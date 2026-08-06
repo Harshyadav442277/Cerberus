@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/*"
+  - "contracts"
 
 # pnpm 10 blocks dependency build scripts by default. tsx needs esbuild's.
 onlyBuiltDependencies:

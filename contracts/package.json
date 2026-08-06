@@ -1,0 +1,25 @@
+{
+  "name": "@safr/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AuditAnchor contract for Base Sepolia, plus its compile and deploy scripts.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "compile": "tsx src/compile.ts",
+    "deploy": "tsx src/deploy.ts",
+    "test": "tsx --test src/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7",
+    "solc": "^0.8.28",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
