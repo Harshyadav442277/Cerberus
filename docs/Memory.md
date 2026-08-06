@@ -12,12 +12,15 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 0:** complete except the funded-wallet check (blocked by B1).
 - **Phase 1:** code complete and verified up to the funding boundary. Definition of Done **not met** — needs a funded wallet. See B1.
 - **Phase 2:** **complete.** DoD met and verified by `npm run db:verify` (13/13 checks).
-- **Phase 3:** **complete.** DoD met — `npm run test` is 29/29 green and engine purity is machine-verified.
+- **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
+- **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted. `npm test` is 52/52 green.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** Phase 4 — wire the engine into the agent's decision path so `evaluate()` is called **before** the x402 request is constructed (Bible Section 6, Rules R6). Needs `apps/agent` with the intent generator (B2 applies) and the orchestrator that calls the Controls Repository, then the engine, then `@safr/x402-client` only on ALLOW. Independently: fund the payer wallet to close out Phase 1.
+- **Next concrete step:** Phase 5 — `packages/audit-log`: the on-chain anchor (`contracts/AuditAnchor.sol` on Base Sepolia, `keccak256(canonical_json(record))`) and the dashboard event stream. The Section 7.5 Postgres write path already exists and is in use (see the Phase 4 entry), so Phase 5 adds anchoring on top rather than reworking it. Independently: fund the payer wallet to close out Phase 1.
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run phase1:preflight` · `npm run phase1`
+
+`npm run demo` needs `npm run merchant` running in another terminal. It accepts a scenario name (`clean`, `cap_breach`, `new_counterparty`) and `--deny-escalation`.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 
 **Stack as resolved:** TypeScript/Node 24, pnpm 10 workspaces, Postgres 16 in Docker on host port **5544**, x402 TS SDK **v2.21.0**, Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
@@ -49,6 +52,41 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 7 — Phase 4: engine wired in front of x402 (COMPLETE, DoD met)
+
+This is the phase that makes the project what it claims to be. The interception constraint is now a **structural, tested property**, not a convention.
+
+**Built**
+- `apps/agent/src/orchestrator.ts` — `runAction(action, deps)`. Resolves the mandate at `proposed_at` → `evaluate()` → writes the audit record → returns early on DENY and on an unapproved ESCALATE → only then reaches settlement. Reads top to bottom as the Architecture 2.2 sketch.
+- `apps/agent/src/settlement/` — the ONLY module outside `packages/x402-client` allowed to import the x402 client.
+- `apps/agent/src/intent-generator.ts` — Anthropic Messages API over plain `fetch` when `ANTHROPIC_API_KEY` is set, fixtures otherwise. Both validated against the Section 7.3 schema, so nothing downstream can tell which produced an action.
+- `apps/agent/src/escalations.ts` — `createEscalationRegistry()` (a real hold, resolved by `submitDecision`; Phase 6's API replaces it without touching the orchestrator) and `createAutoEscalationPort()` for the scripted run.
+- `apps/agent/src/audit.ts` + new writes in `packages/db` — `insertProposedAction`, `insertAuditLogRecord`, `updateAuditSettlement`, `updateAuditHumanReview`.
+- `apps/agent/src/cli/run.ts` — `npm run demo`, all three Bible Section 9 scenarios.
+
+**Verified working (52/52 tests; 23 new)**
+- **The DoD assertion, stated three ways:** on DENY, `pay()` call count is 0, the settlement port's *construction* count is 0, and `settlementAttempted` is false. Construction is tracked separately from invocation precisely because the DoD distinguishes "the payment failed" from "the payment was never attempted".
+- On ESCALATE, `pay()` is 0 while the action is held (checked mid-flight, with the registry showing the action pending), then exactly 1 after approval, and 0 forever if the reviewer denies.
+- **Database evidence, not just test doubles:** after a live run the DENY row's `settlement` column is `NULL` while ALLOW and approved-ESCALATE rows have a settlement object. A payment that was built and discarded could not produce that.
+- **Structural scans over the whole repo:** `@safr/x402-client` is imported from `apps/agent/src/settlement/` and nowhere else; the raw `@x402/*` SDK appears only in its own package and the merchant; and nothing patches global `fetch`, reassigns `fetch`, uses `http-proxy`/proxy agents/`setGlobalDispatcher`, or patches `XMLHttpRequest`.
+- Further scans: the merchant contains no governance logic, the intent generator never touches a mandate or the engine, and no LLM reference exists anywhere in the decision path.
+- **The scanner was validated against a deliberate violation.** A temporary file with a stray x402 import and a patched `globalThis.fetch` made exactly the two expected tests fail; removing it returned the suite to green. A guard that never fires proves nothing, so this was checked rather than assumed.
+- End-to-end from the CLI: ALLOW (rule `null`), DENY on `spend_caps.per_transaction_max` with x402 never reached, ESCALATE→approved settling, ESCALATE→denied with x402 never reached.
+
+**Decisions**
+- **`settlement` is injected as a FACTORY, not an instance.** On DENY the factory is never called, so the settlement module is not merely unused — it is never constructed. Nothing capable of building an HTTP request comes into existence on a denied action. This is a stronger reading of Bible Section 6 than "don't call pay", and it is what the `constructedCount` assertion pins.
+- **`OBSERVE` does not block settlement.** Bible Section 4 and PRD 4.3 define it as "log without gating", so treating it as a soft DENY would silently change its meaning. No seeded rule emits it; the branch exists so that a mandate configuring it behaves as documented.
+- **A missing mandate is refused (`no_mandate`), not allowed.** An absent mandate must never read as an absent limit.
+- **The Section 7.5 Postgres write path was built now rather than in Phase 5.** Phase 4's DoD requires all three dispositions to reach their terminal state end-to-end, which is only demonstrable if decisions are recorded. The record shape written is already the final Section 7.5 shape, so Phase 5 adds the anchor and the event stream on top instead of reworking it. Deliberate, small pull-forward — flagged because Phases.md assigns these writes to Phase 5.
+- **No LLM SDK dependency.** The Anthropic call is one HTTP POST via `fetch`; the approved stack is closed (Rules R2) and a package for a single request is added risk, not saved time.
+- **The audit record copies `mandate_version` at decision time**, so a later mandate edit cannot retroactively change the record of a past decision.
+
+**Not working / not done**
+- Settlement still fails with insufficient balance on the ALLOW path — blocker **B1** only, unchanged. The CLI states this plainly rather than papering over it. Everything upstream of the payment is proven.
+- Intent generation runs in `fixture` mode (blocker **B2**). The LLM path is written but has never executed against a real key.
+
+---
 
 ### Aug 7 — Phase 3: Disposition Engine + Controls Repository (COMPLETE, DoD met)
 

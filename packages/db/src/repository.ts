@@ -1,8 +1,14 @@
 import {
   AgentIdentitySchema,
+  AuditLogRecordSchema,
   MandateSchema,
+  ProposedActionSchema,
   type AgentIdentity,
+  type AuditLogRecord,
+  type HumanReview,
   type Mandate,
+  type ProposedAction,
+  type Settlement,
 } from "@safr/core";
 import { getPool } from "./pool.js";
 
@@ -114,4 +120,84 @@ export async function getActiveMandate(agentId: string, at: string): Promise<Man
     [agentId, at],
   );
   return rows[0] ? MandateSchema.parse(rows[0]) : null;
+}
+
+export async function insertProposedAction(action: ProposedAction): Promise<void> {
+  const parsed = ProposedActionSchema.parse(action);
+  await getPool().query(
+    `INSERT INTO proposed_action (action_id, agent_id, action_type, proposed_at, payload)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (action_id) DO UPDATE SET
+       agent_id    = EXCLUDED.agent_id,
+       action_type = EXCLUDED.action_type,
+       proposed_at = EXCLUDED.proposed_at,
+       payload     = EXCLUDED.payload`,
+    [
+      parsed.action_id,
+      parsed.agent_id,
+      parsed.action_type,
+      parsed.proposed_at,
+      JSON.stringify(parsed.payload),
+    ],
+  );
+}
+
+const AUDIT_COLUMNS = `audit_id, action_id, agent_id, mandate_id, mandate_version,
+  disposition, reason, rule_triggered, evaluated_at, human_review, settlement`;
+
+/**
+ * Writes the Bible Section 7.5 record for a disposition.
+ *
+ * Written for EVERY disposition, including DENY where no payment was ever constructed
+ * — a decision not to pay is exactly as auditable as a decision to pay.
+ */
+export async function insertAuditLogRecord(record: AuditLogRecord): Promise<void> {
+  const parsed = AuditLogRecordSchema.parse(record);
+  await getPool().query(
+    `INSERT INTO audit_log (${AUDIT_COLUMNS})
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      parsed.audit_id,
+      parsed.action_id,
+      parsed.agent_id,
+      parsed.mandate_id,
+      parsed.mandate_version,
+      parsed.disposition,
+      parsed.reason,
+      parsed.rule_triggered,
+      parsed.evaluated_at,
+      parsed.human_review === null ? null : JSON.stringify(parsed.human_review),
+      parsed.settlement === null ? null : JSON.stringify(parsed.settlement),
+    ],
+  );
+}
+
+export async function getAuditLogRecord(auditId: string): Promise<AuditLogRecord | null> {
+  const { rows } = await getPool().query(
+    `SELECT ${AUDIT_COLUMNS} FROM audit_log WHERE audit_id = $1`,
+    [auditId],
+  );
+  return rows[0] ? AuditLogRecordSchema.parse(rows[0]) : null;
+}
+
+/** Settlement is written back after the payment resolves, so it starts null. */
+export async function updateAuditSettlement(
+  auditId: string,
+  settlement: Settlement,
+): Promise<void> {
+  await getPool().query(`UPDATE audit_log SET settlement = $2 WHERE audit_id = $1`, [
+    auditId,
+    JSON.stringify(settlement),
+  ]);
+}
+
+/** Records the compliance officer's decision on an escalated action. */
+export async function updateAuditHumanReview(
+  auditId: string,
+  humanReview: HumanReview,
+): Promise<void> {
+  await getPool().query(`UPDATE audit_log SET human_review = $2 WHERE audit_id = $1`, [
+    auditId,
+    JSON.stringify(humanReview),
+  ]);
 }

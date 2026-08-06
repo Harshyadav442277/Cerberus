@@ -50,7 +50,7 @@ npm run db:seed
 
 # 5. Check everything.
 npm run typecheck
-npm test           # 29 Disposition Engine unit tests
+npm test           # engine unit tests + interception enforcement scans
 npm run db:verify
 ```
 
@@ -75,6 +75,30 @@ npm run phase1
 [sepolia.basescan.org](https://sepolia.basescan.org). `phase1:preflight` reports
 exactly which prerequisite is missing if it cannot.
 
+## The demo
+
+The three scenarios from Bible Section 9, end to end.
+
+```bash
+# Terminal 1 — the merchant being paid.
+npm run merchant
+
+# Terminal 2 — agent proposes, engine decides, settlement only if permitted.
+npm run demo
+npm run demo -- cap_breach                        # one scenario
+npm run demo -- new_counterparty --deny-escalation # reviewer rejects
+```
+
+Output reports, per scenario, the disposition, the rule that fired, and — the line
+that matters — whether x402 was reached at all:
+
+```
+Scenario 2 — cap breach   [cap_breach]
+  disposition   DENY
+  rule          spend_caps.per_transaction_max
+  x402 reached  NO — never constructed
+```
+
 ## Layout
 
 ```
@@ -86,8 +110,9 @@ packages/
   x402-client/          the only module that talks to x402
   audit-log/            Postgres writes + on-chain anchor (Phase 5)
 apps/
+  agent/                LLM agent + orchestrator — owns the gate
+    src/settlement/     the only place x402-client may be imported
   merchant/             x402 resource server (the payee)
-  agent/                LLM agent + orchestrator          (Phase 4)
   api/                  dashboard REST + WebSocket        (Phase 6)
   dashboard/            Next.js compliance dashboard      (Phase 6)
 ```
@@ -95,3 +120,8 @@ apps/
 The Disposition Engine is called by the agent's own orchestration code **before it
 constructs the x402 request** — never as a proxy in front of x402 traffic. This
 pre-execution position is the whole point; see [Architecture.md](docs/Architecture.md) section 2.
+
+It is enforced rather than merely intended. `npm test` scans the repository and fails
+if anything outside `apps/agent/src/settlement/` imports the x402 client, or if any
+code patches global `fetch`, installs a proxy agent, or otherwise intercepts traffic
+after the fact. On a `DENY` the settlement module is never even constructed.
