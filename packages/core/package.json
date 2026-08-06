@@ -1,0 +1,17 @@
+{
+  "name": "@safr/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared schemas and types. Mirrors Bible Section 7 field-for-field. Frozen — see Rules.md R4.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

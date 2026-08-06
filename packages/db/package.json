@@ -1,0 +1,30 @@
+{
+  "name": "@safr/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Postgres pool, migrations and seed data for SAFR Runtime.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "migrate": "tsx src/cli/migrate.ts up",
+    "migrate:down": "tsx src/cli/migrate.ts down",
+    "migrate:status": "tsx src/cli/migrate.ts status",
+    "seed": "tsx src/cli/seed.ts",
+    "verify": "tsx src/cli/verify.ts"
+  },
+  "dependencies": {
+    "@safr/core": "workspace:*",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1",
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "@safr/disposition-engine": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

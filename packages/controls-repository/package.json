@@ -1,0 +1,19 @@
+{
+  "name": "@safr/controls-repository",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Controls Repository: versioned mandate lookup and the counter state the Disposition Engine consumes.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@safr/core": "workspace:*",
+    "@safr/db": "workspace:*",
+    "@safr/disposition-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: safr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: safr
+      POSTGRES_PASSWORD: safr
+      POSTGRES_DB: safr_runtime
+    # Host port 5544 (not 5432) — unrelated containers on this machine already
+    # hold 5432 and 5433. Container-internal port stays 5432.
+    ports:
+      - "5544:5432"
+    volumes:
+      - safr-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safr -d safr_runtime"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  safr-pgdata:

@@ -1,0 +1,30 @@
+{
+  "name": "safr-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SAFR Runtime — enforces MAS's SAFR governance pattern in real time, gating an AI agent's stablecoin payments before they execute.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test packages/disposition-engine/src/__tests__/*.test.ts",
+    "db:up": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:migrate": "tsx packages/db/src/cli/migrate.ts up",
+    "db:migrate:down": "tsx packages/db/src/cli/migrate.ts down",
+    "db:migrate:status": "tsx packages/db/src/cli/migrate.ts status",
+    "db:seed": "tsx packages/db/src/cli/seed.ts",
+    "db:verify": "tsx packages/db/src/cli/verify.ts",
+    "merchant": "tsx apps/merchant/src/server.ts",
+    "phase1": "tsx packages/x402-client/scripts/phase1-pay.ts",
+    "phase1:preflight": "tsx packages/x402-client/scripts/preflight.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

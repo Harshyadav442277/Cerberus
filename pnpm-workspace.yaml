@@ -1,0 +1,10 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# pnpm 10 blocks dependency build scripts by default. tsx needs esbuild's.
+onlyBuiltDependencies:
+  - esbuild
+
+# Never block on an interactive "purge node_modules?" prompt in a non-TTY shell.
+confirmModulesPurge: false

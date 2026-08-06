@@ -1,0 +1,26 @@
+{
+  "name": "@safr/x402-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The only module in SAFR Runtime that talks to x402. Imported solely from apps/agent/src/settlement/ (see Rules.md R6).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "preflight": "tsx scripts/preflight.ts",
+    "phase1": "tsx scripts/phase1-pay.ts"
+  },
+  "dependencies": {
+    "@x402/core": "^2.21.0",
+    "@x402/evm": "^2.21.0",
+    "@x402/fetch": "^2.21.0",
+    "dotenv": "^16.4.7",
+    "viem": "^2.55.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
