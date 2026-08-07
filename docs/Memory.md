@@ -14,12 +14,13 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 2:** **complete.** DoD met and verified by `npm run db:verify` (13/13 checks).
 - **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
 - **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted.
-- **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas). `npm test` is 84/84 green.
+- **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
+- **Phase 6:** **in progress.** `apps/api` and `apps/dashboard` are built (Audit Log live feed, drill-down, Escalations Approve/Deny, Mandate, Agent). DoD not fully closed until a live `--live-escalation` demo is verified end-to-end. `npm test` is 87/87 green.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** Phase 6 — `apps/api` (REST + WebSocket live feed + `POST /escalations/:action_id/decision`) and `apps/dashboard` per `Design.md`. The escalation registry in `apps/agent/src/escalations.ts` is already the seam the API plugs into; the orchestrator does not change. Independently: fund the payer wallet, which closes out Phase 1 **and** the two open Phase 5 items at the same time.
+- **Next concrete step:** End-to-end Phase 6 verification (API + dashboard + `npm run demo -- new_counterparty --live-escalation`), then Phase 7 demo script. Independently: fund the payer wallet (closes Phase 1 + remaining Phase 5 items).
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run api` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` needs `npm run merchant` running in another terminal. It accepts a scenario name (`clean`, `cap_breach`, `new_counterparty`) and `--deny-escalation`.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
@@ -55,6 +56,29 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 7 — Phase 6: API + dashboard (built; DoD verification pending)
+
+**Built**
+- `apps/api` — Express on `:4050`. `GET /audit`, `GET /audit/stream` (SSE + 1s Postgres poll), `GET /audit/:id`, `GET /escalations`, `POST /escalations/:actionId/decision`, `GET /mandates/active`, `GET /agents/:id`, `GET /health`.
+- `apps/agent` — `createDbEscalationPort` + `npm run demo -- --live-escalation` so a dashboard Approve unblocks a waiting agent across processes.
+- `apps/dashboard` — Next.js per `Design.md`: Audit Log (rule column first-class, disposition colours, live indicator), drill-down (§7.5 near-direct), Escalations (one-click Approve/Deny), Mandate, Agent + counters.
+- `packages/db` — `listAuditFeed`, `listPendingEscalations`, `getAuditLogRecordByActionId`, `countByDisposition`.
+
+**Verified**
+- API smoke against live Postgres: `/health` up, `/audit` returns prior demo rows, `/escalations` empty when none pending.
+- `next build` succeeds for all six routes.
+- 87/87 tests green (includes API decision-body tests).
+
+**Decisions**
+- **SSE + 1s poll instead of WebSocket.** Visually identical in a demo; Phases.md descope ladder item 3. The poll also catches writes from the separate agent process.
+- **DB-backed escalation wait** rather than sharing the in-memory registry across processes. API writes `human_review`; agent polls that column. Orchestrator unchanged.
+
+**Not done**
+- Full DoD: approving an escalation from the dashboard while an agent is held on `--live-escalation` has not been run end-to-end in this session yet.
+- Projector legibility check belongs to Phase 7.
+
+---
 
 ### Aug 7 — Phase 5: audit log write path + immutability anchor (code complete; 2 of 4 DoD items met, 2 blocked by B1)
 

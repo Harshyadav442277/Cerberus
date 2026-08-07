@@ -12,6 +12,7 @@
     "test": "tsx --test --test-timeout=60000 packages/disposition-engine/src/__tests__/*.test.ts packages/audit-log/src/__tests__/*.test.ts apps/agent/src/__tests__/*.test.ts contracts/src/__tests__/*.test.ts apps/api/src/__tests__/*.test.ts",
     "demo": "tsx apps/agent/src/cli/run.ts",
     "api": "tsx apps/api/src/server.ts",
+    "dashboard": "npm run dev --prefix apps/dashboard",
     "contracts:compile": "tsx contracts/src/compile.ts",
     "contracts:deploy": "tsx contracts/src/deploy.ts",
     "audit:verify": "tsx packages/audit-log/src/cli/verify-anchors.ts",

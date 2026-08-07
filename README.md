@@ -131,6 +131,22 @@ npm run contracts:deploy    # prints the address for AUDIT_ANCHOR_ADDRESS in .en
 Without `AUDIT_ANCHOR_ADDRESS` set, records still get digests and stay verifiable —
 they simply sit at `pending` until anchoring is configured.
 
+## Compliance dashboard
+
+```bash
+# Terminal 1 — API (audit feed + escalation decisions)
+npm run api
+
+# Terminal 2 — Next.js dashboard at http://localhost:3000
+npm run dashboard
+
+# Terminal 3 — hold an escalation for a real Approve click
+npm run demo -- new_counterparty --live-escalation
+```
+
+The Audit Log shows disposition colour, the rule path on DENY rows, and a live
+indicator. Escalations is one-click Approve / Deny with no confirmation dialog.
+
 ## Layout
 
 ```
@@ -145,8 +161,8 @@ apps/
   agent/                LLM agent + orchestrator — owns the gate
     src/settlement/     the only place x402-client may be imported
   merchant/             x402 resource server (the payee)
-  api/                  dashboard REST + WebSocket        (Phase 6)
-  dashboard/            Next.js compliance dashboard      (Phase 6)
+  api/                  dashboard REST + SSE live feed
+  dashboard/            Next.js compliance dashboard
 contracts/              AuditAnchor.sol + compile and deploy scripts
 ```
 
