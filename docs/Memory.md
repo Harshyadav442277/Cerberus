@@ -13,12 +13,13 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 1:** code complete and verified up to the funding boundary. Definition of Done **not met** — needs a funded wallet. See B1.
 - **Phase 2:** **complete.** DoD met and verified by `npm run db:verify` (13/13 checks).
 - **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
-- **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted. `npm test` is 52/52 green.
+- **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted.
+- **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas). `npm test` is 84/84 green.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** Phase 5 — `packages/audit-log`: the on-chain anchor (`contracts/AuditAnchor.sol` on Base Sepolia, `keccak256(canonical_json(record))`) and the dashboard event stream. The Section 7.5 Postgres write path already exists and is in use (see the Phase 4 entry), so Phase 5 adds anchoring on top rather than reworking it. Independently: fund the payer wallet to close out Phase 1.
+- **Next concrete step:** Phase 6 — `apps/api` (REST + WebSocket live feed + `POST /escalations/:action_id/decision`) and `apps/dashboard` per `Design.md`. The escalation registry in `apps/agent/src/escalations.ts` is already the seam the API plugs into; the orchestrator does not change. Independently: fund the payer wallet, which closes out Phase 1 **and** the two open Phase 5 items at the same time.
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` needs `npm run merchant` running in another terminal. It accepts a scenario name (`clean`, `cap_breach`, `new_counterparty`) and `--deny-escalation`.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
@@ -33,6 +34,8 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 `.env` currently holds a **throwaway, unfunded** keypair generated during Phase 1 purely to exercise the code path (`0x8A74081BCa3EEB7Ec50CA23EC80EF42565F54A36`). It holds nothing on any network.
 What is needed: replace `EVM_PRIVATE_KEY` (payer) and `EVM_ADDRESS` (merchant payee) in `.env` with the team's real wallet, fund the payer with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and a little Sepolia ETH for gas.
 The full payment path is already proven correct except funding (see the Phase 1 entry below).
+
+**B1 also blocks two Phase 5 DoD items** (added Aug 7): deploying `AuditAnchor.sol` and writing anchors both need Sepolia ETH for gas. Digests are computed and stored regardless, so funding the wallet and running `npm run contracts:deploy` is the only remaining work — no code changes. Same rule applies: the submission must not claim records are anchored on chain until one actually is.
 
 **B1 CHECKPOINT — agreed with the project owner, Aug 7. Do not lose this:**
 1. **Phase 1's DoD cannot be marked done, and the submission must not claim "live settlement," until a real funded-wallet transaction has actually fired at least once.** No exceptions. Bible section 12 and Rules R11 both forbid narrating over a gap.
@@ -52,6 +55,37 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 7 — Phase 5: audit log write path + immutability anchor (code complete; 2 of 4 DoD items met, 2 blocked by B1)
+
+**Built**
+- `packages/audit-log` — `canonical.ts` (deterministic JSON + `auditRecordHash`), `anchor.ts` (viem client for the contract), `queue.ts` (the asynchronous, non-blocking anchor path), `repository.ts` (the `audit_anchor` table), `audit-log.ts` (the facade the agent uses).
+- `contracts/AuditAnchor.sol` + `compile.ts` (solc, in memory — no artifacts on disk) + `deploy.ts`. Contract is 263 bytes of bytecode and stores nothing but a `bytes32` digest.
+- `packages/db/migrations/002_audit_anchor.{up,down}.sql` — one row per record: `record_hash`, `anchor_tx_hash`, `status`, `error`.
+- `npm run audit:verify` — re-hashes every stored record against its digest. `npm run audit:tamper-demo` — edits a real record, shows the digest break, and rolls back.
+- `apps/agent/src/audit.ts` now delegates to `@safr/audit-log`; the CLI drains anchors and prints them.
+
+**Verified working (84/84 tests; 32 new)**
+- **DoD 1 — record shape.** All three scenarios write records matching Section 7.5 field-for-field, with `rule_triggered` populated for DENY (`spend_caps.per_transaction_max`) and ESCALATE (`counterparty_policy`) and explicitly `null` for the clean ALLOW.
+- **DoD 3, off-chain half — re-hashing reproduces the digest.** `npm run audit:verify` reports 3/3. Proven the hard way rather than by assertion: `audit:tamper-demo` flipped a stored DENY to ALLOW and the digest moved from `0x4ff1b60c…` to `0x53831020…`; after rollback it returned to `0x4ff1b60c…`. Tests also cover tampering with `disposition`, `reason`, `rule_triggered`, `mandate_version`, `evaluated_at`, and attaching a forged settlement to a denied record.
+- **DoD 4 — anchoring cannot break a disposition.** Covered by six tests: a broken RPC, a chain call that never resolves, a dead database, a failure while recording the failure, and anchoring being unconfigured. In every case `enqueue()` returns immediately and `drain()` does not reject. The digest is always persisted *before* the network call, so an RPC outage still leaves something verifiable.
+- Migration 002 applies, rolls back and re-applies cleanly.
+- The hand-written ABI is asserted equal to solc's output, so `abi.ts` cannot drift from the Solidity and start reverting at runtime.
+
+**Decisions**
+- **Anchoring happens at the record's TERMINAL state, not at creation.** A record is mutated after it is written — `human_review` on an escalation, `settlement` when a payment resolves — so anchoring at creation would anchor a digest the stored record no longer matches, and the DoD's "re-hashing the stored record reproduces the anchored hash" would be false for every ALLOW. `AuditPort.finalize(audit_id)` is therefore called at each terminal point in the orchestrator, including DENY. Not spelled out in the Bible; flagged because it changes when the anchor is written.
+- **`finalize()` re-reads the record from Postgres before hashing** rather than hashing the in-memory copy. The digest is then over exactly the bytes a verifier will later read back, which closes the gap where the two could differ.
+- **Canonical JSON is hand-rolled (about 30 lines), not a dependency.** Keys sorted recursively, no whitespace, array order preserved, `null` kept. Keeping `null` matters: dropping it would let a clean ALLOW (`rule_triggered: null`) and a rule-triggered record collide.
+- **The contract is permissionless and does not deduplicate.** Access control would add a failure mode to a demo-critical path for nothing — the digest is meaningless without the off-chain record, and a duplicate anchor is harmless.
+- **`solc` added as a devDependency of `contracts/`.** Bible Section 8 requires a testnet contract and a contract requires a compiler; it is build-time tooling, not a runtime stack change (Rules R2).
+- **`--test-timeout=60000` added to `npm test`.** A test of mine hung the suite indefinitely because node:test has no default timeout; a hang should fail, not stall.
+
+**Not working / not done**
+- **DoD 2 (ALLOW record carries a real `settlement.tx_hash`)** — not met. Settlement still fails on insufficient balance; the DENY record's `settlement` **is** correctly `NULL`, which is the other half of that item and is verified in the database.
+- **DoD 3, on-chain half (each record has an anchor tx hash)** — not met. All three records sit at `status = 'pending'` with digests computed and stored; nothing has been written to Base Sepolia because the wallet has no gas.
+- Both are **B1 only**. `AuditAnchor.sol` has never been deployed, so it has never executed on chain. The deploy script refuses with a clear message on a zero balance rather than failing obscurely.
+
+---
 
 ### Aug 7 — Phase 4: engine wired in front of x402 (COMPLETE, DoD met)
 

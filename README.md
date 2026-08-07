@@ -99,6 +99,38 @@ Scenario 2 — cap breach   [cap_breach]
   x402 reached  NO — never constructed
 ```
 
+## The audit trail
+
+Every disposition is written to Postgres as a Bible Section 7.5 record — a refusal is
+recorded exactly as carefully as an approval. Once a record reaches its terminal
+state, `keccak256` of its canonical JSON is anchored to
+[`AuditAnchor.sol`](contracts/AuditAnchor.sol) on Base Sepolia. Only the digest goes
+on chain; the record itself never leaves the database.
+
+```bash
+npm run audit:verify        # re-hash every stored record, compare to its anchor
+npm run audit:tamper-demo   # edit a real record, watch the digest break, roll back
+```
+
+`audit:tamper-demo` is the honest version of the immutability claim. It takes a stored
+`DENY`, rewrites it to `ALLOW` the way someone covering their tracks would, and shows
+the digest no longer reproduces — then rolls the transaction back so the log is
+unchanged.
+
+Anchoring is asynchronous and cannot affect a decision: the digest is stored before
+any network call, and a slow, broken, or unconfigured RPC leaves the record valid and
+the disposition untouched.
+
+To deploy the contract (needs a little Sepolia ETH for gas):
+
+```bash
+npm run contracts:compile
+npm run contracts:deploy    # prints the address for AUDIT_ANCHOR_ADDRESS in .env
+```
+
+Without `AUDIT_ANCHOR_ADDRESS` set, records still get digests and stay verifiable —
+they simply sit at `pending` until anchoring is configured.
+
 ## Layout
 
 ```
@@ -108,13 +140,14 @@ packages/
   disposition-engine/   pure, rule-based evaluate() — the gate
   controls-repository/  versioned mandate lookup + counters
   x402-client/          the only module that talks to x402
-  audit-log/            Postgres writes + on-chain anchor (Phase 5)
+  audit-log/            Section 7.5 writes + canonical hash + on-chain anchor
 apps/
   agent/                LLM agent + orchestrator — owns the gate
     src/settlement/     the only place x402-client may be imported
   merchant/             x402 resource server (the payee)
   api/                  dashboard REST + WebSocket        (Phase 6)
   dashboard/            Next.js compliance dashboard      (Phase 6)
+contracts/              AuditAnchor.sol + compile and deploy scripts
 ```
 
 The Disposition Engine is called by the agent's own orchestration code **before it

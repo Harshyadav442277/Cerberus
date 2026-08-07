@@ -150,9 +150,13 @@ web3-project/
 │   │
 │   ├── audit-log/                    # write path
 │   │   └── src/
-│   │       ├── repository.ts         # Postgres writes/reads of §7.5 records
-│   │       ├── anchor.ts             # keccak256(record) → testnet contract
-│   │       └── events.ts             # emits to the dashboard live feed
+│   │       ├── audit-log.ts          # the facade: record(), finalize(), writebacks
+│   │       ├── canonical.ts          # canonical_json + keccak256 of a §7.5 record
+│   │       ├── anchor.ts             # viem client for AuditAnchor on Base Sepolia
+│   │       ├── queue.ts              # asynchronous, non-blocking anchoring
+│   │       ├── repository.ts         # the audit_anchor table
+│   │       ├── cli/verify-anchors.ts # re-hash every record, compare to its anchor
+│   │       └── events.ts             # emits to the dashboard live feed  (Phase 6)
 │   │
 │   └── x402-client/                  # the ONLY module that talks to x402
 │       └── src/pay.ts                # @x402/fetch + @x402/evm wrapper
@@ -175,9 +179,12 @@ web3-project/
 │           ├── page.tsx              # live feed
 │           └── audit/[audit_id]/     # drill-down = near-direct render of §7.5
 │
-├── contracts/
-│   ├── AuditAnchor.sol               # anchorHash(bytes32) event/store
-│   └── deploy.ts
+├── contracts/                        # a workspace package, so it can declare solc
+│   ├── AuditAnchor.sol               # anchor(bytes32) — digest only, no audit content
+│   └── src/
+│       ├── abi.ts                    # hand-written ABI, asserted equal to solc's
+│       ├── compile.ts                # solc in memory; no artifacts on disk
+│       └── deploy.ts
 │
 ├── db/migrations/                    # SQL mirroring §7.1–7.5 exactly
 └── scripts/
@@ -245,7 +252,11 @@ Postgres tables mirror Bible §7.1–7.5 **exactly** — same field names, same 
 
 ### 6.1 Immutability anchor
 
-On each audit write: `keccak256(canonical_json(record))` → `AuditAnchor.anchor(bytes32)` on Base Sepolia. The returned tx hash is stored alongside the record. This supports the "immutable" claim without a custom chain (Bible §8). Anchoring is **asynchronous and non-blocking** — a slow or failed anchor must never stall or fail a disposition, since the disposition path is the demo-critical one.
+`keccak256(canonical_json(record))` → `AuditAnchor.anchor(bytes32)` on Base Sepolia. The returned tx hash is stored alongside the record, in an `audit_anchor` table rather than as columns on `audit_log`, so §7.5 stays exactly as the Bible defines it (Rules R4). This supports the "immutable" claim without a custom chain (Bible §8). Only the digest goes on chain — no amounts, no counterparties, no audit content.
+
+Anchoring is **asynchronous and non-blocking**: a slow or failed anchor must never stall or fail a disposition, since the disposition path is the demo-critical one. The digest is computed and stored *before* the network call, so even a total RPC outage leaves a verifiable hash in Postgres.
+
+**Anchoring happens when a record reaches its terminal state, not on each write.** This corrects an earlier draft of this section. A record is mutated after creation — `human_review` on an escalation, `settlement` when a payment resolves — so anchoring at creation would anchor a digest that the stored record no longer matches, and re-hashing it later would fail. Since "re-hash the stored record and compare" is the entire value of the anchor, it is written once the record can no longer change: immediately for a `DENY`, after settlement for an `ALLOW`, after the reviewer decides for an `ESCALATE`. The record is re-read from Postgres before hashing, so the digest covers exactly the bytes a verifier will see.
 
 ---
 
