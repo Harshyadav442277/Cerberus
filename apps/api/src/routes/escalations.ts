@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { HumanReviewSchema } from "@safr/core";
 import {
+  claimAuditHumanReview,
+  getAuditLogRecord,
   getAuditLogRecordByActionId,
   getProposedAction,
   listPendingEscalations,
-  updateAuditHumanReview,
 } from "@safr/db";
 import { DecisionBodySchema } from "../decision-body.js";
 import { liveHub } from "../live.js";
@@ -25,6 +26,9 @@ escalationsRouter.get("/", async (_req, res, next) => {
  *
  * Unblocks a waiting agent (createDbEscalationPort polls this write). Approve is a
  * single click with no confirmation — Bible §9 reliability decision.
+ *
+ * The write is atomic: `UPDATE … WHERE human_review IS NULL`. A double-click or a
+ * second reviewer gets 409 already_decided instead of silently overwriting.
  */
 escalationsRouter.post("/:actionId/decision", async (req, res, next) => {
   try {
@@ -57,9 +61,17 @@ escalationsRouter.post("/:actionId/decision", async (req, res, next) => {
       note: body.note,
     });
 
-    await updateAuditHumanReview(record.audit_id, humanReview);
+    const claimed = await claimAuditHumanReview(record.audit_id, humanReview);
+    if (!claimed) {
+      // Lost the race to another click / reviewer between the null check and the UPDATE.
+      const latest = await getAuditLogRecord(record.audit_id);
+      res.status(409).json({
+        error: "already_decided",
+        human_review: latest?.human_review ?? null,
+      });
+      return;
+    }
 
-    // Push an updated feed item so the Audit Log row refreshes without a full reload.
     const action = await getProposedAction(actionId);
     if (action) {
       liveHub.publish({
