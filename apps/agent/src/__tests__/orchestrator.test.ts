@@ -168,6 +168,35 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(outcome.settlementAttempted, true);
     strictEqual(outcome.settlement?.tx_hash, null);
   });
+
+  it("on a thrown pay(), still writes a failed settlement and finalizes", async () => {
+    const audit = auditSpy();
+    const { spy } = settlementSpy();
+    const factory = () => {
+      spy.constructedCount += 1;
+      return {
+        async pay() {
+          spy.callCount += 1;
+          throw new Error("facilitator unreachable (simulated)");
+        },
+      };
+    };
+
+    const outcome = await runAction(action(), {
+      controls: controlsPort(),
+      audit,
+      escalations: autoEscalation("approved"),
+      settlement: factory,
+    });
+
+    strictEqual(outcome.status, "settlement_failed");
+    strictEqual(outcome.settlementAttempted, true);
+    strictEqual(outcome.settlement?.status, "failed");
+    strictEqual(outcome.settlement?.tx_hash, null);
+    strictEqual(audit.settlements.length, 1);
+    strictEqual(audit.settlements[0]?.settlement.status, "failed");
+    strictEqual(audit.finalized.length, 1, "terminal anchor must still run after a thrown pay()");
+  });
 });
 
 describe("the engine's verdict is what drives the branch", () => {
