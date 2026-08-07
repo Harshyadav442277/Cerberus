@@ -97,9 +97,30 @@ export async function runAction(
   }
 
   // Reachable only on ALLOW, or ESCALATE that a human approved.
-  const settlement = await deps.settlement().pay(action);
-  await deps.audit.recordSettlement(audit.audit_id, settlement);
-  await deps.audit.finalize(audit.audit_id);
+  //
+  // pay() can soft-fail (returns status:"failed") or hard-throw (network/facilitator
+  // blip — the same class of risk as B1 mid-demo). Either way the record must reach a
+  // terminal state: settlement written and the anchor finalized. An uncaught throw
+  // used to leave the row in limbo with settlement null and no digest.
+  let settlement: Settlement;
+  try {
+    settlement = await deps.settlement().pay(action);
+  } catch {
+    settlement = {
+      status: "failed",
+      tx_hash: null,
+      rail: "x402",
+      settled_at: null,
+    };
+  }
+
+  try {
+    await deps.audit.recordSettlement(audit.audit_id, settlement);
+  } finally {
+    // finalize even if the settlement write itself fails — the disposition already
+    // happened and the digest must still be computable from the stored row.
+    await deps.audit.finalize(audit.audit_id);
+  }
 
   return {
     ...base,
