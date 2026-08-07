@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { API_URL, explorerTx, fetchFeed, formatTime, shortHash } from "@/lib/api";
+import {
+  API_URL,
+  explorerTx,
+  fetchFeed,
+  formatTime,
+  shortHash,
+  type SpendSummary,
+} from "@/lib/api";
 import type { FeedItem } from "@/lib/types";
 import { DispositionBadge, dispositionRowClass } from "./DispositionBadge";
 
@@ -19,6 +26,7 @@ function mergeItems(prev: FeedItem[], incoming: FeedItem[]): FeedItem[] {
 export function AuditTable({ initial }: { initial: FeedItem[] }) {
   const [items, setItems] = useState(initial);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [spend, setSpend] = useState<SpendSummary | null>(null);
   const [live, setLive] = useState(false);
   const [lastEventAt, setLastEventAt] = useState<number | null>(null);
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -28,6 +36,7 @@ export function AuditTable({ initial }: { initial: FeedItem[] }) {
     const data = await fetchFeed();
     setItems(data.items);
     setCounts(data.counts);
+    setSpend(data.spend);
   }, []);
 
   useEffect(() => {
@@ -99,10 +108,17 @@ export function AuditTable({ initial }: { initial: FeedItem[] }) {
         </div>
       </header>
 
-      <div className="flex gap-3 border-b border-border bg-chrome px-6 py-3 text-[12px]">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-chrome px-6 py-3 text-[12px]">
         <SummaryChip label="ALLOW" value={counts.ALLOW ?? 0} tone="allow" />
         <SummaryChip label="DENY" value={counts.DENY ?? 0} tone="deny" />
         <SummaryChip label="ESCALATE" value={counts.ESCALATE ?? 0} tone="escalate" />
+        {spend?.max_total != null && (
+          <SpendStrip
+            rolling={spend.rolling_total_24h}
+            maxTotal={spend.max_total}
+            currency={spend.currency}
+          />
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
@@ -219,6 +235,30 @@ function SummaryChip({
     <span className="rounded-[3px] border border-border bg-white px-2.5 py-1">
       <span className={`font-medium ${toneClass}`}>{label}</span>
       <span className="ml-2 font-mono tabular-nums text-ink">{value}</span>
+    </span>
+  );
+}
+
+/** Design §5.1 — live 24h rolling spend against the mandate max_total. */
+function SpendStrip({
+  rolling,
+  maxTotal,
+  currency,
+}: {
+  rolling: number;
+  maxTotal: number;
+  currency: string;
+}) {
+  const pct = Math.min(100, maxTotal > 0 ? (rolling / maxTotal) * 100 : 0);
+  return (
+    <span className="ml-auto flex items-center gap-2 rounded-[3px] border border-border bg-white px-2.5 py-1">
+      <span className="font-medium text-mute">24h</span>
+      <span className="font-mono tabular-nums text-ink">
+        {rolling.toFixed(2)} / {maxTotal.toFixed(2)} {currency}
+      </span>
+      <span className="inline-block h-1 w-20 overflow-hidden rounded-[2px] bg-border">
+        <span className="block h-full bg-accent" style={{ width: `${pct}%` }} />
+      </span>
     </span>
   );
 }
