@@ -191,7 +191,12 @@ export async function updateAuditSettlement(
   ]);
 }
 
-/** Records the compliance officer's decision on an escalated action. */
+/**
+ * Records the compliance officer's decision on an escalated action.
+ *
+ * Unconditional writeback — used by the orchestrator after awaitDecision returns
+ * (including when the dashboard already wrote the same review via claim).
+ */
 export async function updateAuditHumanReview(
   auditId: string,
   humanReview: HumanReview,
@@ -200,6 +205,31 @@ export async function updateAuditHumanReview(
     auditId,
     JSON.stringify(humanReview),
   ]);
+}
+
+/**
+ * Atomically claims a pending escalation.
+ *
+ * Only succeeds when `human_review` is still null. A double-click Approve/Deny, or
+ * two reviewers hitting the same action, loses the race with rowCount 0 instead of
+ * silently overwriting the first decision — which is what a check-then-write race
+ * would allow during the live demo.
+ *
+ * @returns true if this caller won the claim; false if already decided.
+ */
+export async function claimAuditHumanReview(
+  auditId: string,
+  humanReview: HumanReview,
+): Promise<boolean> {
+  const parsed = humanReview;
+  const { rowCount } = await getPool().query(
+    `UPDATE audit_log
+        SET human_review = $2
+      WHERE audit_id = $1
+        AND human_review IS NULL`,
+    [auditId, JSON.stringify(parsed)],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 /** Feed row for the dashboard: §7.5 record + the proposal that produced it. */

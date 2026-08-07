@@ -1,5 +1,6 @@
 export { closePool, DATABASE_URL, getPool } from "./pool.js";
 export {
+  claimAuditHumanReview,
   countByDisposition,
   getActiveMandate,
   getAgentIdentity,
