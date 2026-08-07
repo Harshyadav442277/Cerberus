@@ -147,6 +147,21 @@ npm run demo -- new_counterparty --live-escalation
 The Audit Log shows disposition colour, the rule path on DENY rows, and a live
 indicator. Escalations is one-click Approve / Deny with no confirmation dialog.
 
+## Judged demo script (Phase 7)
+
+Bible Section 9 in order, with a pre-staged ESCALATE approval and a clean reset
+between attempts:
+
+```bash
+npm run merchant          # terminal 1
+npm run demo:script       # one run (resets first)
+npm run demo:script -- --thrice   # Phase 7 DoD: three consecutive clean runs
+```
+
+Each run asserts ALLOW → DENY (`spend_caps.per_transaction_max`, x402 never
+constructed) → ESCALATE approved with `human_review` persisted. Real settlement
+hashes still need a funded Base Sepolia wallet.
+
 ## Layout
 
 ```

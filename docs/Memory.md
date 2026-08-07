@@ -15,14 +15,15 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
 - **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted.
 - **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
-- **Phase 6:** **in progress.** `apps/api` and `apps/dashboard` are built (Audit Log live feed, drill-down, Escalations Approve/Deny, Mandate, Agent). DoD not fully closed until a live `--live-escalation` demo is verified end-to-end. `npm test` is 87/87 green.
+- **Phase 6:** **DoD met (verified Aug 7).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted. `npm test` 87/87.
+- **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** End-to-end Phase 6 verification (API + dashboard + `npm run demo -- new_counterparty --live-escalation`), then Phase 7 demo script. Independently: fund the payer wallet (closes Phase 1 + remaining Phase 5 items).
+- **Next concrete step:** Phase 9 architecture diagram (mandatory Stage 1 material) and/or Phase 8 backup demo video. Independently: fund the payer wallet — that alone closes Phase 1, remaining Phase 5, and the settlement half of Phase 7.
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run api` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
-`npm run demo` needs `npm run merchant` running in another terminal. It accepts a scenario name (`clean`, `cap_breach`, `new_counterparty`) and `--deny-escalation`.
+`npm run demo` / `demo:script` need `npm run merchant` running. `demo:script -- --thrice` is the Phase 7 DoD check. `demo -- --live-escalation` waits for a dashboard Approve.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 
 **Stack as resolved:** TypeScript/Node 24, pnpm 10 workspaces, Postgres 16 in Docker on host port **5544**, x402 TS SDK **v2.21.0**, Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
@@ -57,7 +58,27 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 
 ## Log
 
-### Aug 7 — Phase 6: API + dashboard (built; DoD verification pending)
+### Aug 7 — Phase 7: Section 9 demo script + reset (disposition DoD met thrice; settlement blocked by B1)
+
+**Built**
+- `packages/db` — `resetDemoState()` + `npm run demo:reset` (truncates audit_anchor / audit_log / proposed_action, re-seeds agent + mandate).
+- `apps/agent/src/cli/section9.ts` + `scripts/demo.ts` launcher — `npm run demo:script` runs clean → cap_breach → new_counterparty with pre-staged approval, asserts dispositions/rules/interception/persistence/anchor digests.
+- Flags: `--thrice`, `--no-reset`, `--live` (dashboard Approve for scenario 3).
+
+**Verified**
+- `npm run demo:script -- --thrice`: three consecutive clean runs, ~1s each after reset. ALLOW / DENY(`spend_caps.per_transaction_max`, x402 never constructed) / ESCALATE→approved with human_review persisted.
+- Typecheck clean; 87/87 tests still green.
+
+**Not met (B1 only)**
+- DoD line "settlement hash within seconds" — settlement status is `failed` on ALLOW and approved-ESCALATE until the wallet holds Base Sepolia USDC + gas. Script reports this explicitly rather than narrating over it.
+
+**Decisions**
+- Pre-staged approval is the default (Bible §9); `--live` is the stretch path already proven in Phase 6.
+- Demo script drains the anchor queue before asserting digests — anchoring is async, so a naked `getAnchor` right after `finalize` raced and flaked once.
+
+---
+
+### Aug 7 — Phase 6: API + dashboard (COMPLETE, DoD met)
 
 **Built**
 - `apps/api` — Express on `:4050`. `GET /audit`, `GET /audit/stream` (SSE + 1s Postgres poll), `GET /audit/:id`, `GET /escalations`, `POST /escalations/:actionId/decision`, `GET /mandates/active`, `GET /agents/:id`, `GET /health`.
@@ -74,8 +95,16 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 - **SSE + 1s poll instead of WebSocket.** Visually identical in a demo; Phases.md descope ladder item 3. The poll also catches writes from the separate agent process.
 - **DB-backed escalation wait** rather than sharing the in-memory registry across processes. API writes `human_review`; agent polls that column. Orchestrator unchanged.
 
-**Not done**
-- Full DoD: approving an escalation from the dashboard while an agent is held on `--live-escalation` has not been run end-to-end in this session yet.
+**Verified end-to-end (Aug 7 evening)**
+- `npm test` 87/87; typecheck clean; `db:verify` 13/13; `next build` green.
+- Full demo: ALLOW / DENY (`spend_caps.per_transaction_max`, x402 never constructed) / ESCALATE→approved.
+- `--deny-escalation`: x402 never constructed.
+- `--live-escalation`: API `POST .../decision` approved `action_9ac6a9c4`; agent unblocked; `x402 reached yes`.
+- Feed exposes DENY rule path; drill-down returns `{record, action, anchor}`; SSE emits audit events; dashboard routes `/`, `/escalations`, `/mandate`, `/agent`, `/audit/:id` all 200.
+- `audit:verify` 8/8 digests reproduce; tamper-demo detects DENY→ALLOW rewrite.
+
+**Not done / expected gaps**
+- Settlement still fails (B1 — unfunded wallet). Anchors pending on chain for the same reason.
 - Projector legibility check belongs to Phase 7.
 
 ---
