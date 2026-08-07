@@ -1,6 +1,6 @@
 /**
- * Phase 4 end-to-end run: agent proposes, engine decides, settlement happens only if
- * the decision permits it.
+ * End-to-end run: agent proposes, engine decides, settlement happens only if the
+ * decision permits it, and every record is anchored once it reaches its terminal state.
  *
  * Usage:
  *   npm run demo                 all three Bible Section 9 scenarios
@@ -9,9 +9,10 @@
  */
 import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
+import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool } from "@safr/db";
-import { createAuditPort } from "../audit.js";
+import { createAuditLog } from "../audit.js";
 import { createAutoEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator, type Scenario } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
@@ -51,6 +52,9 @@ function describe(outcome: Outcome): string {
   return lines.join("\n");
 }
 
+// One audit log for the whole run, so all anchors share a single queue to drain.
+const auditLog = createAuditLog();
+
 async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
   const generator = createIntentGenerator();
   const action = await generator.propose(scenario, AGENT_ID);
@@ -63,7 +67,7 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
 
   const outcome = await runAction(action, {
     controls: { loadEvaluationContext },
-    audit: createAuditPort(),
+    audit: auditLog,
     escalations: createAutoEscalationPort(denyEscalation ? "denied" : "approved"),
     // A factory, so on DENY the settlement module is never even constructed.
     settlement: createSettlementPort,
@@ -73,8 +77,34 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
   return outcome;
 }
 
+/**
+ * Reports each record's anchor after the run.
+ *
+ * Printed separately from the scenario output on purpose: anchoring happens after the
+ * disposition has already been returned, which is exactly the property Architecture
+ * 6.1 requires. The digests below are present whether or not the chain was reachable.
+ */
+async function reportAnchors(outcomes: Outcome[]): Promise<void> {
+  await auditLog.anchors.drain();
+
+  console.log("\nAudit anchors");
+  for (const outcome of outcomes) {
+    if (!outcome.audit) continue;
+    const anchor = await getAnchor(outcome.audit.audit_id);
+    if (!anchor) {
+      console.log(`  ${outcome.audit.audit_id}  no anchor row`);
+      continue;
+    }
+    const onChain =
+      anchor.status === "anchored" ? anchor.anchor_tx_hash : `not on chain (${anchor.status})`;
+    console.log(`  ${anchor.audit_id}  ${anchor.record_hash.slice(0, 18)}…  ${onChain}`);
+  }
+  console.log("\n  Verify with: npm run audit:verify");
+}
+
 async function main(): Promise<void> {
   const keys = selected.length > 0 ? selected : Object.keys(SCENARIOS);
+  const outcomes: Outcome[] = [];
 
   for (const key of keys) {
     const scenario = SCENARIOS[key];
@@ -83,12 +113,15 @@ async function main(): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    await runScenario(key, scenario);
+    outcomes.push(await runScenario(key, scenario));
   }
 
+  await reportAnchors(outcomes);
+
   console.log(
-    "\nNote: a failed settlement on the ALLOW path is expected until the payer wallet is\n" +
-      "funded (Memory.md blocker B1). The disposition path above is unaffected by it.\n",
+    "\nNote: a failed settlement on the ALLOW path, and anchors that are not yet on chain,\n" +
+      "are both expected until the payer wallet is funded (Memory.md blocker B1). Neither\n" +
+      "affects the disposition path above.\n",
   );
 }
 

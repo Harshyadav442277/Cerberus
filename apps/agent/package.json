@@ -12,6 +12,7 @@
     "demo": "tsx src/cli/run.ts"
   },
   "dependencies": {
+    "@safr/audit-log": "workspace:*",
     "@safr/controls-repository": "workspace:*",
     "@safr/core": "workspace:*",
     "@safr/db": "workspace:*",

@@ -111,6 +111,7 @@ export interface AuditSpy extends AuditPort {
   records: AuditLogRecord[];
   humanReviews: Array<{ auditId: string; review: HumanReview }>;
   settlements: Array<{ auditId: string; settlement: Settlement }>;
+  finalized: string[];
 }
 
 export function auditSpy(): AuditSpy {
@@ -118,6 +119,7 @@ export function auditSpy(): AuditSpy {
     records: [],
     humanReviews: [],
     settlements: [],
+    finalized: [],
     async record(
       proposedAction: ProposedAction,
       mandate: Mandate,
@@ -144,6 +146,10 @@ export function auditSpy(): AuditSpy {
     },
     async recordSettlement(auditId: string, settlement: Settlement): Promise<void> {
       spy.settlements.push({ auditId, settlement });
+    },
+    async finalize(auditId: string): Promise<`0x${string}` | null> {
+      spy.finalized.push(auditId);
+      return "0xabc";
     },
   };
   return spy;

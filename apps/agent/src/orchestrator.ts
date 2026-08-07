@@ -76,6 +76,7 @@ export async function runAction(
   const audit = await deps.audit.record(action, mandate, disposition);
 
   if (disposition.disposition === "DENY") {
+    await deps.audit.finalize(audit.audit_id);
     return { ...base, status: "denied", disposition, audit };
   }
 
@@ -90,6 +91,7 @@ export async function runAction(
     await deps.audit.recordHumanReview(audit.audit_id, humanReview);
 
     if (humanReview.decision !== "approved") {
+      await deps.audit.finalize(audit.audit_id);
       return { ...base, status: "escalation_denied", disposition, audit, humanReview };
     }
   }
@@ -97,6 +99,7 @@ export async function runAction(
   // Reachable only on ALLOW, or ESCALATE that a human approved.
   const settlement = await deps.settlement().pay(action);
   await deps.audit.recordSettlement(audit.audit_id, settlement);
+  await deps.audit.finalize(audit.audit_id);
 
   return {
     ...base,

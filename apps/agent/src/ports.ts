@@ -40,4 +40,10 @@ export interface AuditPort {
   ): Promise<AuditLogRecord>;
   recordHumanReview(auditId: string, review: HumanReview): Promise<void>;
   recordSettlement(auditId: string, settlement: import("@safr/core").Settlement): Promise<void>;
+  /**
+   * Anchors the record once it can no longer change. Called at every terminal point,
+   * so a DENY is anchored just as an ALLOW is. Must never throw — anchoring cannot be
+   * allowed to affect a disposition (Architecture 6.1).
+   */
+  finalize(auditId: string): Promise<`0x${string}` | null>;
 }
