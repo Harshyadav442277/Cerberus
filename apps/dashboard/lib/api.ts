@@ -8,14 +8,28 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface SpendSummary {
+  agent_id: string;
+  rolling_total_24h: number;
+  max_total: number | null;
+  currency: string;
+}
+
 export function fetchFeed() {
-  return getJson<{ items: FeedItem[]; counts: Record<string, number> }>("/audit");
+  return getJson<{
+    items: FeedItem[];
+    counts: Record<string, number>;
+    spend: SpendSummary;
+  }>("/audit");
 }
 
 export function fetchAudit(auditId: string) {
-  return getJson<{ record: FeedItem["record"]; action: FeedItem["action"]; anchor: FeedItem["anchor"] }>(
-    `/audit/${auditId}`,
-  );
+  return getJson<{
+    record: FeedItem["record"];
+    action: FeedItem["action"];
+    anchor: FeedItem["anchor"];
+    mandate: Record<string, unknown> | null;
+  }>(`/audit/${auditId}`);
 }
 
 export function fetchEscalations() {
