@@ -18,4 +18,5 @@ export {
 } from "./repository.js";
 export type { AuditFeedItem } from "./repository.js";
 export { SEED_AGENT, SEED_MANDATE } from "./seed-data.js";
+export { resetDemoState } from "./reset-demo.js";
 export { appliedMigrations, listMigrations, migrateDown, migrateUp } from "./migrator.js";
