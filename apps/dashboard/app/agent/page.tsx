@@ -44,8 +44,11 @@ export default async function AgentPage() {
             <span className="font-mono text-[12px]">{String(agent.agent_id)}</span>
           </FieldRow>
           <FieldRow name="display_name">{String(agent.display_name)}</FieldRow>
-          <FieldRow name="owner_id">
-            <span className="font-mono text-[12px]">{String(agent.owner_id)}</span>
+          <FieldRow name="owner_org">
+            <span className="font-mono text-[12px]">{String(agent.owner_org)}</span>
+          </FieldRow>
+          <FieldRow name="wallet_address">
+            <span className="font-mono text-[12px]">{String(agent.wallet_address)}</span>
           </FieldRow>
           <FieldRow name="status">{String(agent.status)}</FieldRow>
           <FieldRow name="created_at">
@@ -60,10 +63,7 @@ export default async function AgentPage() {
                 {counters.rolling_total_24h.toFixed(2)} / {maxTotal.toFixed(2)} USDC
               </span>
               <div className="mt-2 h-1.5 w-64 overflow-hidden rounded-[2px] bg-border">
-                <div
-                  className="h-full bg-accent"
-                  style={{ width: `${pct}%` }}
-                />
+                <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
               </div>
             </div>
           </FieldRow>
