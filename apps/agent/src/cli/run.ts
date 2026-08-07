@@ -6,6 +6,8 @@
  *   npm run demo                 all three Bible Section 9 scenarios
  *   npm run demo -- clean        one scenario: clean | cap_breach | new_counterparty
  *   npm run demo -- --deny-escalation   reviewer rejects instead of approving
+ *   npm run demo -- new_counterparty --live-escalation
+ *       wait for Approve/Deny from the dashboard API (Phase 6)
  */
 import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
@@ -13,7 +15,7 @@ import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool } from "@safr/db";
 import { createAuditLog } from "../audit.js";
-import { createAutoEscalationPort } from "../escalations.js";
+import { createAutoEscalationPort, createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator, type Scenario } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
 import { createSettlementPort } from "../settlement/index.js";
@@ -24,6 +26,8 @@ const AGENT_ID = "agent_treasury_01";
 
 const args = process.argv.slice(2);
 const denyEscalation = args.includes("--deny-escalation");
+/** Wait for a real dashboard approval instead of auto-deciding (Phase 6). */
+const liveEscalation = args.includes("--live-escalation");
 const selected = args.filter((arg) => !arg.startsWith("--"));
 
 function describe(outcome: Outcome): string {
@@ -68,7 +72,9 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
   const outcome = await runAction(action, {
     controls: { loadEvaluationContext },
     audit: auditLog,
-    escalations: createAutoEscalationPort(denyEscalation ? "denied" : "approved"),
+    escalations: liveEscalation
+      ? createDbEscalationPort()
+      : createAutoEscalationPort(denyEscalation ? "denied" : "approved"),
     // A factory, so on DENY the settlement module is never even constructed.
     settlement: createSettlementPort,
   });

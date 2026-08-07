@@ -201,3 +201,113 @@ export async function updateAuditHumanReview(
     JSON.stringify(humanReview),
   ]);
 }
+
+/** Feed row for the dashboard: §7.5 record + the proposal that produced it. */
+export interface AuditFeedItem {
+  record: AuditLogRecord;
+  action: ProposedAction;
+}
+
+/**
+ * Newest-first audit feed for the dashboard.
+ *
+ * When `since` is set, only rows evaluated strictly after that timestamp are
+ * returned — the live poll / SSE cursor. Cap keeps a projector-friendly page size.
+ */
+export async function listAuditFeed(options: {
+  limit?: number;
+  since?: string;
+} = {}): Promise<AuditFeedItem[]> {
+  const limit = options.limit ?? 100;
+  const params: unknown[] = [limit];
+  let sinceClause = "";
+  if (options.since) {
+    params.push(options.since);
+    sinceClause = `AND a.evaluated_at > $2`;
+  }
+
+  const { rows } = await getPool().query(
+    `SELECT
+       a.audit_id, a.action_id, a.agent_id, a.mandate_id, a.mandate_version,
+       a.disposition, a.reason, a.rule_triggered, a.evaluated_at,
+       a.human_review, a.settlement,
+       p.action_type, p.proposed_at, p.payload
+     FROM audit_log a
+     JOIN proposed_action p ON p.action_id = a.action_id
+     WHERE TRUE ${sinceClause}
+     ORDER BY a.evaluated_at DESC
+     LIMIT $1`,
+    params,
+  );
+
+  return rows.map((row) => ({
+    record: AuditLogRecordSchema.parse(row),
+    action: ProposedActionSchema.parse({
+      action_id: row.action_id,
+      agent_id: row.agent_id,
+      action_type: row.action_type,
+      proposed_at: row.proposed_at,
+      payload: row.payload,
+    }),
+  }));
+}
+
+export async function getProposedAction(actionId: string): Promise<ProposedAction | null> {
+  const { rows } = await getPool().query(
+    `SELECT action_id, agent_id, action_type, proposed_at, payload
+       FROM proposed_action WHERE action_id = $1`,
+    [actionId],
+  );
+  return rows[0] ? ProposedActionSchema.parse(rows[0]) : null;
+}
+
+/** Escalations waiting on a human — disposition ESCALATE and no human_review yet. */
+export async function listPendingEscalations(): Promise<AuditFeedItem[]> {
+  const { rows } = await getPool().query(
+    `SELECT
+       a.audit_id, a.action_id, a.agent_id, a.mandate_id, a.mandate_version,
+       a.disposition, a.reason, a.rule_triggered, a.evaluated_at,
+       a.human_review, a.settlement,
+       p.action_type, p.proposed_at, p.payload
+     FROM audit_log a
+     JOIN proposed_action p ON p.action_id = a.action_id
+     WHERE a.disposition = 'ESCALATE' AND a.human_review IS NULL
+     ORDER BY a.evaluated_at DESC`,
+  );
+
+  return rows.map((row) => ({
+    record: AuditLogRecordSchema.parse(row),
+    action: ProposedActionSchema.parse({
+      action_id: row.action_id,
+      agent_id: row.agent_id,
+      action_type: row.action_type,
+      proposed_at: row.proposed_at,
+      payload: row.payload,
+    }),
+  }));
+}
+
+/**
+ * Looks up the audit row for an action. Used by the dashboard decision endpoint and
+ * by the agent's DB-backed escalation wait (Phase 6).
+ */
+export async function getAuditLogRecordByActionId(
+  actionId: string,
+): Promise<AuditLogRecord | null> {
+  const { rows } = await getPool().query(
+    `SELECT ${AUDIT_COLUMNS} FROM audit_log WHERE action_id = $1
+     ORDER BY evaluated_at DESC LIMIT 1`,
+    [actionId],
+  );
+  return rows[0] ? AuditLogRecordSchema.parse(rows[0]) : null;
+}
+
+/** Counts by disposition — the summary strip on the Audit Log screen. */
+export async function countByDisposition(): Promise<Record<string, number>> {
+  const { rows } = await getPool().query<{ disposition: string; n: string }>(
+    `SELECT disposition, COUNT(*)::text AS n FROM audit_log GROUP BY disposition`,
+  );
+  const out: Record<string, number> = { ALLOW: 0, DENY: 0, ESCALATE: 0, OBSERVE: 0 };
+  for (const row of rows) out[row.disposition] = Number(row.n);
+  return out;
+}

@@ -1,5 +1,9 @@
 export { createAuditPort } from "./audit.js";
-export { createAutoEscalationPort, createEscalationRegistry } from "./escalations.js";
+export {
+  createAutoEscalationPort,
+  createDbEscalationPort,
+  createEscalationRegistry,
+} from "./escalations.js";
 export type { EscalationRegistry } from "./escalations.js";
 export {
   SCENARIOS,

@@ -67,3 +67,36 @@ export function createAutoEscalationPort(
     },
   };
 }
+
+/**
+ * Waits for a human decision written through the dashboard API.
+ *
+ * The agent and the API are separate processes, so the in-memory registry cannot
+ * carry the decision. The API writes `human_review` onto the audit row; this port
+ * polls that row until it appears. The orchestrator still calls `recordHumanReview`
+ * afterwards — an idempotent overwrite of the same JSON.
+ */
+export function createDbEscalationPort(options: {
+  pollMs?: number;
+  timeoutMs?: number;
+} = {}): EscalationPort {
+  const pollMs = options.pollMs ?? 250;
+  const timeoutMs = options.timeoutMs ?? 10 * 60 * 1000;
+
+  return {
+    async awaitDecision(actionId: string): Promise<HumanReview> {
+      const { getAuditLogRecordByActionId } = await import("@safr/db");
+      const deadline = Date.now() + timeoutMs;
+
+      while (Date.now() < deadline) {
+        const record = await getAuditLogRecordByActionId(actionId);
+        if (record?.human_review) return record.human_review;
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+      }
+
+      throw new Error(
+        `Timed out waiting for human review on ${actionId}. Approve or deny it from the dashboard.`,
+      );
+    },
+  };
+}
