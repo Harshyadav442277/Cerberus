@@ -17,8 +17,11 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
 - **Phase 6:** **DoD met (verified Aug 7).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted. `npm test` 87/87.
 - **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
+- **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
 - **Next concrete step:** Phase 9 architecture diagram (mandatory Stage 1 material) and/or Phase 8 backup demo video. Independently: fund the payer wallet — that alone closes Phase 1, remaining Phase 5, and the settlement half of Phase 7.
+
+**Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
 `npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
@@ -57,6 +60,19 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 7 — Review hardening (atomic escalation, pay throw path, dashboard §7.1 / Design gaps)
+
+**Fixed**
+1. `claimAuditHumanReview` — `UPDATE … WHERE human_review IS NULL`; API returns 409 on lost race / double-click.
+2. Orchestrator — thrown `pay()` becomes `{status:"failed"}`; settlement write + `finalize` always run.
+3. Agent page — `owner_org` + `wallet_address` (Bible §7.1).
+4. Drill-down — threshold vs actual from pinned mandate version (scenario 2: `1` / `proposed 5`).
+5. Audit Log summary — live `rolling_total_24h / max_total` strip (Design §5.1).
+
+**Left alone (demo-safe):** rolling_window.window parse, evaluate→settle locking, overnight time windows, API auth, facilitator probe, SSE-only settlement push.
+
+---
 
 ### Aug 7 — Phase 7: Section 9 demo script + reset (disposition DoD met thrice; settlement blocked by B1)
 
