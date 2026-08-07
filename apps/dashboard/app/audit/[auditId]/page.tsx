@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DispositionBadge } from "@/components/DispositionBadge";
 import { FieldRow, Section } from "@/components/FieldRow";
 import { explorerTx, fetchAudit, shortHash } from "@/lib/api";
+import { thresholdVsActual } from "@/lib/threshold";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,15 @@ export default async function AuditDrillDownPage({
     );
   }
 
-  const { record, action, anchor } = data;
+  const { record, action, anchor, mandate } = data;
+  const comparison = thresholdVsActual(
+    record.rule_triggered,
+    mandate as {
+      scope?: { action_types?: string[]; currencies?: string[] };
+      controls?: Record<string, unknown>;
+    } | null,
+    action?.payload ?? null,
+  );
 
   return (
     <div className="px-6 py-6">
@@ -108,6 +117,23 @@ export default async function AuditDrillDownPage({
               v{record.mandate_version}
             </span>
           </FieldRow>
+          {comparison ? (
+            <>
+              <FieldRow name="control_evaluated">
+                <span className="font-mono text-[12px]">{comparison.control}</span>
+              </FieldRow>
+              <FieldRow name="threshold">
+                <span className="font-mono text-[12px]">{comparison.threshold}</span>
+              </FieldRow>
+              <FieldRow name="actual">
+                <span className="font-mono text-[12px]">{comparison.actual}</span>
+              </FieldRow>
+            </>
+          ) : (
+            <FieldRow name="control_evaluated">
+              <span className="text-faint">none — clean ALLOW</span>
+            </FieldRow>
+          )}
         </Section>
 
         <Section title="Human Review">
@@ -189,7 +215,7 @@ export default async function AuditDrillDownPage({
             View raw JSON
           </summary>
           <pre className="mt-3 overflow-auto font-mono text-[11px] text-ink">
-            {JSON.stringify({ record, action, anchor }, null, 2)}
+            {JSON.stringify({ record, action, anchor, mandate }, null, 2)}
           </pre>
         </details>
       </div>
