@@ -8,6 +8,8 @@ An agent proposes a payment. The system evaluates it against a programmable **ma
 
 **NTU InnovateX Hackathon 2026 — Track 1: Payments and Financial Infrastructure.**
 
+![SAFR Runtime pre-execution architecture](docs/assets/safr-architecture-slide.png)
+
 ## Documents
 
 Read in this order. The Bible is the source of truth and overrides everything else.

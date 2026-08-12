@@ -22,3 +22,8 @@ coverage/
 
 # Local Postgres volume if bind-mounted
 pgdata/
+
+# Local crash dumps and quarantined build artifacts
+core
+core.*
+.local-trash/

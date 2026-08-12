@@ -17,9 +17,10 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
 - **Phase 6:** **DoD met (verified Aug 7).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted. `npm test` 87/87.
 - **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
+- **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** Phase 9 architecture diagram (mandatory Stage 1 material) and/or Phase 8 backup demo video. Independently: fund the payer wallet — that alone closes Phase 1, remaining Phase 5, and the settlement half of Phase 7.
+- **Next concrete step:** Phase 8 backup demo video and Phase 10 submission draft. Independently: fund the payer wallet — that alone closes Phase 1, remaining Phase 5, and the settlement half of Phase 7.
 
 **Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
@@ -60,6 +61,18 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 13 — repository recovery and Phase 9 architecture asset
+
+**Recovered:** eight tracked files that had become zero-byte local files were restored exactly from intact `HEAD` (`59bc765`); `main` and `origin/main` were already identical, so no source code was missing from GitHub.
+
+**Published asset prepared:** selected the enterprise-style 16:9 architecture slide, embedded it in the README, and ignored `core`, `core.*`, and `.local-trash/`. Empty placeholder files, duplicate artwork, and seven crash dumps were moved into the ignored `.local-trash/2026-08-13-prepush/` quarantine; none are part of the repository.
+
+**Verified:** `npm run typecheck` clean; `npm test` **91/91**; `npm run build --prefix apps/dashboard` clean. A prior 92-test result included an empty untracked `feed.test.ts` and was not the canonical suite count.
+
+**Next:** record Phase 8 demo video, complete Phase 10 submission, and resolve B1 for explorer-verifiable settlement/anchor evidence.
+
+---
 
 ### Aug 7 — Review hardening (atomic escalation, pay throw path, dashboard §7.1 / Design gaps)
 
