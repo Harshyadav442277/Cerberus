@@ -12,21 +12,26 @@ optional on-chain evidence lands — see `EVIDENCE.md` for what to paste where.
 ## 1. Project title
 
 ```
-SAFR Runtime — a pre-execution governance gate for agent-initiated payments
+Cerberus — a pre-execution governance gate for agent-initiated payments
 ```
 
 Short form if the field is length-limited:
 
 ```
-SAFR Runtime
+Cerberus
 ```
+
+**Naming convention — keep it consistent everywhere.** Cerberus is the product;
+SAFR Runtime is the governance pattern it implements. Write "Cerberus implements the
+pattern SAFR describes", never "Cerberus is SAFR". The three heads map to the three
+dispositions: ALLOW, DENY, ESCALATE.
 
 ## 2. Short description (tagline)
 
 ```
-A runtime governance checkpoint that evaluates an AI agent's proposed stablecoin
-payment against a machine-readable mandate and resolves it to ALLOW, DENY, or
-ESCALATE — before the payment is ever constructed.
+Cerberus is a runtime governance checkpoint that evaluates an AI agent's proposed
+stablecoin payment against a machine-readable mandate and resolves it to ALLOW, DENY,
+or ESCALATE — before the payment is ever constructed.
 ```
 
 ## 3. Selected track
@@ -100,9 +105,10 @@ rail, where the enforcement can actually be inspected rather than asserted.
 ## 8. Solution overview
 
 ```
-SAFR Runtime implements SAFR's four runtime components as working middleware in front
-of a live stablecoin payment rail, for SAFR's first applied domain: agent-assisted
-payments and treasury operations.
+Cerberus implements SAFR's four runtime components as working middleware in front of a
+live stablecoin payment rail, for SAFR's first applied domain: agent-assisted payments
+and treasury operations. It is named for the three-headed guardian of a boundary that
+cannot be crossed unchecked — the three heads are the three dispositions.
 
 An AI agent proposes a payment as a structured Proposed Action. Before any payment
 object exists, that proposal is evaluated against a versioned, machine-readable
@@ -277,6 +283,10 @@ easy, avoidable errors:
   narrate over the gap.
 - **Do not claim domains outside payments and treasury.** SAFR describes several; this
   implements one.
+- **Do not let the mythology do the technical talking.** The Cerberus framing is a
+  memorable name for a real three-outcome design, not an argument. Judges score the
+  implementation; lead with the pre-execution gate and the enforcement test, and let
+  the name be a label.
 - **Do not claim production-readiness.** Known limitations, stated plainly if asked:
   concurrent evaluate→settle is not locked (the sequential demo path is unaffected);
   the rolling-window period is fixed at 24 hours matching the seeded mandate;

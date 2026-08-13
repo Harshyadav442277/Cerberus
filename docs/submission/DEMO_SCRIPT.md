@@ -1,4 +1,4 @@
-# Demo video — narration script and recording plan
+# Cerberus — demo video narration script and recording plan
 
 Target length **100 seconds** (inside the 90–120s window). Written to be read aloud at
 a normal pace; the timings assume roughly 150 words per minute.

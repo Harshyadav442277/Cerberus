@@ -1,4 +1,4 @@
-# Operator runbook — cold start to judged demo
+# Cerberus — operator runbook, cold start to judged demo
 
 Everything needed to take this machine from powered-off to a running demo, and the
 recovery steps for the failures actually hit during setup.
@@ -140,11 +140,16 @@ not a scripted pause.
 
 Everything above works without funding. Settlement does not.
 
-**Payer address (fund this one):**
+**Payer address on this machine (fund this one):**
 
 ```
 0x8cD0592123215f5510A5a0774323c765b9DA34e7
 ```
+
+> A second machine was rebuilt the same day with its own payer
+> (`0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`). Private keys live only in each
+> machine's gitignored `.env`, so funding one does not help the other. Pick the
+> machine that will record the demo and fund only that wallet.
 
 It needs two things on **Base Sepolia**:
 

@@ -1,4 +1,4 @@
-# Evidence manifest
+# Cerberus — evidence manifest
 
 What has actually been produced, what it proves, and what is still outstanding.
 Captured 13 August 2026 against the rebuilt local environment.
@@ -61,7 +61,14 @@ reproducible on demand. It proves the gate is cross-process, not an in-memory pa
 These cannot be produced until the payer address holds Base Sepolia ETH and USDC.
 See `RUNBOOK.md` section 4.
 
-**Payer address:** `0x8cD0592123215f5510A5a0774323c765b9DA34e7`
+**Payer address on this machine:** `0x8cD0592123215f5510A5a0774323c765b9DA34e7`
+
+> **Two payer wallets exist.** A second machine was rebuilt the same day with its own
+> keypair (`0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`). `.env` is gitignored, so
+> each machine's private key never left it — a wallet funded on one machine cannot
+> settle from the other. **Decide which machine records the demo, fund only that
+> wallet, and produce all on-chain evidence there.** Splitting the faucet allowance
+> across both leaves neither able to complete a run. See `docs/Memory.md` B1.
 
 | Evidence | Command once funded | Paste result into |
 |---|---|---|
