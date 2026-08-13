@@ -9,6 +9,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 
 ## Current state at a glance
 
+- **Project name:** **CERBERUS** (corrected spelling locked by the project owner on Aug 13), named for the three-headed guardian of Hades. The three heads map to ALLOW, DENY, and ESCALATE; SAFR Runtime remains the technical description.
 - **Phase 0:** complete except the funded-wallet check (blocked by B1).
 - **Phase 1:** code complete and verified up to the funding boundary. Definition of Done **not met** — needs a funded wallet. See B1.
 - **Phase 2:** **complete.** DoD met and verified by `npm run db:verify` (13/13 checks).
@@ -20,7 +21,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** Phase 8 backup demo video and Phase 10 submission draft. Independently: fund the payer wallet — that alone closes Phase 1, remaining Phase 5, and the settlement half of Phase 7.
+- **Next concrete step:** fund the dedicated payer `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824` with Base Sepolia ETH + USDC, then run `npm run phase1:preflight` and `npm run phase1`. In parallel: Phase 8 backup demo video and Phase 10 submission draft.
 
 **Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
@@ -37,8 +38,8 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 ## Blockers
 
 **B1 — No funded Base Sepolia wallet. Blocks the Phase 1 DoD.**
-`.env` currently holds a **throwaway, unfunded** keypair generated during Phase 1 purely to exercise the code path (`0x8A74081BCa3EEB7Ec50CA23EC80EF42565F54A36`). It holds nothing on any network.
-What is needed: replace `EVM_PRIVATE_KEY` (payer) and `EVM_ADDRESS` (merchant payee) in `.env` with the team's real wallet, fund the payer with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and a little Sepolia ETH for gas.
+`.env` now holds two fresh **testnet-only** identities generated on Aug 13. Payer: `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`; separate merchant payee: `0xf56e3F3134879156e11EAff78978a270726B661b`. Their private keys remain only in the gitignored, mode-600 `.env`; never send real assets to either wallet.
+What is needed: fund the payer with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and Base Sepolia ETH for gas. Aug 13 preflight confirms both balances are zero; every other preflight check passes.
 The full payment path is already proven correct except funding (see the Phase 1 entry below).
 
 **B1 also blocks two Phase 5 DoD items** (added Aug 7): deploying `AuditAnchor.sol` and writing anchors both need Sepolia ETH for gas. Digests are computed and stored regardless, so funding the wallet and running `npm run contracts:deploy` is the only remaining work — no code changes. Same rule applies: the submission must not claim records are anchored on chain until one actually is.
@@ -61,6 +62,18 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 13 — local runtime environment restored
+
+**Built:** recreated the corrupted one-byte `.env` from `.env.example` with dedicated, separate testnet-only payer and merchant identities. `.env` is gitignored and mode 600; no private key was printed or placed in tracked files.
+
+**Working:** Postgres is healthy on `:5544`; migrations current; seed loaded; `db:verify` 13/13. Merchant `:4021`, API `:4050`, and dashboard `:3000` are running and respond successfully. Merchant returns a real HTTP 402 challenge; API returns the new agent identity, zero counters, and active mandate. x402 facilitator and Base Sepolia RPC are reachable.
+
+**Blocked:** preflight fails only on external balances: payer has 0 Base Sepolia ETH and 0 Base Sepolia USDC. `audit_anchor_configured=false` until the funded payer deploys `AuditAnchor`.
+
+**Next:** fund payer `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`, rerun preflight, then execute the bare Phase 1 settlement.
+
+---
 
 ### Aug 13 — repository recovery and Phase 9 architecture asset
 

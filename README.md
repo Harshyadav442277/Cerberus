@@ -1,14 +1,44 @@
-# SAFR Runtime
+# CERBERUS
 
-Middleware + dashboard that enforces MAS's **SAFR** (Safeguards for Agentic Finance at Runtime) governance pattern in real time, gating an AI agent's stablecoin payments **before** they execute.
+### The three-headed guardian of agentic payments
 
-An agent proposes a payment. The system evaluates it against a programmable **mandate** (spend caps, counterparty allowlist, time windows, velocity limits) held in the **controls repository**, then issues a **disposition** — `ALLOW`, `DENY`, or `ESCALATE`. The payment only settles over the **x402** protocol if it is allowed, or escalated and then approved by a human. Every proposal and decision is written to an audit log a compliance officer could query.
+Cerberus is a pre-execution governance runtime and compliance dashboard for payment-capable AI agents. It gives every proposed payment one of three deterministic dispositions — **ALLOW**, **DENY**, or **ESCALATE** — before an x402 payment request can exist.
+
+In Greek mythology, Cerberus guards a boundary that cannot be crossed unchecked. Here, its three heads represent the three possible outcomes at the boundary between an AI agent's intent and financial execution:
+
+- **ALLOW** — the action is within mandate and may proceed to x402 settlement.
+- **DENY** — a hard control is breached; no payment request is constructed.
+- **ESCALATE** — the action is held until a human reviewer approves or denies it.
+
+An agent proposes a payment. Cerberus evaluates it against a versioned **mandate** — spend caps, permitted currencies, counterparty policy, time windows, and velocity limits — held in the **controls repository**. Every proposal, disposition, triggered rule, human review, and settlement result is written to an audit log a compliance officer can inspect.
+
+The LLM may generate a payment intent. It never makes the compliance decision. The **Disposition Engine is pure, deterministic, rule-based, and reproducible**.
 
 > SAFR is an industry white paper (Version 1.0) published by the Monetary Authority of Singapore under its BuildFin.ai initiative on July 3, 2026. It is **explicitly non-binding** — MAS states it does not constitute regulatory guidance or supervisory expectations. This project implements only SAFR's first applied domain, agent-assisted payments and treasury operations.
 
 **NTU InnovateX Hackathon 2026 — Track 1: Payments and Financial Infrastructure.**
 
-![SAFR Runtime pre-execution architecture](docs/assets/safr-architecture-slide.png)
+![Cerberus pre-execution architecture implementing the SAFR runtime pattern](docs/assets/safr-architecture-slide.png)
+
+*Cerberus is the product; SAFR Runtime is the governance pattern it implements.*
+
+## Why it matters
+
+A signing key proves that an agent **can** move money. It does not prove that a particular payment is within the institution's authority, risk limits, or operating mandate.
+
+Cerberus places that missing control point before execution. Clear violations are denied immediately. Ambiguous but potentially legitimate actions are escalated for human judgment. Allowed actions continue to the settlement rail. Every outcome leaves evidence.
+
+## What is working
+
+- All three dispositions run end to end: `ALLOW`, `DENY`, and `ESCALATE`.
+- `DENY` is proven to stop execution before the x402 client is constructed.
+- `ESCALATE` suspends the agent and resumes only after a human decision.
+- The controls repository enforces versioned mandates and rolling counters.
+- The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
+- Terminal audit records are canonically hashed; optional Base Sepolia anchoring is asynchronous and non-blocking.
+- **91 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+
+Live settlement and on-chain anchor claims remain conditional on a funded Base Sepolia testnet wallet; the repository does not represent an unfunded attempt as a completed transaction.
 
 ## Documents
 
@@ -77,7 +107,7 @@ npm run phase1
 [sepolia.basescan.org](https://sepolia.basescan.org). `phase1:preflight` reports
 exactly which prerequisite is missing if it cannot.
 
-## The demo
+## The three-headed demo
 
 The three scenarios from Bible Section 9, end to end.
 
@@ -105,9 +135,10 @@ Scenario 2 — cap breach   [cap_breach]
 
 Every disposition is written to Postgres as a Bible Section 7.5 record — a refusal is
 recorded exactly as carefully as an approval. Once a record reaches its terminal
-state, `keccak256` of its canonical JSON is anchored to
-[`AuditAnchor.sol`](contracts/AuditAnchor.sol) on Base Sepolia. Only the digest goes
-on chain; the record itself never leaves the database.
+state, Cerberus computes `keccak256` of its canonical JSON. When anchoring is
+configured, that digest is written to [`AuditAnchor.sol`](contracts/AuditAnchor.sol)
+on Base Sepolia. Only the digest goes on chain; the record itself never leaves the
+database.
 
 ```bash
 npm run audit:verify        # re-hash every stored record, compare to its anchor
@@ -133,7 +164,7 @@ npm run contracts:deploy    # prints the address for AUDIT_ANCHOR_ADDRESS in .en
 Without `AUDIT_ANCHOR_ADDRESS` set, records still get digests and stay verifiable —
 they simply sit at `pending` until anchoring is configured.
 
-## Compliance dashboard
+## Cerberus compliance dashboard
 
 ```bash
 # Terminal 1 — API (audit feed + escalation decisions)
