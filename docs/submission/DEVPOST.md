@@ -256,8 +256,19 @@ submission text.
 ## 15. Links
 
 ```
-GitHub repository:  [TEAM — paste the public repo URL]
+GitHub repository:  https://github.com/Harshyadav442277/Cerberus
 Demo video:         [paste after upload; must play without login — test in incognito]
+```
+
+Confirm the repository is **public** before submitting — a 404 on the repo link is a
+wasted judging criterion. The repo was renamed from `track-1` to `Cerberus`; GitHub
+redirects the old URL, but submit the new one.
+
+Local clones still pointing at the old name will keep working via the redirect. To
+update one:
+
+```bash
+git remote set-url origin https://github.com/Harshyadav442277/Cerberus.git
 ```
 
 ---
