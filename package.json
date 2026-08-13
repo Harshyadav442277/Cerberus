@@ -29,7 +29,8 @@
     "db:verify": "tsx packages/db/src/cli/verify.ts",
     "merchant": "tsx apps/merchant/src/server.ts",
     "phase1": "tsx packages/x402-client/scripts/phase1-pay.ts",
-    "phase1:preflight": "tsx packages/x402-client/scripts/preflight.ts"
+    "phase1:preflight": "tsx packages/x402-client/scripts/preflight.ts",
+    "wallets:new": "tsx packages/x402-client/scripts/gen-wallets.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
