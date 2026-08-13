@@ -16,12 +16,13 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
 - **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted.
 - **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
-- **Phase 6:** **DoD met (verified Aug 7).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted. `npm test` 87/87.
+- **Phase 6:** **DoD met (verified Aug 7, re-verified Aug 13).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted.
 - **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
-- **Deadline:** Fri Aug 14, 2026, 21:15 IST. Self-imposed submission target Aug 14, 12:00 IST.
-- **Next concrete step:** fund the dedicated payer `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824` with Base Sepolia ETH + USDC, then run `npm run phase1:preflight` and `npm run phase1`. In parallel: Phase 8 backup demo video and Phase 10 submission draft.
+- **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
+- **Test count:** **91/91** as of Aug 13. Historical entries below quoting 84/87 were correct when written.
+- **Next concrete step:** fund the payer wallet **on whichever machine will run the judged demo** — see B1, there are currently two — then record the Phase 8 video and complete the Phase 10 submission from `docs/submission/`.
 
 **Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
@@ -38,8 +39,18 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 ## Blockers
 
 **B1 — No funded Base Sepolia wallet. Blocks the Phase 1 DoD.**
-`.env` now holds two fresh **testnet-only** identities generated on Aug 13. Payer: `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`; separate merchant payee: `0xf56e3F3134879156e11EAff78978a270726B661b`. Their private keys remain only in the gitignored, mode-600 `.env`; never send real assets to either wallet.
-What is needed: fund the payer with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and Base Sepolia ETH for gas. Aug 13 preflight confirms both balances are zero; every other preflight check passes.
+**TWO payer wallets now exist — one per machine. Fund the one on the machine that will run the judged demo.** `.env` is gitignored, so each machine's private keys never left it and neither wallet can be used from the other machine.
+
+| Machine | Payer (fund this) | Payee | Generated |
+|---|---|---|---|
+| Rebuild machine (`npm run wallets:new`, Aug 13) | `0x8cD0592123215f5510A5a0774323c765b9DA34e7` | `0x3EE24C8af00b88828D17E390ed63Eb8A302208c2` | Aug 13 |
+| Earlier Aug 13 restore | `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824` | `0xf56e3F3134879156e11EAff78978a270726B661b` | Aug 13 |
+
+All four are throwaway testnet-only keys holding nothing on any network; none has ever touched mainnet. Never send real assets to any of them. The original Phase 1 keypair (`0x8A74…4A36`) is retired.
+
+What is needed: fund the chosen **payer** with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and a little Base Sepolia ETH for gas (https://www.alchemy.com/faucets/base-sepolia). No `.env` edit is required on either machine — the addresses are already in place. Budget ~4 USDC: each full demo run spends 1.25 (0.50 ALLOW + 0.75 approved ESCALATE).
+
+**Do not split the funding across both wallets.** Pick the demo machine first, fund only that one, and record the video there. Preflight on both machines currently reports zero ETH and zero USDC with every other check passing.
 The full payment path is already proven correct except funding (see the Phase 1 entry below).
 
 **B1 also blocks two Phase 5 DoD items** (added Aug 7): deploying `AuditAnchor.sol` and writing anchors both need Sepolia ETH for gas. Digests are computed and stored regardless, so funding the wallet and running `npm run contracts:deploy` is the only remaining work — no code changes. Same rule applies: the submission must not claim records are anchored on chain until one actually is.
@@ -63,7 +74,25 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 
 ## Log
 
-### Aug 13 — local runtime environment restored
+### Aug 13 (later) — second machine rebuilt; submission pack written
+
+**Note on the two Aug 13 entries.** This one and the entry below describe the same day on **two different machines**. Both are accurate. The consequence that matters is in B1: there are now two payer wallets and only the one whose private key is on the demo machine can settle. Pick the demo machine before funding anything.
+
+**Environment rebuilt.** `.env` recreated from `.env.example` with a fresh dedicated testnet keypair (new `npm run wallets:new` script). Schema migrated and seeded; `npm run db:verify` **13/13**. merchant `:4021`, API `:4050`, dashboard `:3000` all verified responding.
+
+**Postgres is no longer Docker on this machine.** Docker Desktop's Linux VM is broken here — the engine's init control API never responds, every `docker` command returns HTTP 500, and the WSL `docker-desktop` distro fails to mount (`getpwuid(0) failed`). A Docker Desktop restart and `wsl --shutdown` did not clear it. Repairing it needs a factory reset, which would destroy the unrelated containers on ports 5432/5433, so it was left alone. Postgres 18.6 was installed **user-locally via scoop** on the same port 5544 with the same role and database, so `DATABASE_URL` is unchanged and no application code knows the difference. `docker-compose.yml` is untouched and still correct on a working Docker host. Start/stop commands are in `docs/submission/RUNBOOK.md` §1.
+
+**Verified.** typecheck clean; `npm test` **91/91**; dashboard production build clean; `npm run demo:script -- --thrice` three consecutive clean runs; and a **live escalation end-to-end** — a real Approve click on the dashboard unblocked a separate agent process, `human_review` persisted, x402 reached.
+
+**Written.** `docs/submission/` — `DEVPOST.md` (paste-ready copy for every mandatory field, mapped to the published judging criteria, with prior-work and sponsor-tool disclosures that the earlier internal checklist omitted), `DEMO_SCRIPT.md` (100s narration, shot list, two settlement variants), `EVIDENCE.md` (manifest + slots for the on-chain hashes), `RUNBOOK.md` (cold start, failure modes). Seven dashboard evidence PNGs captured to `docs/assets/evidence/` via the new `scripts/capture-evidence.ps1`.
+
+**Corrected.** Deadline is **11:59 PM SGT / 21:29 IST**, from the organizer's rules text; the 21:15 IST figure came from the schedule banner. Test count reconciled to 91.
+
+**Still blocked:** B1 only. On this machine, fund `0x8cD0592123215f5510A5a0774323c765b9DA34e7`.
+
+---
+
+### Aug 13 — local runtime environment restored (first machine)
 
 **Built:** recreated the corrupted one-byte `.env` from `.env.example` with dedicated, separate testnet-only payer and merchant identities. `.env` is gitignored and mode 600; no private key was printed or placed in tracked files.
 

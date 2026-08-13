@@ -53,6 +53,8 @@ Read in this order. The Bible is the source of truth and overrides everything el
 | [Phases.md](docs/Phases.md) | Build phases with a Definition of Done each |
 | [Design.md](docs/Design.md) | Dashboard visual design |
 | [Memory.md](docs/Memory.md) | Working log: current state, decisions, blockers, next step |
+| [submission/RUNBOOK.md](docs/submission/RUNBOOK.md) | Cold start to judged demo, and the failure modes actually hit |
+| [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | What has been proven, how, and what is still outstanding |
 
 ## Stack
 
@@ -69,10 +71,14 @@ npx --yes pnpm@10.34.5 install
 
 # 2. Start Postgres (host port 5544 — 5432 is often already taken).
 npm run db:up
+#    No working Docker? Any Postgres 16+ on localhost:5544 with role `safr`
+#    and database `safr_runtime` works identically — see
+#    docs/submission/RUNBOOK.md section 1.
 
 # 3. Configure credentials.
 cp .env.example .env
-#    Set EVM_PRIVATE_KEY (payer) and EVM_ADDRESS (merchant payee).
+npm run wallets:new
+#    Paste the printed EVM_PRIVATE_KEY (payer) and EVM_ADDRESS (payee) into .env.
 #    Fund the payer with Base Sepolia USDC: https://faucet.circle.com
 #    and a little Sepolia ETH for gas.
 
