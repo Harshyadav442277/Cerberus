@@ -18,12 +18,15 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 5:** **complete.** `AuditAnchor` is deployed; two fresh supervised runs anchored all six terminal records, and final-run verification is 3/3.
 - **Phase 6:** **DoD met.** API + dashboard live; two real dashboard Approve clicks unblocked separate agent processes and both payments settled.
 - **Phase 7:** **complete.** The disposition path passed thrice, then two fresh supervised runs produced real ALLOW and approved-ESCALATE settlement hashes with DENY never constructing x402.
+- **Phase 8:** narration recorded; final visual edit not completed to publication standard and intentionally omitted. Non-blocking: the architecture diagram and verified evidence satisfy the Stage 1 supporting-material requirement.
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
+- **Phase 10:** repository-side technical copy and evidence are complete. Team identity and portal submission state are human-only and intentionally not inferred here.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
+- **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
 - **Test count:** **91/91**, re-verified Aug 14. Historical entries below quoting 84/87 were correct when written.
-- **Next concrete step:** record/upload the Phase 8 video, fill the human-only team fields, and submit Phase 10 using `docs/submission/`.
+- **Next concrete step:** finish the repository cleanup and verification pass; after that, only human-owned portal/team actions remain. No further product features are planned.
 
 **Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
@@ -33,9 +36,9 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 `npm run demo` / `demo:script` need `npm run merchant` running. `demo:script -- --thrice` is the Phase 7 DoD check. `demo -- --live-escalation` waits for a dashboard Approve.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 
-**Stack as resolved on this machine:** TypeScript/Node 24, pnpm 10 workspaces,
-user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**, Base
-Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
+**Stack as resolved on the Windows evidence machine:** TypeScript/Node 24, pnpm 10
+workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
+Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
 ---
 
@@ -49,19 +52,43 @@ runs settled and anchored successfully. Exact transaction hashes are in
 `docs/submission/EVIDENCE.md`. The other Aug 13 wallet remains unused; do not
 switch identities for the recorded demo.
 
-**B2 — No LLM API key.** Not yet blocking. First needed in Phase 4 for `apps/agent/src/intent-generator.ts`. Descope ladder item 2 replaces it with fixed fixtures if it does not arrive.
+**B2 — RESOLVED BY DESCOPE.** Judged runs use deterministic Proposed Action fixtures. The optional LLM intent path remains schema-validated but is not needed and never participates in the compliance decision.
 
 **B5 — RESOLVED (Aug 7).** The seeded `time_window` would have DENIED the demo on a weekend.
 Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally followed it exactly. Time window is check 4 in the Section 7.4 order, so on a Saturday or Sunday demo scenario 1 resolved to **DENY on rule `time_window`** instead of ALLOW — the engine behaving correctly, the demo looking broken. **Stage 2 judging is Aug 21-23, which spans Saturday Aug 22 and Sunday Aug 23.**
 **Resolution, confirmed by the project owner:** seeded `allowed_days` widened to all seven days. Seed-value change only, same category as B4 — no schema field names touched and the `time_window` rule is still fully enforced and unit-tested (two tests cover it, including a Saturday DENY). `npm run db:verify` still prints a WARNING if the seed is ever narrowed to exclude the current day.
 
-**B3 — Team details unknown.** Names, affiliations, Student Group vs. Public Group. Needed for the Stage 1 submission (Phase 10), not for the build. Student Group requires proof of status for every member — worth settling early.
+**B3 — EXTERNAL.** Names, affiliations, Student Group vs. Public Group, and portal submission state are human-only facts. They are not needed for the build and are intentionally not invented or stored in this repository.
 
 **B4 — RESOLVED (Aug 7).** Seed mandate uses faucet-sized values: `per_transaction_max: 1.00`, `rolling_window.max_total: 3.00`, clean demo payment `0.50`, cap-breach attempt `5.00`. Schema field names are exactly as Bible section 7.2 — only the numeric seed values differ from the Bible's illustrative `1000`/`500`/`3000`, because testnet faucets cannot fund those.
 
 ---
 
 ## Log
+
+### Aug 14 — README clone-to-reproduction walkthrough
+
+**Changed:** replaced the abbreviated setup block with a nine-step public walkthrough covering prerequisites, clone/install, environment creation, Postgres initialization, build verification, three service terminals, deterministic ALLOW/DENY/ESCALATE reproduction, the live human-review hold, funded x402 settlement, audit-anchor deployment, verification, expected outputs, and shutdown. The README explicitly separates the no-cost governance verification path from the testnet-funded settlement path and states that no LLM key is required.
+
+**Verified:** every documented command maps to an existing package script; expected counts match the final checks (91/91 tests, 13/13 database checks, six dashboard routes, 263-byte contract bytecode). Markdown formatting and local links pass.
+
+**Next:** no product code changed. The project owner approved publication as the second of two final commits to `main`.
+
+---
+
+### Aug 14 — final repository synchronization and cleanup
+
+**Synchronized:** fast-forwarded local `main` from `2026fbe` to origin commit `b16970f`, which publishes the verified Base Sepolia settlement, contract deployment, two supervised runs, anchor transactions, final dashboard captures, and updated evidence manifest.
+
+**Cleaned:** corrected final-state drift across README, Rules, PRD, Phases, demo script, Devpost copy, evidence manifest and runbook; recorded that the optional video visual edit was omitted; replaced Cloudflare-prone BaseScan links with equivalent Blockscout links; narrowed the root crash-dump ignore so it no longer masks `packages/core/`; ignored local video/PDF/temp outputs. The obsolete pre-rebrand `02-escalations.png` was moved recoverably to ignored `.local-trash/2026-08-14-final-cleanup/`; the final escalation drill-down and supervised-run manifest remain tracked.
+
+**Verified:** `npm test` 91/91; typecheck clean; dashboard production build clean; `AuditAnchor` compiles to 263-byte bytecode; `db:verify` 13/13; no tracked secret candidates; no missing local Markdown links; GitHub, MAS and Blockscout evidence URLs return HTTP 200. This Linux clone's current database re-hashes 3/3 records but has 0/3 anchor transaction hashes, so it is not the final evidence database snapshot; the public chain manifest and screenshots from the Windows evidence machine are the durable evidence.
+
+**Publication:** the project owner approved publishing the cleanup and README work to `main` as two deliberate commits on 14 August 2026.
+
+**Next:** no further product code is planned. Only human-owned portal/team actions remain unless the project advances to Stage 2.
+
+---
 
 ### Aug 14 — live Base Sepolia settlement and anchoring complete
 
@@ -88,6 +115,16 @@ merchant, API, and dashboard are healthy. Remaining work is human/submission wor
 record or upload the video, fill team identity fields, and submit before the deadline.
 
 ---
+
+### Aug 14 - submission PDF draft
+
+**Built:** replaced the earlier report-style draft with an 11-page landscape CERBERUS supporting brief authored as standalone LaTeX/TikZ. The sequence now moves from control gap to native architecture, versioned mandate, deterministic evaluation, the three Section 9 outcomes, real human-review hold, audit evidence, verified build proof, adjacent-control comparison and a final evidence gate. The architecture shows DENY bypassing settlement, every terminal path reaching audit and the prototype trust boundary explicitly; scenario cards expose threshold versus actual values and the exact unknown-counterparty disposition field.
+
+**Evidence status:** stale screenshots showing failed settlement, pending anchors, old branding or `Reconnecting` were not embedded. At build time the cover and closing evidence gate correctly stated that public-chain capture was pending. B1 subsequently resolved in commit `b16970f`, so that pending wording is now stale; the draft must not be uploaded as the final artifact without replacing it with the verified settlement and anchor evidence.
+
+**Verified:** LuaLaTeX builds cleanly in two passes; all 11 pages were rendered and visually inspected at full resolution; page geometry is 960.01x540; all Noto fonts are embedded with Unicode mappings; PDF text extraction and five external link annotations pass. GitHub, MAS SAFR and hackathon URLs are embedded. Wording scan finds no SAFR-compliance claim, first-ever claim, rejected three-layers phrasing, internal Bible labels or unsupported live-settlement claim. The `.tex`, generated PDF and TeX auxiliaries are ignored locally under `output/pdf/`.
+
+**Next:** keep the draft local as reference, or regenerate it from `docs/submission/EVIDENCE.md` under a final filename and re-render every page before any future upload.
 
 ### Aug 14 — pre-recording branding and final-evidence guard
 

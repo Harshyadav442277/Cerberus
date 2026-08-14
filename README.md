@@ -38,7 +38,7 @@ Cerberus places that missing control point before execution. Clear violations ar
 - Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
 - **91 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
 
-Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://sepolia.basescan.org/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
+Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://base-sepolia.blockscout.com/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
 ## Documents
 
@@ -54,47 +54,233 @@ Read in this order. The Bible is the source of truth and overrides everything el
 | [Design.md](docs/Design.md) | Dashboard visual design |
 | [Memory.md](docs/Memory.md) | Working log: current state, decisions, blockers, next step |
 | [submission/RUNBOOK.md](docs/submission/RUNBOOK.md) | Cold start to judged demo, and the failure modes actually hit |
-| [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | What has been proven, how, and what is still outstanding |
+| [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | Verified local and Base Sepolia evidence, transaction manifest, and known limitations |
 
 ## Stack
 
 TypeScript/Node 22+, pnpm workspaces, Postgres 16 (Docker), x402 v2 TS SDK on **Base Sepolia** (`eip155:84532`), Next.js dashboard. The approved stack is closed — see [Rules.md](docs/Rules.md) R2.
 
-## Getting started
+## Quick start — clone, run, and reproduce the results
 
-Install uses pnpm (run from the npx cache, never installed into the workspace —
-see [Memory.md](docs/Memory.md)). Everything else is plain `npm run`.
+The deterministic governance path can be verified without spending testnet assets.
+A funded Base Sepolia wallet is required only for reproducing live x402 settlement
+and on-chain audit anchoring. No LLM API key is required: the reproducible demo uses
+fixed, schema-validated Proposed Action fixtures, and the LLM never participates in
+the compliance decision.
+
+### Prerequisites
+
+- Git.
+- Node.js **22 or newer** (`node --version`).
+- Docker with Compose for the default Postgres setup. Alternatively, use any
+  Postgres 16+ instance matching `DATABASE_URL` in `.env.example`.
+- Free local ports: `5544` (Postgres), `4021` (merchant), `4050` (API), and `3000`
+  (dashboard).
+- For the full on-chain path only: Base Sepolia USDC and a small amount of Base
+  Sepolia ETH. Never use a wallet that holds real assets.
+
+### 1. Clone and install
 
 ```bash
-# 1. Install the workspace.
+git clone https://github.com/Harshyadav442277/Cerberus.git
+cd Cerberus
 npx --yes pnpm@10.34.5 install
+```
 
-# 2. Start Postgres (host port 5544 — 5432 is often already taken).
-npm run db:up
-#    No working Docker? Any Postgres 16+ on localhost:5544 with role `safr`
-#    and database `safr_runtime` works identically — see
-#    docs/submission/RUNBOOK.md section 1.
+The install uses pnpm workspaces through the npx cache; pnpm is not installed into
+the repository. All remaining commands are plain `npm run` commands.
 
-# 3. Configure credentials.
+### 2. Create the local environment
+
+Linux, macOS, or Git Bash:
+
+```bash
 cp .env.example .env
 npm run wallets:new
-#    Paste the printed EVM_PRIVATE_KEY (payer) and EVM_ADDRESS (payee) into .env.
-#    Fund the payer with Base Sepolia USDC: https://faucet.circle.com
-#    and a little Sepolia ETH for gas.
+```
 
-# 4. Create the schema and seed the demo agent + mandate.
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+npm run wallets:new
+```
+
+Copy the generated `EVM_PRIVATE_KEY` and `EVM_ADDRESS` lines into `.env`. The command
+also prints the payer address that must be funded for live settlement. `.env` is
+gitignored; never paste its private key into an issue, screenshot, commit, or demo.
+
+You may leave `ANTHROPIC_API_KEY` and `AUDIT_ANCHOR_ADDRESS` empty for the local
+governance verification path.
+
+### 3. Start Postgres and initialize the data
+
+```bash
+npm run db:up
 npm run db:migrate
 npm run db:seed
-
-# 5. Check everything.
-npm run typecheck
-npm test           # engine unit tests + interception enforcement scans
 npm run db:verify
 ```
 
-`db:verify` proves the schema mirrors Bible Section 7 field-for-field: exact column
-names, a deep-equality round-trip of the seeded mandate through Postgres and zod, and
-correct `effective_from`/`effective_to` handling in `getActiveMandate`.
+Expected result: `db:verify` prints **13 `OK` checks** followed by `All checks
+passed`, including exact Bible Section 7 columns, lossless zod/Postgres round-trips,
+mandate-version boundaries, and the three expected demo dispositions.
+
+If Docker is unavailable, point `DATABASE_URL` at an existing Postgres 16+ instance
+on port `5544`; the Windows setup used for the published evidence is documented in
+[the operator runbook](docs/submission/RUNBOOK.md).
+
+### 4. Verify the build before starting services
+
+```bash
+npm run typecheck
+npm test
+npm run build --prefix apps/dashboard
+npm run contracts:compile
+```
+
+Expected result:
+
+- TypeScript exits without errors.
+- The test runner reports **91 tests, 21 suites, 91 passed, 0 failed**.
+- The Next.js production build completes and lists six application routes.
+- `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.
+
+The tests include the structural guarantee that `DENY` constructs no x402 client,
+the deterministic rule order, atomic escalation review, audit hashing, contract
+compilation, and all three scripted scenarios.
+
+### 5. Start Cerberus
+
+Keep these three terminals running:
+
+Terminal 1 — x402 merchant:
+
+```bash
+npm run merchant
+```
+
+Terminal 2 — audit and escalation API:
+
+```bash
+npm run api
+```
+
+Terminal 3 — compliance dashboard:
+
+```bash
+npm run dashboard
+```
+
+Open <http://localhost:3000>. The sidebar should show `CERBERUS / SAFR Runtime`, the
+Audit Log status should become `Live`, and the footer indicators should show Base
+Sepolia, Database, and Facilitator.
+
+Optional health check:
+
+```bash
+curl http://localhost:4021/health
+curl http://localhost:4050/health
+curl -I http://localhost:3000
+```
+
+Expected result: merchant `status: ok`, API `ok: true` with `database: up`, and an
+HTTP success response from the dashboard.
+
+### 6. Reproduce ALLOW, DENY, and ESCALATE
+
+In a fourth terminal, run the deterministic three-scenario sequence:
+
+```bash
+npm run demo:script
+```
+
+The command resets the demo state, runs all three proposals, asserts the expected
+dispositions, persists their audit records, and waits for asynchronous digest work to
+finish. The important output is:
+
+```text
+dispositions  ALLOW → DENY → ESCALATE(approved)  ✓
+interception  DENY never reached x402           ✓
+human_review  persisted on scenario 3           ✓
+```
+
+Run the reliability check with three clean resets:
+
+```bash
+npm run demo:script -- --thrice
+```
+
+Expected final line: `Three consecutive clean runs succeeded.` An unfunded payer can
+still reproduce the dispositions and the DENY interception guarantee, but permitted
+settlements will not have transaction hashes.
+
+### 7. Reproduce the real human approval hold
+
+With the API and dashboard still running:
+
+```bash
+npm run demo -- new_counterparty --live-escalation
+```
+
+Then open <http://localhost:3000/escalations>. The agent remains blocked until you
+click **Approve** or **Deny**. Approve should unblock the separate agent process,
+persist `human_review`, and reach settlement; Deny should leave settlement null.
+
+To run the complete three-scenario script with a real click for scenario 3:
+
+```bash
+npm run demo:script -- --live
+```
+
+### 8. Reproduce live settlement and on-chain anchoring
+
+This step spends testnet-only assets. Fund the generated payer with approximately
+**4 Base Sepolia USDC** for several rehearsals and a small amount of Base Sepolia ETH
+for contract deployment and anchor transactions.
+
+- USDC: <https://faucet.circle.com> — select Base Sepolia.
+- ETH: <https://www.alchemy.com/faucets/base-sepolia>.
+
+With the merchant running:
+
+```bash
+npm run phase1:preflight
+npm run phase1
+```
+
+Do not proceed until preflight reports every prerequisite as `OK`. `phase1` should
+print a transaction hash that resolves on the
+[Base Sepolia Blockscout explorer](https://base-sepolia.blockscout.com).
+
+Deploy a fresh audit anchor for your clone:
+
+```bash
+npm run contracts:deploy
+```
+
+Copy the printed contract address into `.env` as `AUDIT_ANCHOR_ADDRESS`. The next
+agent process will load it; then run:
+
+```bash
+npm run demo:script -- --live
+npm run audit:verify
+```
+
+Expected result after approving scenario 3: ALLOW and approved ESCALATE have distinct
+settlement hashes, DENY has no settlement, and `audit:verify` reports **3/3 records
+reproduce their digest**, **3/3 anchored on Base Sepolia**, and `No tampering
+detected`. Your transaction hashes will differ from the published run; the behavior
+and invariants should match [the evidence manifest](docs/submission/EVIDENCE.md).
+
+### 9. Stop the local stack
+
+Stop the merchant, API, and dashboard with `Ctrl+C` in their terminals, then stop the
+default Docker database:
+
+```bash
+npm run db:stop
+```
 
 ## Phase 1 — bare x402 payment
 
@@ -109,8 +295,8 @@ npm run phase1:preflight
 npm run phase1
 ```
 
-`phase1` prints a settlement transaction hash verifiable on
-[sepolia.basescan.org](https://sepolia.basescan.org). `phase1:preflight` reports
+`phase1` prints a settlement transaction hash verifiable on the
+[Base Sepolia Blockscout explorer](https://base-sepolia.blockscout.com). `phase1:preflight` reports
 exactly which prerequisite is missing if it cannot.
 
 ## The three-headed demo
