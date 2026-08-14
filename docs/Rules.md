@@ -26,7 +26,7 @@ Specifically: if I catch myself thinking "a different approach might work better
 Conflicts flagged and resolved so far, for the record:
 - **OBSERVE disposition** (Bible §4 suggests four; §7.4/§9 use three) → resolved: supported in schema and type, never emitted, absent from the demo. See PRD §4.3.
 - **Backend language** (Bible §8 permits Node or Python) → resolved: TypeScript/Node end-to-end.
-- **Demo amounts vs. testnet funding** (Bible §7.2/7.3 illustrate 1000/500 USDC; faucets cannot fund that) → proposed: change seed values only, never schema. See PRD §4.4. **Still requires confirmation before seeding.**
+- **Demo amounts vs. testnet funding** (Bible §7.2/7.3 illustrate 1000/500 USDC; faucets cannot fund that) → resolved: faucet-sized seed values only, with the schema unchanged. See PRD §4.4 and `Memory.md` B4.
 
 ## R2. Approved stack — this list is closed
 

@@ -1,6 +1,6 @@
 # Cerberus — evidence manifest
 
-What has actually been produced, what it proves, and what is still outstanding.
+What has actually been produced, what it proves, and the known prototype limitations.
 Local evidence was captured on 13 August 2026; live Base Sepolia evidence was
 completed and independently re-verified on 14 August 2026.
 
@@ -10,7 +10,7 @@ Regenerate development dashboard shots any time with:
 pwsh -File scripts/capture-evidence.ps1
 ```
 
-After the funded final run, use strict mode. It refuses to overwrite evidence unless
+For any future recapture, use strict mode. It refuses to overwrite evidence unless
 ALLOW and approved ESCALATE have real settlement hashes, DENY has no settlement, and
 all three terminal records have on-chain anchor transaction hashes:
 
@@ -25,7 +25,6 @@ pwsh -File scripts/capture-evidence.ps1 -Final
 | File | Shows | Proves |
 |---|---|---|
 | `01-audit-log.png` | Feed with ALLOW / DENY / ESCALATE, rule column, 24h spend strip | Every disposition is recorded, refusals included |
-| `02-escalations.png` | A live pending escalation with Approve / Deny, rule and reason | The human gate is real and blocking, not decorative |
 | `03-mandate.png` | Spend caps, allowlist, unknown-counterparty policy, time window, velocity | Delegated authority is machine-readable and inspectable |
 | `04-agent.png` | Agent identity, owner org, wallet address, counters | Agent Identity component per SAFR |
 | `05-drilldown-deny-threshold.png` | DENY record: `spend_caps.per_transaction_max`, threshold `1` vs actual `proposed 5`, mandate `v1` | The refusal is explainable to a compliance officer |
@@ -77,9 +76,9 @@ reproducible on demand. It proves the gate is cross-process, not an in-memory pa
 |---|---|
 | Payer | [`0x8cD0592123215f5510A5a0774323c765b9DA34e7`](https://base-sepolia.blockscout.com/address/0x8cD0592123215f5510A5a0774323c765b9DA34e7) |
 | Merchant / payee | [`0x3EE24C8af00b88828D17E390ed63Eb8A302208c2`](https://base-sepolia.blockscout.com/address/0x3EE24C8af00b88828D17E390ed63Eb8A302208c2?tab=tokens) |
-| Bare x402 settlement (0.01 USDC) | [`0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9`](https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9) |
-| `AuditAnchor` contract | [`0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`](https://sepolia.basescan.org/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7) |
-| Contract deployment | [`0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08`](https://sepolia.basescan.org/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08) |
+| Bare x402 settlement (0.01 USDC) | [`0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9`](https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9) |
+| `AuditAnchor` contract | [`0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`](https://base-sepolia.blockscout.com/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7) |
+| Contract deployment | [`0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08`](https://base-sepolia.blockscout.com/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08) |
 
 The deployment receipt has `status = 0x1`, creates the configured contract address,
 and names the configured payer as deployer. The 236-byte deployed runtime matches the
@@ -93,12 +92,12 @@ constructed the x402 client and therefore has no settlement transaction.
 
 | Run | Outcome | Settlement | Audit anchor |
 |---|---|---|---|
-| 1 | ALLOW | [`0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28`](https://sepolia.basescan.org/tx/0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28) | [`0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac`](https://sepolia.basescan.org/tx/0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac) |
-| 1 | DENY | none — x402 never constructed | [`0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe`](https://sepolia.basescan.org/tx/0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe) |
-| 1 | ESCALATE → approved | [`0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5`](https://sepolia.basescan.org/tx/0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5) | [`0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388`](https://sepolia.basescan.org/tx/0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388) |
-| 2 | ALLOW | [`0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4`](https://sepolia.basescan.org/tx/0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4) | [`0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc`](https://sepolia.basescan.org/tx/0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc) |
-| 2 | DENY | none — x402 never constructed | [`0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c`](https://sepolia.basescan.org/tx/0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c) |
-| 2 | ESCALATE → approved | [`0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c`](https://sepolia.basescan.org/tx/0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c) | [`0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191`](https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) |
+| 1 | ALLOW | [`0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28`](https://base-sepolia.blockscout.com/tx/0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28) | [`0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac`](https://base-sepolia.blockscout.com/tx/0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac) |
+| 1 | DENY | none — x402 never constructed | [`0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe`](https://base-sepolia.blockscout.com/tx/0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe) |
+| 1 | ESCALATE → approved | [`0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5`](https://base-sepolia.blockscout.com/tx/0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5) | [`0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388`](https://base-sepolia.blockscout.com/tx/0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388) |
+| 2 | ALLOW | [`0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4`](https://base-sepolia.blockscout.com/tx/0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4) | [`0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc`](https://base-sepolia.blockscout.com/tx/0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc) |
+| 2 | DENY | none — x402 never constructed | [`0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c`](https://base-sepolia.blockscout.com/tx/0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c) |
+| 2 | ESCALATE → approved | [`0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c`](https://base-sepolia.blockscout.com/tx/0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c) | [`0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191`](https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) |
 
 All 11 settlement and anchor receipts above were independently read from the public
 Base Sepolia RPC and had `status = 0x1`. After run 2, `npm run audit:verify` reported
@@ -107,9 +106,9 @@ tampering detected`. The final Postgres rows retain the complete run-2 transacti
 hashes and record digests.
 
 BaseScan presented a Cloudflare interstitial during automated image capture, so the
-tracked screenshots use Base Sepolia Blockscout. The linked BaseScan transaction and
-address pages remain the canonical submission links; both explorers resolve the same
-public chain data.
+tracked screenshots and primary links use Base Sepolia Blockscout. Both explorers
+resolve the same public chain data; Blockscout is used here because the evidence pages
+load without that interstitial.
 
 ---
 

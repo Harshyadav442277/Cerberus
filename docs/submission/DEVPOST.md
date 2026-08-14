@@ -1,12 +1,12 @@
 # Devpost submission copy — NTU InnovateX 2026, Stage 1
 
-Paste-ready text for every mandatory field. Fields marked **[TEAM]** need human-only
-facts and are the one thing this document cannot supply.
+Paste-ready technical text for the submission. Fields marked **[TEAM]** need
+human-only facts and are intentionally not invented or stored here.
 
 **Deadline: 14 August 2026, 11:59 PM SGT** (= 9:29 PM IST). Internal target: noon IST
-the same day. Every claim below is written so it stays true whether or not the
-live on-chain evidence is included — see `EVIDENCE.md` for the complete transaction
-manifest and independent verification notes.
+the same day. The technical claims below reflect the verified build and live
+Base Sepolia evidence; see `EVIDENCE.md` for the complete transaction manifest and
+independent verification notes.
 
 ---
 
@@ -258,10 +258,11 @@ submission text.
 
 ```
 GitHub repository:  https://github.com/Harshyadav442277/Cerberus
-Demo video:         [paste after upload; must play without login — test in incognito]
-Live x402 payment:   https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9
-AuditAnchor:         https://sepolia.basescan.org/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
-Final audit anchor:  https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191
+Architecture:       https://github.com/Harshyadav442277/Cerberus/blob/main/docs/assets/safr-architecture-slide.png
+Evidence manifest:  https://github.com/Harshyadav442277/Cerberus/blob/main/docs/submission/EVIDENCE.md
+Live x402 payment:   https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9
+AuditAnchor:         https://base-sepolia.blockscout.com/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+Final audit anchor:  https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191
 ```
 
 Confirm the repository is **public** before submitting — a 404 on the repo link is a

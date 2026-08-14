@@ -1,12 +1,12 @@
-# Cerberus — demo video narration script and recording plan
+# Cerberus — archived demo video narration script and recording plan
 
 Target length **100 seconds** (inside the 90–120s window). Written to be read aloud at
 a normal pace; the timings assume roughly 150 words per minute.
 
-The script has two variants for the settlement beat. Use **A** if the payer wallet is
-funded and real transaction hashes appear. Use **B** if it is not. Variant B is not a
-weaker demo — it is an honest one, and the governance argument is identical either
-way. Do not improvise a third version that implies settlement happened when it did not.
+The Base Sepolia settlement and anchoring evidence is now verified. This script keeps
+only the evidence-backed ending. The narration was recorded, but the visual edit was
+not completed to publication standard; retain this document as a reproducible Stage 2
+recording plan rather than implying that a finished video exists.
 
 ---
 
@@ -18,8 +18,8 @@ way. Do not improvise a third version that implies settlement happened when it d
 3. Terminal font large enough to read at 720p. Test by shrinking the player to a
    quarter of the screen; if you cannot read the disposition lines, increase the size.
 4. Close notifications, chat apps, and anything that can pop a toast mid-take.
-5. Have `npm run demo:script` ready to paste, and the BaseScan tab pre-loaded if you
-   are recording variant A.
+5. Have `npm run demo:script` ready to paste, plus the verified settlement and anchor
+   links from `EVIDENCE.md` pre-loaded in a block explorer.
 
 ---
 
@@ -33,7 +33,7 @@ way. Do not improvise a third version that implies settlement happened when it d
 | 4 | 0:44–1:00 | Terminal — scenario 2 | `DENY`, rule, **x402 never constructed** |
 | 5 | 1:00–1:20 | Dashboard → Escalations → Approve | The human gate, live |
 | 6 | 1:20–1:34 | Dashboard → audit drill-down | Threshold vs actual, mandate version, hash |
-| 7 | 1:34–1:40 | BaseScan / anchor verify | Real transaction, or the honest statement |
+| 7 | 1:34–1:40 | Block explorer / anchor verify | Verified settlement and anchor transactions |
 
 ---
 
@@ -98,24 +98,11 @@ click, not a scripted pause.*
 
 ### 1:34–1:40 — settlement and anchoring
 
-**Variant A — funded wallet:**
-
 > That hash is anchored to Base Sepolia, and the approved payments settled in real
 > USDC. Here they are on-chain. Governed before execution, and provable after it.
 
-*On screen: BaseScan showing the settlement transaction, then `npm run audit:verify`.*
-
-**Variant B — unfunded wallet:**
-
-> The record's hash is computed and stored, and anchoring to Base Sepolia is
-> implemented and tested — the payer wallet is not yet funded, so we are not claiming a
-> live settlement. What is proven is the part that matters: the decision, the refusal,
-> and the audit trail, all before any money can move.
-
-*On screen: `npm run audit:verify` showing digests reproduce, then `npm run
-audit:tamper-demo` showing a rewritten record breaking its digest. The tamper demo is
-a strong closing frame — it shows the immutability claim being tested rather than
-asserted.*
+*On screen: the verified settlement and final anchor transaction from `EVIDENCE.md`,
+then `npm run audit:verify` showing the stored digests reproduce.*
 
 ---
 

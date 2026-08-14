@@ -3,6 +3,8 @@
 **Derived from:** Bible Section 10's build sequence, converted into phases with explicit Definitions of Done.
 **Authority:** `SAFR_RUNTIME_PROJECT_BIBLE.md` overrides this document on any conflict.
 
+**Final implementation status (Aug 14):** Phases 0–7 and 9 are complete and verified. Phase 8's narration was recorded, but the visual edit was not completed to publication standard and is intentionally omitted; the mandatory supporting-material requirement is satisfied by the architecture diagram and verified evidence captures. Phase 10's repository materials are complete; team identity and portal submission state remain external human-only facts.
+
 ---
 
 ## Timeline — recomputed against the real date
@@ -10,9 +12,9 @@
 Bible §10 explicitly instructs: *"recompute the day count against today's actual date and the Aug 14, 9:15 PM GMT+5:30 deadline before committing to a day-by-day schedule. Do not assume the day numbers below are still accurate."*
 
 - **Now:** Friday, Aug 7, 2026, 00:17 IST
-- **Stage 1 deadline:** Friday, Aug 14, 2026, 21:15 IST (11:59 PM SGT)
-- **Actual remaining: 7 days, 21 hours.** The Bible was written against 8 days; that count is now stale.
-- **Self-imposed submission target: Aug 14, 12:00 IST** — a 9-hour buffer. Portal problems at the deadline are a preventable, avoidable way to lose everything.
+- **Stage 1 deadline:** Friday, Aug 14, 2026, 21:29 IST (11:59 PM SGT)
+- **Actual remaining at the Aug 7 planning checkpoint: 7 days, 21 hours, 12 minutes.** The Bible was written against 8 days; that count became stale.
+- **Self-imposed submission target: Aug 14, 12:00 IST** — a 9-hour, 29-minute buffer. Portal problems at the deadline are a preventable, avoidable way to lose everything.
 
 Stage 2 (on-site at NTU, Aug 21–23) requires a functional prototype and in-person attendance, but only happens if shortlisted. It is **not** planned for here. Stage 1 is the only thing on the clock.
 
@@ -143,7 +145,7 @@ This is the phase that makes the project what it claims to be. It does not get d
 *Bible §10 step 6: "Build the dashboard: live feed, verdict color-coding, per-record drill-down."*
 
 **Work**
-- `apps/api`: REST for audit records + WebSocket live feed + `POST /escalations/:action_id/decision`.
+- `apps/api`: REST for audit records + SSE live feed backed by a 1-second Postgres poll + `POST /escalations/:action_id/decision` (the approved Phase 6 descope recorded in `Memory.md`).
 - `apps/dashboard` (Next.js) per `Design.md`: live feed table, disposition colour semantics (green=ALLOW, red=DENY, amber=ESCALATE), drill-down view, escalation review action.
 
 **Definition of Done**
@@ -177,6 +179,8 @@ This is the phase that makes the project what it claims to be. It does not get d
 
 *Bible §10 step 8: "Record a backup demo video in case the live demo fails during judging."*
 
+**Final status:** narration exists, but the visual edit was not completed to publication standard. This optional backup was omitted rather than publishing a misleading audio-only demo. Phase 9's architecture diagram and the tracked verified evidence satisfy the Stage 1 supporting-material requirement.
+
 **Definition of Done**
 - A screen recording of a complete, successful three-scenario run exists as a file in the repo or a stable link.
 - It shows the dashboard reacting in real time and at least one settlement hash legibly on screen.
@@ -204,7 +208,7 @@ Scheduled before Phase 10 because it is the one **mandatory** supporting materia
 **Work** — per the Bible §11 checklist:
 - Project Details: title, **Track 1 (Payments and Financial Infrastructure)** as primary, team type, short description.
 - Project Overview: the §11 problem framing verbatim in spirit; SAFR's **non-binding status stated explicitly**; scoped to the payments/treasury domain only; KLA Control Plane differentiation stated plainly.
-- Supporting Materials: architecture diagram (Phase 9) + demo clip (Phase 8).
+- Supporting Materials: architecture diagram (Phase 9) + verified evidence captures. A demo clip is optional backup material and is included only if it meets the Phase 8 Definition of Done.
 - Team Details: names + affiliations for every member; student proof if Student Group.
 - Project Link: the GitHub repo.
 

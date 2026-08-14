@@ -134,7 +134,7 @@ Agent attempts a payment to a counterparty not on the allowlist, under the cap �
 
 ## 7. Stage 1 submission requirements (Bible Sections 1, 11)
 
-**Deadline: Aug 14, 2026, 9:15 PM GMT+5:30 / 11:59 PM SGT.** Recomputed against the real current date (Aug 7, 2026, 00:17 IST): **7 days and 21 hours remain.**
+**Deadline: Aug 14, 2026, 9:29 PM IST / 11:59 PM SGT.** Recomputed against the real current date (Aug 7, 2026, 00:17 IST): **7 days, 21 hours, and 12 minutes remain.** The organizer's rules text is authoritative; the earlier 9:15 PM IST schedule-banner conversion was inconsistent with 11:59 PM SGT.
 
 - **Project Details** — title, track, team type, short description.
 - **Project Overview** — problem, solution, key features, target users, technologies used. Must state SAFR's non-binding status. Must use Section 4 terminology. Must state the KLA differentiation explicitly.

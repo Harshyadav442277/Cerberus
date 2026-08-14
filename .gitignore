@@ -25,11 +25,14 @@ coverage/
 pgdata/
 
 # Local crash dumps and quarantined build artifacts
-core
-core.*
+/core
+/core.*
 .local-trash/
 
 # Local review notes and generated submission/deck artifacts
 ReviewByHarsh/
 output/
 tmp/
+
+# Abandoned/local video-editing assets and narration assembly files
+docs/assets/video/

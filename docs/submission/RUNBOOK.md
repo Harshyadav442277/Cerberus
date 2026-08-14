@@ -5,9 +5,11 @@ recovery steps for the failures actually hit during setup.
 
 ---
 
-## 0. What is already done on this machine
+## 0. What is already done on the Windows evidence machine
 
-As of 14 August 2026, the local environment is fully rebuilt, funded, and running:
+As of 14 August 2026, Harsh's Windows recording/evidence environment is fully rebuilt,
+funded, and running. A different clone may have different `.env` values and database
+rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 
 - `.env` exists with dedicated Base Sepolia testnet wallets (regenerate with `npm run wallets:new`)
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
@@ -20,8 +22,11 @@ As of 14 August 2026, the local environment is fully rebuilt, funded, and runnin
 - `AuditAnchor` deployed at `0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`
 - two fresh supervised ALLOW → DENY → ESCALATE runs settled and anchored successfully
 
-There is no remaining external technical blocker. The remaining submission work is
-the demo-video upload and the human-only Devpost fields.
+There is no remaining external technical blocker and no further product code is
+required for the verified demo. Team identity and portal submission state are
+human-only facts outside this repository. The optional backup-video narration was
+recorded, but its visual edit was not completed to publication standard and is not a
+runtime blocker.
 
 ---
 
