@@ -41,12 +41,11 @@ embedded in the README).
 
 ### Note on `01-audit-log.png`
 
-The current live indicator reads "Reconnecting" in this capture. That is an artefact of the
-headless screenshot, not a defect: the page holds an SSE connection open, which never
-settles inside a headless frame grab. On a real browser it reads **Live** — see the
-first frame of the demo video. The final `01-audit-log.png` must be retaken manually
-in a real browser after strict capture passes; do not use the headless version in the
-PDF because a judge may reasonably read it as a broken connection.
+The final image was captured through a real browser after strict validation passed.
+It visibly shows **Live**, ALLOW / DENY / ESCALATE, both final settlement hashes, and
+the 1.25 / 3.00 USDC rolling-spend strip. The headless capture is deliberately not
+used for this page because its open SSE connection prevents Chrome from terminating
+reliably.
 
 ---
 
