@@ -53,7 +53,7 @@ app.use(
 );
 
 app.listen(PORT, () => {
-  console.log(`\n  SAFR API listening on http://localhost:${PORT}`);
+  console.log(`\n  CERBERUS API — SAFR Runtime listening on http://localhost:${PORT}`);
   console.log(`  live feed     GET /audit/stream`);
   console.log(`  escalations   POST /escalations/:actionId/decision\n`);
 });

@@ -185,7 +185,7 @@ async function runOnce(runLabel: string): Promise<void> {
 }
 
 export async function main(): Promise<void> {
-  console.log("\nSAFR Runtime — Bible Section 9 demo script (Phase 7)");
+  console.log("\nCERBERUS — SAFR Runtime demo (Bible Section 9)");
   console.log(
     live
       ? "Mode: live escalation (dashboard Approve required for scenario 3)"

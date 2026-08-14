@@ -16,8 +16,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SAFR Runtime — Compliance",
-  description: "Audit log and escalation review for agentic payments under SAFR.",
+  title: "CERBERUS — Compliance",
+  description: "CERBERUS implements the SAFR runtime pattern for governed agentic payments.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -24,7 +24,8 @@ param(
   [string]$ApiUrl       = "http://localhost:4050",
   [string]$OutDir       = "docs/assets/evidence",
   [int]$Width           = 1440,
-  [int]$Height          = 900
+  [int]$Height          = 900,
+  [switch]$Final
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,12 +90,55 @@ function Save-Shot {
 
 Write-Host "`nCapturing evidence to $OutDir`n"
 
+$health = Invoke-RestMethod -Uri "$ApiUrl/health" -TimeoutSec 20
+if (-not $health.ok -or $health.database -ne "up") {
+  throw "API/database health is not green. Start and verify the final demo stack before capturing evidence."
+}
+if ($Final) {
+  if (-not $health.audit_anchor_configured) {
+    throw "Final capture requires AUDIT_ANCHOR_ADDRESS to be configured."
+  }
+  $supportedUrl = "$($health.facilitator.TrimEnd('/'))/supported"
+  $facilitatorResponse = Invoke-WebRequest -Uri $supportedUrl -TimeoutSec 20
+  if (-not $facilitatorResponse.StatusCode -or $facilitatorResponse.StatusCode -ge 400) {
+    throw "Final capture requires a reachable x402 facilitator; $supportedUrl is not healthy."
+  }
+}
+
 # Pick the DENY and ESCALATE records out of the live audit feed so the drill-down
 # shots always point at real, current records rather than hardcoded ids.
 $feed = Invoke-RestMethod -Uri "$ApiUrl/audit" -TimeoutSec 20
-$denyId     = ($feed.items | Where-Object { $_.record.disposition -eq "DENY" }     | Select-Object -First 1).record.audit_id
-$escalateId = ($feed.items | Where-Object { $_.record.disposition -eq "ESCALATE" } | Select-Object -First 1).record.audit_id
-$allowId    = ($feed.items | Where-Object { $_.record.disposition -eq "ALLOW" }    | Select-Object -First 1).record.audit_id
+$deny       = $feed.items | Where-Object { $_.record.disposition -eq "DENY" }     | Select-Object -First 1
+$escalate   = $feed.items | Where-Object { $_.record.disposition -eq "ESCALATE" } | Select-Object -First 1
+$allow      = $feed.items | Where-Object { $_.record.disposition -eq "ALLOW" }    | Select-Object -First 1
+
+if (-not $deny -or -not $escalate -or -not $allow) {
+  throw "Audit feed must contain ALLOW, DENY, and ESCALATE before evidence capture."
+}
+
+if ($Final) {
+  if ($deny.record.settlement) {
+    throw "Final DENY evidence is invalid: settlement must be null."
+  }
+  if ($allow.record.settlement.status -ne "settled" -or -not $allow.record.settlement.tx_hash) {
+    throw "Final ALLOW evidence is invalid: a real settled transaction hash is required."
+  }
+  if ($escalate.record.human_review.decision -ne "approved") {
+    throw "Final ESCALATE evidence is invalid: approved human_review is required."
+  }
+  if ($escalate.record.settlement.status -ne "settled" -or -not $escalate.record.settlement.tx_hash) {
+    throw "Final ESCALATE evidence is invalid: a real settled transaction hash is required."
+  }
+  foreach ($item in @($deny, $escalate, $allow)) {
+    if ($item.anchor.status -ne "anchored" -or -not $item.anchor.anchor_tx_hash) {
+      throw "Final evidence is invalid: every terminal record must have an anchored transaction hash."
+    }
+  }
+}
+
+$denyId     = $deny.record.audit_id
+$escalateId = $escalate.record.audit_id
+$allowId    = $allow.record.audit_id
 
 Save-Shot "$DashboardUrl/"            "01-audit-log"
 Save-Shot "$DashboardUrl/escalations" "02-escalations"
@@ -107,3 +151,7 @@ if ($allowId)    { Save-Shot "$DashboardUrl/audit/$allowId"    "07-drilldown-all
 
 Write-Host "`nDone. BaseScan and anchor-verification shots are captured manually —"
 Write-Host "see docs/submission/EVIDENCE.md.`n"
+if ($Final) {
+  Write-Host "Final record assertions passed. Capture 01-audit-log manually in a real browser"
+  Write-Host "with the SSE indicator visibly Live; headless Chrome cannot prove that state.`n"
+}

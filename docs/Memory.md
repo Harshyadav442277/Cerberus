@@ -20,6 +20,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
+- **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
 - **Test count:** **91/91** as of Aug 13. Historical entries below quoting 84/87 were correct when written.
 - **Next concrete step:** fund the payer wallet **on whichever machine will run the judged demo** — see B1, there are currently two — then record the Phase 8 video and complete the Phase 10 submission from `docs/submission/`.
@@ -73,6 +74,18 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 14 — pre-recording branding and final-evidence guard
+
+**Changed:** dashboard sidebar now shows `CERBERUS` / `SAFR Runtime`; browser metadata is `CERBERUS — Compliance`; the Section 9 terminal and API startup banners identify CERBERUS while retaining SAFR Runtime as the implemented pattern. The architecture slide was regenerated with the CERBERUS title and visually verified at 1200×720; topology, dispositions, terminology, and the pre-execution constraint remain unchanged.
+
+**Evidence safety:** `scripts/capture-evidence.ps1 -Final` now refuses final capture unless API/database health is green, the x402 facilitator responds, `AUDIT_ANCHOR_ADDRESS` is configured, ALLOW and approved ESCALATE have real settlement hashes, DENY has no settlement, and all three terminal records are anchored. The Audit Log `Live` frame remains a required manual real-browser capture because headless SSE cannot prove that state. PowerShell is unavailable on this Linux machine, so Harsh must execute strict capture on the Windows recording machine after pulling; the script's application inputs and record fields match the existing API schema.
+
+**Verified:** `npm run typecheck` clean; `npm test` **91/91**; `npm run build --prefix apps/dashboard` clean. No governance, schema, settlement, or disposition behavior changed.
+
+**Still external:** the funded run, contract deployment, real hashes, strict screenshots, and raw video must be produced on Harsh's machine because its funded `.env` cannot be transferred through Git.
+
+---
 
 ### Aug 13 (later) — second machine rebuilt; submission pack written
 

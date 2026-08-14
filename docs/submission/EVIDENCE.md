@@ -3,10 +3,18 @@
 What has actually been produced, what it proves, and what is still outstanding.
 Captured 13 August 2026 against the rebuilt local environment.
 
-Regenerate the dashboard shots any time with:
+Regenerate development dashboard shots any time with:
 
 ```bash
 pwsh -File scripts/capture-evidence.ps1
+```
+
+After the funded final run, use strict mode. It refuses to overwrite evidence unless
+ALLOW and approved ESCALATE have real settlement hashes, DENY has no settlement, and
+all three terminal records have on-chain anchor transaction hashes:
+
+```bash
+pwsh -File scripts/capture-evidence.ps1 -Final
 ```
 
 ---
@@ -28,11 +36,12 @@ embedded in the README).
 
 ### Note on `01-audit-log.png`
 
-The live indicator reads "Reconnecting" in this capture. That is an artefact of the
+The current live indicator reads "Reconnecting" in this capture. That is an artefact of the
 headless screenshot, not a defect: the page holds an SSE connection open, which never
 settles inside a headless frame grab. On a real browser it reads **Live** — see the
-first frame of the demo video, or just retake this one shot manually. Worth retaking
-before submission since a judge may read it as a broken connection.
+first frame of the demo video. The final `01-audit-log.png` must be retaken manually
+in a real browser after strict capture passes; do not use the headless version in the
+PDF because a judge may reasonably read it as a broken connection.
 
 ---
 

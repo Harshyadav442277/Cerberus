@@ -48,8 +48,8 @@ export function Sidebar() {
   return (
     <aside className="flex w-[220px] shrink-0 flex-col border-r border-border bg-chrome">
       <div className="px-5 pb-6 pt-6">
-        <div className="text-[15px] font-semibold tracking-tight text-ink">SAFR</div>
-        <div className="text-[13px] text-mute">Runtime</div>
+        <div className="text-[15px] font-semibold tracking-tight text-ink">CERBERUS</div>
+        <div className="text-[13px] text-mute">SAFR Runtime</div>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
