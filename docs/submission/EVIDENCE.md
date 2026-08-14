@@ -1,7 +1,8 @@
 # Cerberus — evidence manifest
 
 What has actually been produced, what it proves, and what is still outstanding.
-Captured 13 August 2026 against the rebuilt local environment.
+Local evidence was captured on 13 August 2026; live Base Sepolia evidence was
+completed and independently re-verified on 14 August 2026.
 
 Regenerate development dashboard shots any time with:
 
@@ -30,18 +31,21 @@ pwsh -File scripts/capture-evidence.ps1 -Final
 | `05-drilldown-deny-threshold.png` | DENY record: `spend_caps.per_transaction_max`, threshold `1` vs actual `proposed 5`, mandate `v1` | The refusal is explainable to a compliance officer |
 | `06-drilldown-escalate-review.png` | ESCALATE record with `human_review` persisted | Human decisions are captured in the record |
 | `07-drilldown-allow-settlement.png` | ALLOW record with settlement block and record hash | The full Section 7.5 record shape |
+| `08-blockscout-settlement.png` | Successful Base Sepolia `transferWithAuthorization` for the bare x402 payment | The live x402 rail settled real testnet USDC |
+| `09-blockscout-merchant-balance.png` | Merchant address holding 6.28 Base Sepolia USDC after the verified runs | The payee received the testnet payments |
+| `10-blockscout-anchor.png` | Successful `anchor` call to the deployed `AuditAnchor` contract | A final-run audit digest was written on chain |
+| `11-blockscout-contract-deployment.png` | Successful contract creation by the configured payer | The anchor contract is actually deployed on Base Sepolia |
 
 Architecture diagram: `docs/assets/safr-architecture-slide.png` (already in the repo,
 embedded in the README).
 
 ### Note on `01-audit-log.png`
 
-The current live indicator reads "Reconnecting" in this capture. That is an artefact of the
-headless screenshot, not a defect: the page holds an SSE connection open, which never
-settles inside a headless frame grab. On a real browser it reads **Live** — see the
-first frame of the demo video. The final `01-audit-log.png` must be retaken manually
-in a real browser after strict capture passes; do not use the headless version in the
-PDF because a judge may reasonably read it as a broken connection.
+The final image was captured through a real browser after strict validation passed.
+It visibly shows **Live**, ALLOW / DENY / ESCALATE, both final settlement hashes, and
+the 1.25 / 3.00 USDC rolling-spend strip. The headless capture is deliberately not
+used for this page because its open SSE connection prevents Chrome from terminating
+reliably.
 
 ---
 
@@ -65,43 +69,47 @@ reproducible on demand. It proves the gate is cross-process, not an in-memory pa
 
 ---
 
-## Outstanding — blocked on funding the payer wallet
+## Completed — live settlement and on-chain anchoring
 
-These cannot be produced until the payer address holds Base Sepolia ETH and USDC.
-See `RUNBOOK.md` section 4.
+**Network:** Base Sepolia (`eip155:84532`)
 
-**Payer address on this machine:** `0x8cD0592123215f5510A5a0774323c765b9DA34e7`
+| Item | Verified value |
+|---|---|
+| Payer | [`0x8cD0592123215f5510A5a0774323c765b9DA34e7`](https://base-sepolia.blockscout.com/address/0x8cD0592123215f5510A5a0774323c765b9DA34e7) |
+| Merchant / payee | [`0x3EE24C8af00b88828D17E390ed63Eb8A302208c2`](https://base-sepolia.blockscout.com/address/0x3EE24C8af00b88828D17E390ed63Eb8A302208c2?tab=tokens) |
+| Bare x402 settlement (0.01 USDC) | [`0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9`](https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9) |
+| `AuditAnchor` contract | [`0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`](https://sepolia.basescan.org/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7) |
+| Contract deployment | [`0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08`](https://sepolia.basescan.org/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08) |
 
-> **Two payer wallets exist.** A second machine was rebuilt the same day with its own
-> keypair (`0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`). `.env` is gitignored, so
-> each machine's private key never left it — a wallet funded on one machine cannot
-> settle from the other. **Decide which machine records the demo, fund only that
-> wallet, and produce all on-chain evidence there.** Splitting the faucet allowance
-> across both leaves neither able to complete a run. See `docs/Memory.md` B1.
+The deployment receipt has `status = 0x1`, creates the configured contract address,
+and names the configured payer as deployer. The 236-byte deployed runtime matches the
+236-byte runtime compiled from this repository exactly.
 
-| Evidence | Command once funded | Paste result into |
-|---|---|---|
-| Bare x402 settlement tx hash | `npm run phase1` | below, and `DEVPOST.md` §15 |
-| BaseScan settlement screenshot | open `https://sepolia.basescan.org/tx/<hash>` | `docs/assets/evidence/08-basescan-settlement.png` |
-| Merchant received test USDC | BaseScan on `0x3EE24C8af00b88828D17E390ed63Eb8A302208c2` | `docs/assets/evidence/09-merchant-balance.png` |
-| `AuditAnchor` deployed | `npm run contracts:deploy` | `.env` as `AUDIT_ANCHOR_ADDRESS` |
-| Real anchor transaction | re-run `npm run demo:script` after setting the address | below |
-| Anchor verification | `npm run audit:verify` | `docs/assets/evidence/10-anchor-verify.png` |
+### Two fresh supervised runs
 
-### Slots to fill
+Both runs used the DB-backed `--live` escalation port. Each stopped until a real
+dashboard Approve click arrived from another process. In both runs, DENY never
+constructed the x402 client and therefore has no settlement transaction.
 
-```
-Settlement tx hash:      ______________________________________
-Settlement explorer:     https://sepolia.basescan.org/tx/______
-AuditAnchor address:     ______________________________________
-AuditAnchor explorer:    https://sepolia.basescan.org/address/______
-Anchor tx hash:          ______________________________________
-```
+| Run | Outcome | Settlement | Audit anchor |
+|---|---|---|---|
+| 1 | ALLOW | [`0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28`](https://sepolia.basescan.org/tx/0xe7ee1064b9ca6e08d0d023d6176f982c869947ea44a700cecdf8900d15a02f28) | [`0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac`](https://sepolia.basescan.org/tx/0xd6412593f424eebae4c20d8a0b2dab5f6f79fddbdd0392b06536c6c01986bdac) |
+| 1 | DENY | none — x402 never constructed | [`0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe`](https://sepolia.basescan.org/tx/0xb2088db7a899fdda8bc706964da1873d5970a17ee1b06dfb00b98633a6cf3bfe) |
+| 1 | ESCALATE → approved | [`0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5`](https://sepolia.basescan.org/tx/0xa2a021955a4c95a10dd6ac14681c0add0dae5ed37a2d3c9c554dbe501cd46ec5) | [`0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388`](https://sepolia.basescan.org/tx/0x1cbbab412815ec2ec9cfec6143af5e947ae0beeb900fdbad5df4af5e4769b388) |
+| 2 | ALLOW | [`0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4`](https://sepolia.basescan.org/tx/0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4) | [`0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc`](https://sepolia.basescan.org/tx/0x5a846c2106f420c7e23ac69d68998f8c68ffe4c53b1cc5c2da3d1e001c42f7cc) |
+| 2 | DENY | none — x402 never constructed | [`0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c`](https://sepolia.basescan.org/tx/0xa0528ce1adacb733ccd5b75ec3c762a2492d0efb09973a28beafb122fe05011c) |
+| 2 | ESCALATE → approved | [`0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c`](https://sepolia.basescan.org/tx/0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c) | [`0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191`](https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) |
 
-Until these are filled, the submission must not claim live settlement or on-chain
-anchoring. `DEVPOST.md` §16 has the exact wording to use instead — the honest version
-is a strong submission, and an unsupported claim a judge can check is a much worse
-outcome than a stated limitation.
+All 11 settlement and anchor receipts above were independently read from the public
+Base Sepolia RPC and had `status = 0x1`. After run 2, `npm run audit:verify` reported
+`3/3 records reproduce their digest`, `3/3 anchored on Base Sepolia`, and `No
+tampering detected`. The final Postgres rows retain the complete run-2 transaction
+hashes and record digests.
+
+BaseScan presented a Cloudflare interstitial during automated image capture, so the
+tracked screenshots use Base Sepolia Blockscout. The linked BaseScan transaction and
+address pages remain the canonical submission links; both explorers resolve the same
+public chain data.
 
 ---
 
