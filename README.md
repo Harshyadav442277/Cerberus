@@ -35,10 +35,10 @@ Cerberus places that missing control point before execution. Clear violations ar
 - `ESCALATE` suspends the agent and resumes only after a human decision.
 - The controls repository enforces versioned mandates and rolling counters.
 - The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
-- Terminal audit records are canonically hashed; optional Base Sepolia anchoring is asynchronous and non-blocking.
+- Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
 - **91 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
 
-Live settlement and on-chain anchor claims remain conditional on a funded Base Sepolia testnet wallet; the repository does not represent an unfunded attempt as a completed transaction.
+Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://sepolia.basescan.org/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
 ## Documents
 
@@ -198,8 +198,9 @@ npm run demo:script -- --thrice   # Phase 7 DoD: three consecutive clean runs
 ```
 
 Each run asserts ALLOW → DENY (`spend_caps.per_transaction_max`, x402 never
-constructed) → ESCALATE approved with `human_review` persisted. Real settlement
-hashes still need a funded Base Sepolia wallet.
+constructed) → ESCALATE approved with `human_review` persisted. Two fresh supervised
+runs settled both permitted payments and anchored all three audit outcomes on Base
+Sepolia; exact hashes are recorded in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
 ## Layout
 

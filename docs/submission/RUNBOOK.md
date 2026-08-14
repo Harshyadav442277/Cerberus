@@ -7,7 +7,7 @@ recovery steps for the failures actually hit during setup.
 
 ## 0. What is already done on this machine
 
-As of 13 August 2026, the local environment is fully rebuilt and running:
+As of 14 August 2026, the local environment is fully rebuilt, funded, and running:
 
 - `.env` exists with dedicated Base Sepolia testnet wallets (regenerate with `npm run wallets:new`)
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
@@ -16,8 +16,12 @@ As of 13 August 2026, the local environment is fully rebuilt and running:
 - `npm test` — 91/91, `npm run typecheck` clean, dashboard production build clean
 - merchant (`:4021`), API (`:4050`), dashboard (`:3000`) all responding
 - `npm run demo:script -- --thrice` — three consecutive clean runs
+- bare x402 settlement confirmed on Base Sepolia
+- `AuditAnchor` deployed at `0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`
+- two fresh supervised ALLOW → DENY → ESCALATE runs settled and anchored successfully
 
-The **only** outstanding technical item is funding the payer wallet. See section 4.
+There is no remaining external technical blocker. The remaining submission work is
+the demo-video upload and the human-only Devpost fields.
 
 ---
 
@@ -136,62 +140,59 @@ not a scripted pause.
 
 ---
 
-## 4. The one remaining item — fund the payer wallet
+## 4. Live Base Sepolia configuration
 
-Everything above works without funding. Settlement does not.
-
-**Payer address on this machine (fund this one):**
+**Payer address on this machine:**
 
 ```
 0x8cD0592123215f5510A5a0774323c765b9DA34e7
 ```
 
-> A second machine was rebuilt the same day with its own payer
-> (`0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824`). Private keys live only in each
-> machine's gitignored `.env`, so funding one does not help the other. Pick the
-> machine that will record the demo and fund only that wallet.
+This payer is funded on **Base Sepolia** and is the identity used by the recorded
+evidence. Do not switch to the other Aug 13 throwaway wallet. The configured payee is
+`0x3EE24C8af00b88828D17E390ed63Eb8A302208c2` and the configured contract is:
 
-It needs two things on **Base Sepolia**:
+```
+AUDIT_ANCHOR_ADDRESS=0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7
+```
+
+Verified public-chain identifiers:
+
+| Item | Transaction / address |
+|---|---|
+| Bare x402 settlement | `0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9` |
+| Contract deployment | `0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08` |
+| Final ALLOW settlement | `0x426f3acac92e5c41fb2078be649e744342c9ec79284c35c349e1ccc4b8dcebe4` |
+| Final ESCALATE settlement | `0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c` |
+| Final ESCALATE anchor | `0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191` |
+
+See `EVIDENCE.md` for both complete supervised-run manifests.
+
+Before another recorded run:
+
+```bash
+npm run phase1:preflight
+npm run demo:script -- --live
+```
+
+The second command blocks on the real dashboard Approve click. After it completes:
+
+```bash
+npm run audit:verify
+pwsh -File scripts/capture-evidence.ps1 -Final
+```
+
+Do **not** redeploy the contract for an ordinary rehearsal. Redeployment changes the
+evidence address and spends unnecessary gas. Only top up if preflight reports a low
+balance:
 
 | Asset | Why | Where |
 |---|---|---|
 | Base Sepolia ETH | gas to deploy `AuditAnchor` and write anchors | <https://www.alchemy.com/faucets/base-sepolia> |
 | Base Sepolia USDC | the actual payments (needs ~4 USDC for several full runs) | <https://faucet.circle.com> — select Base Sepolia |
 
-A tiny amount of ETH is enough — the contract is 263 bytes. Each full demo run spends
-1.25 USDC (0.50 on the ALLOW + 0.75 on the approved ESCALATE), so 4 USDC covers three
-rehearsals plus the recorded take.
-
-Then:
-
-```bash
-npm run phase1:preflight    # expect every line OK
-npm run phase1              # one bare x402 payment; prints a real tx hash
-```
-
-`phase1:preflight` names exactly which prerequisite is missing if it fails, so read it
-rather than guessing.
-
-### Deploy the audit anchor contract
-
-```bash
-npm run contracts:compile
-npm run contracts:deploy    # prints the deployed address
-```
-
-Put the printed address in `.env`:
-
-```
-AUDIT_ANCHOR_ADDRESS=0x…
-```
-
-Restart the API so it picks up the new value, then run the demo again. Records will
-move from `pending` to `anchored` with a real anchor transaction hash.
-
-```bash
-npm run audit:verify        # re-hash every stored record against its anchor
-npm run audit:tamper-demo   # the honest immutability check
-```
+Each full demo run spends 1.25 USDC (0.50 on ALLOW + 0.75 on approved
+ESCALATE). A tiny amount of ETH covers the three anchor calls.
 
 ---
 
@@ -204,7 +205,7 @@ npm run audit:tamper-demo   # the honest immutability check
 | `preflight` fails on merchant | merchant not running | `npm run merchant` |
 | `phase1` → `invalid_exact_evm_insufficient_balance` | payer has no USDC | Fund it (section 4). This error means everything except funding is working. |
 | `contracts:deploy` → "no Sepolia ETH for gas" | payer has no ETH | Fund it (section 4) |
-| Demo shows `settle failed` | expected before funding | Not a bug; the disposition path is unaffected |
+| Demo shows `settle failed` | payer depleted, wrong network, or facilitator unavailable | Run preflight; top up only the configured payer if needed |
 | Dashboard shows "Reconnecting" | API not running, or restarted | `npm run api`, then reload |
 | Escalation Approve returns 409 | already decided (double-click or a second reviewer) | Expected — the claim is atomic by design |
 | Demo scenario 1 unexpectedly DENIES | seeded `time_window` narrowed | Seed allows all seven days; re-run `npm run db:seed`. `db:verify` warns if the seed excludes today. |
@@ -218,5 +219,5 @@ pwsh -File scripts/capture-evidence.ps1
 ```
 
 Writes dashboard PNGs to `docs/assets/evidence/`. Requires all three services running
-and at least one demo run in the audit log. Re-run it after funding so the screenshots
-show real settlement hashes instead of `failed`.
+and at least one demo run in the audit log. Use `-Final`; it refuses to capture failed
+settlements, missing human approval, or unanchored records.

@@ -5,7 +5,8 @@ facts and are the one thing this document cannot supply.
 
 **Deadline: 14 August 2026, 11:59 PM SGT** (= 9:29 PM IST). Internal target: noon IST
 the same day. Every claim below is written so it stays true whether or not the
-optional on-chain evidence lands — see `EVIDENCE.md` for what to paste where.
+live on-chain evidence is included — see `EVIDENCE.md` for the complete transaction
+manifest and independent verification notes.
 
 ---
 
@@ -258,6 +259,9 @@ submission text.
 ```
 GitHub repository:  https://github.com/Harshyadav442277/Cerberus
 Demo video:         [paste after upload; must play without login — test in incognito]
+Live x402 payment:   https://sepolia.basescan.org/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9
+AuditAnchor:         https://sepolia.basescan.org/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+Final audit anchor:  https://sepolia.basescan.org/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191
 ```
 
 Confirm the repository is **public** before submitting — a 404 on the repo link is a
@@ -287,11 +291,9 @@ easy, avoidable errors:
   in agent-payment tooling. Differentiate on what is actually demonstrable —
   pre-execution enforcement that is structurally tested, mandate-versioned audit
   records, and the tamper demo.
-- **Do not claim live settlement or on-chain anchoring until a real transaction
-  exists.** If the faucet path does not complete in time, say plainly that settlement
-  was exercised against the live testnet facilitator up to the funding boundary, and
-  that the disposition, audit, and anchoring paths are complete and tested. Do not
-  narrate over the gap.
+- **Keep live settlement and anchoring claims tied to the explorer evidence.** Real
+  transactions now exist and are linked in §15 and `EVIDENCE.md`; do not broaden that
+  proof into a production-readiness claim or imply that testnet assets are real funds.
 - **Do not claim domains outside payments and treasury.** SAFR describes several; this
   implements one.
 - **Do not let the mythology do the technical talking.** The Cerberus framing is a

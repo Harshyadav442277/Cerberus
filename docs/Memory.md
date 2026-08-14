@@ -10,20 +10,20 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 ## Current state at a glance
 
 - **Project name:** **CERBERUS** (corrected spelling locked by the project owner on Aug 13), named for the three-headed guardian of Hades. The three heads map to ALLOW, DENY, and ESCALATE; SAFR Runtime remains the technical description.
-- **Phase 0:** complete except the funded-wallet check (blocked by B1).
-- **Phase 1:** code complete and verified up to the funding boundary. Definition of Done **not met** — needs a funded wallet. See B1.
+- **Phase 0:** **complete.** Funded-wallet and network checks pass.
+- **Phase 1:** **complete.** Bare x402 settlement succeeded on Base Sepolia (`0xed51af70…efab9`).
 - **Phase 2:** **complete.** DoD met and verified by `npm run db:verify` (13/13 checks).
 - **Phase 3:** **complete.** DoD met — engine purity is machine-verified.
 - **Phase 4:** **complete.** DoD met — the interception constraint is proven by test, not asserted.
-- **Phase 5:** **code complete, 2 of 4 DoD items met.** Hashing, the write path and the non-blocking guarantee are done and verified; the two on-chain items are blocked by B1 (gas).
-- **Phase 6:** **DoD met (verified Aug 7, re-verified Aug 13).** API + dashboard live; `--live-escalation` Approve unblocked the agent and settlement was attempted.
-- **Phase 7:** **code complete; disposition DoD met thrice.** `npm run demo:script -- --thrice` passes 3 consecutive clean resets. Settlement-hash half of the DoD is blocked by B1 (same as Phase 1/5).
+- **Phase 5:** **complete.** `AuditAnchor` is deployed; two fresh supervised runs anchored all six terminal records, and final-run verification is 3/3.
+- **Phase 6:** **DoD met.** API + dashboard live; two real dashboard Approve clicks unblocked separate agent processes and both payments settled.
+- **Phase 7:** **complete.** The disposition path passed thrice, then two fresh supervised runs produced real ALLOW and approved-ESCALATE settlement hashes with DENY never constructing x402.
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **91/91** as of Aug 13. Historical entries below quoting 84/87 were correct when written.
-- **Next concrete step:** fund the payer wallet **on whichever machine will run the judged demo** — see B1, there are currently two — then record the Phase 8 video and complete the Phase 10 submission from `docs/submission/`.
+- **Test count:** **91/91**, re-verified Aug 14. Historical entries below quoting 84/87 were correct when written.
+- **Next concrete step:** record/upload the Phase 8 video, fill the human-only team fields, and submit Phase 10 using `docs/submission/`.
 
 **Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
 
@@ -33,33 +33,21 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 `npm run demo` / `demo:script` need `npm run merchant` running. `demo:script -- --thrice` is the Phase 7 DoD check. `demo -- --live-escalation` waits for a dashboard Approve.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 
-**Stack as resolved:** TypeScript/Node 24, pnpm 10 workspaces, Postgres 16 in Docker on host port **5544**, x402 TS SDK **v2.21.0**, Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
+**Stack as resolved on this machine:** TypeScript/Node 24, pnpm 10 workspaces,
+user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**, Base
+Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
 ---
 
 ## Blockers
 
-**B1 — No funded Base Sepolia wallet. Blocks the Phase 1 DoD.**
-**TWO payer wallets now exist — one per machine. Fund the one on the machine that will run the judged demo.** `.env` is gitignored, so each machine's private keys never left it and neither wallet can be used from the other machine.
-
-| Machine | Payer (fund this) | Payee | Generated |
-|---|---|---|---|
-| Rebuild machine (`npm run wallets:new`, Aug 13) | `0x8cD0592123215f5510A5a0774323c765b9DA34e7` | `0x3EE24C8af00b88828D17E390ed63Eb8A302208c2` | Aug 13 |
-| Earlier Aug 13 restore | `0x0fe2676DcBA5aBc648BF46403dCc24BBdF90f824` | `0xf56e3F3134879156e11EAff78978a270726B661b` | Aug 13 |
-
-All four are throwaway testnet-only keys holding nothing on any network; none has ever touched mainnet. Never send real assets to any of them. The original Phase 1 keypair (`0x8A74…4A36`) is retired.
-
-What is needed: fund the chosen **payer** with Base Sepolia USDC (https://faucet.circle.com, select Base Sepolia) and a little Base Sepolia ETH for gas (https://www.alchemy.com/faucets/base-sepolia). No `.env` edit is required on either machine — the addresses are already in place. Budget ~4 USDC: each full demo run spends 1.25 (0.50 ALLOW + 0.75 approved ESCALATE).
-
-**Do not split the funding across both wallets.** Pick the demo machine first, fund only that one, and record the video there. Preflight on both machines currently reports zero ETH and zero USDC with every other check passing.
-The full payment path is already proven correct except funding (see the Phase 1 entry below).
-
-**B1 also blocks two Phase 5 DoD items** (added Aug 7): deploying `AuditAnchor.sol` and writing anchors both need Sepolia ETH for gas. Digests are computed and stored regardless, so funding the wallet and running `npm run contracts:deploy` is the only remaining work — no code changes. Same rule applies: the submission must not claim records are anchored on chain until one actually is.
-
-**B1 CHECKPOINT — agreed with the project owner, Aug 7. Do not lose this:**
-1. **Phase 1's DoD cannot be marked done, and the submission must not claim "live settlement," until a real funded-wallet transaction has actually fired at least once.** No exceptions. Bible section 12 and Rules R11 both forbid narrating over a gap.
-2. Later phases may proceed in parallel while funding is pending — settlement is not a dependency of the schema or the engine.
-3. **If funding is still blocked on Aug 10** (day 4 of the remaining build), invoke the mocked-settlement fallback (descope ladder). If that happens, label it in this file as an **explicit fallback taken under time pressure**, not a silent substitution, and state plainly in the submission that settlement was mocked.
+**B1 — RESOLVED (Aug 14).** The demo-machine payer
+`0x8cD0592123215f5510A5a0774323c765b9DA34e7` was funded on Base Sepolia. The
+bare x402 payment settled, `AuditAnchor` deployed at
+`0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`, and two fresh supervised
+runs settled and anchored successfully. Exact transaction hashes are in
+`docs/submission/EVIDENCE.md`. The other Aug 13 wallet remains unused; do not
+switch identities for the recorded demo.
 
 **B2 — No LLM API key.** Not yet blocking. First needed in Phase 4 for `apps/agent/src/intent-generator.ts`. Descope ladder item 2 replaces it with fixed fixtures if it does not arrive.
 
@@ -74,6 +62,32 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 14 — live Base Sepolia settlement and anchoring complete
+
+**B1 resolved.** The configured payer was funded and `npm run phase1:preflight`
+passed every check. The bare x402 payment settled 0.01 USDC in transaction
+`0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9`.
+
+**Contract live.** `AuditAnchor` is deployed at
+`0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7` by transaction
+`0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08`.
+The deployment receipt succeeded and its 236-byte runtime is an exact byte-for-byte
+match for the runtime compiled from this repository.
+
+**Supervised proof.** Two fresh full runs each settled ALLOW, refused DENY before
+x402 construction, blocked ESCALATE on a genuine cross-process dashboard decision,
+then settled only after a real Approve click. All six audit records anchored. Every
+one of the 11 settlement/anchor receipts returned `status = 0x1` from the public Base
+Sepolia RPC. The final database state re-verifies 3/3 record digests and 3/3 anchors
+with no tampering. Exact hashes and explorer screenshots are in
+`docs/submission/EVIDENCE.md`.
+
+**Runtime state.** Postgres recovered cleanly after an OS resource-exhaustion wedge;
+merchant, API, and dashboard are healthy. Remaining work is human/submission work:
+record or upload the video, fill team identity fields, and submit before the deadline.
+
+---
 
 ### Aug 14 — pre-recording branding and final-evidence guard
 
