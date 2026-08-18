@@ -103,7 +103,7 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 ## Current phase boundary
 
 Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5 are complete. The Phase 5 release
-gate passed the full **248/248-test suite across 48 suites** against real PostgreSQL.
+gate passed the full **249/249-test suite across 48 suites** against real PostgreSQL.
 Phase 6 has not started.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.

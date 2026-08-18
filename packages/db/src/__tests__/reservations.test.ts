@@ -553,6 +553,32 @@ describe("durable outcome reconciliation state", () => {
     );
   });
 
+  it("recovers a correlated SUBMITTING row after a post-broadcast process crash", async () => {
+    // Correlation committed and transport began, but the executor died before it
+    // could record the HTTP result or transition to OUTCOME_UNKNOWN.
+    const id = await submission("recon_post_broadcast_crash");
+    strictEqual((await getReservation(id))!.status, "SUBMITTING");
+
+    const restarted = await claimReconciliation({ at: AT, leaseSeconds: 30 });
+    ok(restarted?.reconciliation_token);
+    strictEqual(restarted.reservation_id, id);
+    strictEqual(restarted.payment_payload_hash, `0x${"66".repeat(32)}`);
+
+    strictEqual(
+      await markReconciledSettled(id, restarted.reconciliation_token, "0xrecovered", AT),
+      true,
+    );
+    const terminal = (await getReservation(id))!;
+    strictEqual(terminal.status, "SETTLED");
+    strictEqual(terminal.settlement_tx, "0xrecovered");
+    const audit = await getPool().query<{ settlement: { status: string; tx_hash: string } }>(
+      `SELECT settlement FROM audit_log WHERE audit_id = $1`,
+      [terminal.audit_id],
+    );
+    strictEqual(audit.rows[0]!.settlement.status, "settled");
+    strictEqual(audit.rows[0]!.settlement.tx_hash, "0xrecovered");
+  });
+
   it("keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment", async () => {
     const id = await submission("recon_defer");
     await markOutcomeUnknown(id, AT, AT);

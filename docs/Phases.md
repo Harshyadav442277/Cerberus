@@ -50,7 +50,7 @@ until the current phase passes its Definition of Done.
    fencing-token worker resolves exact chain-proven settlement or expired-unused
    non-payment, while inconclusive evidence retains capacity. Terminal audit and
    reservation state commit together, and the dashboard displays UNKNOWN and
-   RECONCILING explicitly. The full suite passes 248/248 tests across 48 suites.
+   RECONCILING explicitly. The full suite passes 249/249 tests across 48 suites.
 6. **Complete adversarial suite — not started.** Consolidate the critique's hostile
    cases as repeatable evidence.
 7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and

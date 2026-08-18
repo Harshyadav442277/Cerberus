@@ -43,7 +43,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   obtains a fresh clock/context read and rechecks authorization, mandate, approval,
   and reservation authority before consuming or signing. The unsigned request has a
   10-second timeout, and the final database CAS operations enforce expiry. The full
-  suite is now 248/248 across 48 suites. Phase 5 `OUTCOME_UNKNOWN` reconciliation is
+  suite is now 249/249 across 48 suites. Phase 5 `OUTCOME_UNKNOWN` reconciliation is
   complete: correlation is durable before transport, a keyless fenced worker resolves
   exact settlement or expired-unused non-payment, and audit/dashboard state preserves
   UNKNOWN honestly. Phases 6–8 have not started. The fresh funded hardened-path run
@@ -52,7 +52,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **248/248 across 48 suites**, Aug 19 after Stage-2 Phase 5, against
+- **Test count:** **249/249 across 48 suites**, Aug 19 after Stage-2 Phase 5, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
@@ -246,7 +246,7 @@ OUTCOME_UNKNOWN, RECONCILING, and reconciled terminal state beside—not inside�
 frozen audit JSON.
 
 **Verification.** Migrations 008 and 009 each rolled down/up cleanly during
-implementation and both are applied. The full real-PostgreSQL suite passes **248/248
+implementation and both are applied. The full real-PostgreSQL suite passes **249/249
 tests across 48 suites**. Typecheck, seven-route dashboard production build,
 263-byte contract compile, `db:verify`, migration status, and `git diff --check` pass.
 
