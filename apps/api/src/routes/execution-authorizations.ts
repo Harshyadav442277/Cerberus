@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
 import { loadEvaluationContext } from "@safr/controls-repository";
-import { getAuditLogRecord, getProposedAction } from "@safr/db";
+import {
+  bindAuthorization,
+  getAuditLogRecord,
+  getProposedAction,
+  reserveBudget,
+} from "@safr/db";
 import { apiEnv } from "../env.js";
 import {
   AuthorizationIssuanceError,
@@ -23,6 +28,7 @@ const authorizer = createExecutionAuthorizer({
     loadEvaluationContext,
   },
   authorizerPrivateKey: apiEnv.executionAuthPrivateKey,
+  reservations: { reserve: reserveBudget, bindAuthorization },
   target: {
     chainId: chainId(apiEnv.network),
     payTo: apiEnv.payTo,
@@ -39,6 +45,8 @@ executionAuthorizationsRouter.post("/", async (req, res, next) => {
     res.status(201).json(envelope);
   } catch (error) {
     if (error instanceof AuthorizationIssuanceError) {
+      // 503 is "this control plane is misconfigured"; everything else is a refusal
+      // the caller cannot retry its way out of, including a budget that is full.
       const status = error.code === "AUTHORIZER_NOT_CONFIGURED" ? 503 : 409;
       res.status(status).json({ error: error.code });
       return;

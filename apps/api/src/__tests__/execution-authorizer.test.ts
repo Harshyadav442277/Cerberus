@@ -1,6 +1,7 @@
-import { rejects, strictEqual } from "node:assert/strict";
+import { ok, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
+import type { PaymentReservation, ReserveBudgetInput, ReserveBudgetResult } from "@safr/db";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   AuthorizationIssuanceError,
@@ -60,7 +61,83 @@ const AUDIT: AuditLogRecord = {
   settlement: null,
 };
 
-function authorizer(action = ACTION, audit = AUDIT) {
+/**
+ * Stands in for the reservation table with the same two guarantees the real one has:
+ * a hard ceiling on committed capacity, and at most one authorization ever bound to a
+ * reservation. The database-level proof of both lives in the packages/db suite, which
+ * runs against a real PostgreSQL; this fake exists so the authorizer's ORDERING can be
+ * asserted without one.
+ */
+function reservations(options: { ceiling?: number } = {}) {
+  const ceiling = options.ceiling ?? 100;
+  const rows = new Map<string, PaymentReservation>();
+  const calls = { reserve: 0, bind: 0 };
+
+  function committed(): number {
+    return [...rows.values()]
+      .filter((r) => r.status !== "FAILED" && r.status !== "EXPIRED")
+      .reduce((sum, r) => sum + Number(r.amount_decimal), 0);
+  }
+
+  return {
+    calls,
+    rows,
+    port: {
+      async reserve(input: ReserveBudgetInput): Promise<ReserveBudgetResult> {
+        calls.reserve += 1;
+        const live = [...rows.values()].find(
+          (r) => r.audit_id === input.auditId || r.action_id === input.actionId,
+        );
+        if (live) return { outcome: "existing", reservation: live };
+        if (committed() + Number(input.amountDecimal) > ceiling) {
+          return {
+            outcome: "insufficient_budget",
+            committed: committed().toString(),
+            requested: input.amountDecimal,
+            limit: ceiling.toString(),
+          };
+        }
+        const reservation: PaymentReservation = {
+          reservation_id: `res_${rows.size + 1}`,
+          audit_id: input.auditId,
+          action_id: input.actionId,
+          agent_id: input.agentId,
+          mandate_id: input.mandateId,
+          mandate_version: input.mandateVersion,
+          budget_key: `mandate:${input.mandateId}`,
+          currency: input.currency,
+          amount_decimal: input.amountDecimal,
+          amount_atomic: input.amountAtomic,
+          chain_id: input.chainId,
+          token: input.token,
+          status: "RESERVED",
+          authorization_id: null,
+          settlement_tx: null,
+          counts_at: "2026-08-18T10:00:00.000Z",
+          expires_at: "2026-08-18T10:02:00.000Z",
+          created_at: "2026-08-18T10:00:00.000Z",
+          updated_at: "2026-08-18T10:00:00.000Z",
+        };
+        rows.set(reservation.reservation_id, reservation);
+        return { outcome: "created", reservation };
+      },
+      async bindAuthorization(reservationId: string, authorizationId: string) {
+        calls.bind += 1;
+        const row = rows.get(reservationId);
+        if (!row || row.status !== "RESERVED" || row.authorization_id !== null) return null;
+        const bound: PaymentReservation = {
+          ...row,
+          status: "AUTHORIZED",
+          authorization_id: authorizationId,
+        };
+        rows.set(reservationId, bound);
+        return bound;
+      },
+    },
+  };
+}
+
+function authorizer(action = ACTION, audit = AUDIT, store = reservations()) {
   return createExecutionAuthorizer({
     context: {
       async getAudit() { return audit; },
@@ -69,6 +146,7 @@ function authorizer(action = ACTION, audit = AUDIT) {
         return { mandate: MANDATE, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
       },
     },
+    reservations: store.port,
     authorizerPrivateKey: KEY,
     target: {
       chainId: 84532,
@@ -91,6 +169,7 @@ describe("trusted execution authorizer", () => {
           return { mandate: MANDATE, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
         },
       },
+      reservations: reservations().port,
       authorizerPrivateKey: `0x${"00".repeat(32)}`,
       target: {
         chainId: 84532,
@@ -139,5 +218,56 @@ describe("trusted execution authorizer", () => {
       (error) =>
         error instanceof AuthorizationIssuanceError && error.code === "HUMAN_APPROVAL_REQUIRED",
     );
+  });
+});
+
+describe("authorization is backed by committed capacity", () => {
+  it("binds the signed authorization to a real reservation, not a derived string", async () => {
+    const store = reservations();
+    const envelope = await authorizer(ACTION, AUDIT, store).issue(AUDIT.audit_id);
+
+    const reservation = [...store.rows.values()][0]!;
+    strictEqual(envelope.authorization.reservationId, reservation.reservation_id);
+    ok(!envelope.authorization.reservationId.startsWith("phase1_unreserved"));
+    strictEqual(reservation.status, "AUTHORIZED");
+    strictEqual(reservation.authorization_id, envelope.authorization.authorizationId);
+    strictEqual(reservation.amount_decimal, "0.500000", "reserved amount matches the atomic amount");
+  });
+
+  it("refuses to issue when the shared budget cannot cover the proposal", async () => {
+    const store = reservations({ ceiling: 0.25 });
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "INSUFFICIENT_BUDGET",
+    );
+    strictEqual(store.calls.bind, 0, "nothing is signed when capacity is refused");
+  });
+
+  it("gives one audit a single executable authorization however often it asks", async () => {
+    // The Phase 1 gap: one audit could mint AUTH A and AUTH B, both validly signed,
+    // both seeing settlement === null. Committed capacity is now the source of truth.
+    const store = reservations();
+    const issuer = authorizer(ACTION, AUDIT, store);
+    const first = await issuer.issue(AUDIT.audit_id);
+
+    await rejects(
+      () => issuer.issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError &&
+        error.code === "AUTHORIZATION_ALREADY_ISSUED",
+    );
+    strictEqual(store.rows.size, 1, "the second request created no second reservation");
+    strictEqual(
+      [...store.rows.values()][0]!.authorization_id,
+      first.authorization.authorizationId,
+    );
+  });
+
+  it("does not reserve capacity for a DENY", async () => {
+    const store = reservations();
+    const breach = { ...ACTION, payload: { ...ACTION.payload, amount: 5 } };
+    await rejects(() => authorizer(breach, AUDIT, store).issue(AUDIT.audit_id));
+    strictEqual(store.calls.reserve, 0, "a denied proposal never touches financial state");
   });
 });
