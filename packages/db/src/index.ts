@@ -39,6 +39,24 @@ export type {
   ReserveBudgetInput,
   ReserveBudgetResult,
 } from "./reservations.js";
+export {
+  APPROVAL_TTL_SECONDS,
+  claimHumanDecision,
+  consumeAuthorization,
+  evaluateApprovalFreshness,
+  getHumanApproval,
+  getIssuedAuthorization,
+  recordHumanApproval,
+  recordIssuedAuthorization,
+} from "./authorizations.js";
+export type {
+  ApprovalFreshness,
+  ClaimHumanDecisionInput,
+  HumanApprovalBinding,
+  IssuedAuthorization,
+  RecordApprovalInput,
+  RecordAuthorizationInput,
+} from "./authorizations.js";
 export { SEED_AGENT, SEED_MANDATE } from "./seed-data.js";
 export { resetDemoState } from "./reset-demo.js";
 export { appliedMigrations, listMigrations, migrateDown, migrateUp } from "./migrator.js";

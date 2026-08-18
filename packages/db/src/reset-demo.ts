@@ -8,7 +8,8 @@ import { SEED_AGENT, SEED_MANDATE } from "./seed-data.js";
  */
 export async function resetDemoState(): Promise<{ agentId: string; mandateId: string }> {
   await getPool().query(
-    `TRUNCATE TABLE payment_reservation, audit_anchor, audit_log, proposed_action
+    `TRUNCATE TABLE human_approval, execution_authorization, payment_reservation,
+                    audit_anchor, audit_log, proposed_action
        RESTART IDENTITY CASCADE`,
   );
 
