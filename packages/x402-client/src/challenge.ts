@@ -2,6 +2,9 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { PaymentRequired, PaymentRequirements } from "@x402/core/types";
 import { getAddress } from "viem";
 
+type Fetch = typeof fetch;
+const defaultFetch: Fetch = (...args) => globalThis.fetch(...args);
+
 export interface PaymentRequest {
   counterparty: string;
   /** Decimal amount, e.g. 0.5 for 0.50 USDC. */
@@ -70,7 +73,7 @@ export function paymentRequestUrl(request: PaymentRequest, merchantBaseUrl: stri
 export async function fetchX402Challenge(
   request: PaymentRequest,
   merchantBaseUrl: string,
-  fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+  fetchImpl: Fetch = defaultFetch,
 ): Promise<X402Challenge> {
   const requestUrl = paymentRequestUrl(request, merchantBaseUrl);
   const response = await fetchImpl(new Request(requestUrl, { method: "GET" }));

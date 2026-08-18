@@ -8,13 +8,20 @@ import {
   AuthorizationError,
   InMemoryAuthorizationUseStore,
   buildExecutionTarget,
+  consumeExecutionAuthorization,
   hashProposal,
-  verifyAndConsumeExecutionAuthorization,
+  verifyExecutionAuthorization,
   type AuthorizationUseStore,
   type SignedExecutionAuthorization,
   type TargetConfig,
 } from "@safr/execution-authorization";
-import type { X402Payer } from "@safr/x402-client";
+import {
+  paymentRequestUrl,
+  validateX402Challenge,
+  type PaymentRequest,
+  type X402Challenge,
+  type X402Payer,
+} from "@safr/x402-client";
 import type { Address } from "viem";
 
 export class ExecutionRefusedError extends Error {
@@ -83,6 +90,8 @@ export interface ExecutorOptions {
   expectedAuthorizer: Address;
   target: TargetConfig;
   payerFactory: () => X402Payer;
+  /** Unsigned transport path. It has no signer and receives no payment credentials. */
+  challengeFetcher: (request: PaymentRequest) => Promise<X402Challenge>;
   useStore?: AuthorizationUseStore;
   nowMs?: () => number;
 }
@@ -139,7 +148,7 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       }
 
       const target = buildExecutionTarget(action, options.target);
-      const authorization = await verifyAndConsumeExecutionAuthorization({
+      const authorization = await verifyExecutionAuthorization({
         envelope: input.envelope,
         action,
         target,
@@ -149,9 +158,30 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
         // The reservation identifier now comes from committed financial state, so an
         // authorization can only be spent against the capacity actually held for it.
         expectedReservationId: reservation.reservation_id,
-        useStore,
         nowMs,
       });
+
+      const paymentRequest: PaymentRequest = {
+        counterparty: action.payload.counterparty,
+        amount: action.payload.amount,
+        reference: action.payload.reference,
+      };
+      const requestUrl = paymentRequestUrl(paymentRequest, options.target.merchantBaseUrl);
+      const liveChallenge = await options.challengeFetcher(paymentRequest);
+      const challenge = validateX402Challenge(liveChallenge, {
+        x402Version: 2,
+        scheme: "exact",
+        network: `eip155:${authorization.chainId}`,
+        asset: authorization.token,
+        amount: authorization.amount,
+        payTo: authorization.payTo,
+        resourceUrl: requestUrl,
+        eip712: { name: "USDC", version: "2", assetTransferMethod: "eip3009" },
+      });
+
+      // A challenge mismatch returns above while the durable capability and
+      // reservation are untouched. Consume only after the exact live 402 is pinned.
+      await consumeExecutionAuthorization(authorization, useStore);
 
       // The durable one-shot boundary: AUTHORIZED -> SUBMITTING, compare-and-set on
       // the reservation AND the exact authorization bound to it. Two authorizations
@@ -168,11 +198,7 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       const payer = options.payerFactory();
       let result: Awaited<ReturnType<X402Payer["pay"]>>;
       try {
-        result = await payer.pay({
-          counterparty: action.payload.counterparty,
-          amount: action.payload.amount,
-          reference: action.payload.reference,
-        });
+        result = await payer.pay(challenge);
       } catch (error) {
         // A thrown settlement error is NOT evidence that no money moved — the payment
         // may already have been broadcast and accepted with only the response lost.

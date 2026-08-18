@@ -2,14 +2,17 @@ export {
   AuthorizationError,
   InMemoryAuthorizationUseStore,
   authorizationMessage,
+  consumeExecutionAuthorization,
   hashProposal,
   issueExecutionAuthorization,
   verifyAndConsumeExecutionAuthorization,
+  verifyExecutionAuthorization,
 } from "./authorization.js";
 export type {
   AuthorizationUseStore,
   IssueAuthorizationInput,
   VerifyAuthorizationInput,
+  VerifyAuthorizationContextInput,
 } from "./authorization.js";
 export {
   ExecutionAuthorizationSchema,

@@ -1,6 +1,10 @@
 import { rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
-import { encodePaymentRequiredHeader } from "@x402/core/http";
+import {
+  decodePaymentSignatureHeader,
+  encodePaymentRequiredHeader,
+  encodePaymentResponseHeader,
+} from "@x402/core/http";
 import type { PaymentRequired } from "@x402/core/types";
 import {
   X402ChallengeError,
@@ -10,6 +14,7 @@ import {
   type ExpectedX402Challenge,
   type X402Challenge,
 } from "../challenge.js";
+import { createX402Payer } from "../pay.js";
 
 const PAY_TO = "0x1111111111111111111111111111111111111111";
 const TOKEN = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
@@ -128,4 +133,47 @@ describe("exact live challenge binding", () => {
 
   it("rejects a transfer-method switch", () =>
     rejectsWith(() => validateX402Challenge(challenge(changed({ extra: { name: "USDC", version: "2", assetTransferMethod: "permit2" } })), EXPECTED), "TRANSFER_METHOD_MISMATCH"));
+});
+
+describe("paid retry uses only the pinned challenge", () => {
+  it("constructs one signature and submits directly without fetching another 402", async () => {
+    const validated = validateX402Challenge(challenge(), EXPECTED);
+    let paidRequests = 0;
+    const payer = createX402Payer(
+      {
+        privateKey: `0x${"44".repeat(32)}`,
+        network: "eip155:84532",
+        facilitatorUrl: "https://x402.org/facilitator",
+        rpcUrl: "https://sepolia.base.org",
+        merchantBaseUrl: "http://localhost:4021",
+      },
+      async (input) => {
+        paidRequests += 1;
+        const request = input instanceof Request ? input : new Request(input);
+        strictEqual(request.url, RESOURCE);
+        const encoded = request.headers.get("PAYMENT-SIGNATURE");
+        strictEqual(typeof encoded, "string");
+        const payload = decodePaymentSignatureHeader(encoded!);
+        strictEqual(payload.accepted.amount, "500000");
+        strictEqual(payload.accepted.payTo, PAY_TO);
+        return new Response(JSON.stringify({ settled: true }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "PAYMENT-RESPONSE": encodePaymentResponseHeader({
+              success: true,
+              payer: "0x4444444444444444444444444444444444444444",
+              transaction: "0xdeadbeef",
+              network: "eip155:84532",
+            }),
+          },
+        });
+      },
+    );
+
+    const settlement = await payer.pay(validated);
+    strictEqual(paidRequests, 1);
+    strictEqual(settlement.status, "settled");
+    strictEqual(settlement.tx_hash, "0xdeadbeef");
+  });
 });

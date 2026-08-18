@@ -8,7 +8,12 @@ import {
   hashProposal,
   issueExecutionAuthorization,
 } from "@safr/execution-authorization";
-import type { X402Payer } from "@safr/x402-client";
+import {
+  X402ChallengeError,
+  paymentRequestUrl,
+  type X402Challenge,
+  type X402Payer,
+} from "@safr/x402-client";
 import { privateKeyToAccount } from "viem/accounts";
 import { createIsolatedExecutor, ExecutionRefusedError } from "../execution.js";
 
@@ -37,6 +42,41 @@ const ACTION: ProposedAction = {
     reference: "invoice_1",
   },
 };
+
+const LIVE_CHALLENGE: X402Challenge = {
+  method: "GET",
+  requestUrl: paymentRequestUrl(ACTION.payload, TARGET_CONFIG.merchantBaseUrl),
+  paymentRequired: {
+    x402Version: 2,
+    error: "Payment required",
+    resource: {
+      url: paymentRequestUrl(ACTION.payload, TARGET_CONFIG.merchantBaseUrl),
+      description: "fixture",
+      mimeType: "application/json",
+    },
+    accepts: [{
+      scheme: "exact",
+      network: "eip155:84532",
+      amount: "500000",
+      asset: TARGET_CONFIG.token,
+      payTo: TARGET_CONFIG.payTo,
+      maxTimeoutSeconds: 300,
+      extra: { name: "USDC", version: "2" },
+    }],
+  },
+};
+
+function challengeWith(
+  update: Partial<X402Challenge["paymentRequired"]["accepts"][number]>,
+): X402Challenge {
+  return {
+    ...LIVE_CHALLENGE,
+    paymentRequired: {
+      ...LIVE_CHALLENGE.paymentRequired,
+      accepts: [{ ...LIVE_CHALLENGE.paymentRequired.accepts[0]!, ...update }],
+    },
+  };
+}
 
 const AUDIT: AuditLogRecord = {
   audit_id: "audit_1",
@@ -155,9 +195,11 @@ function harness(
   },
   store = reservationStore(context.reservation === undefined ? RESERVATION : context.reservation),
   payerImpl?: X402Payer["pay"],
+  challenges: X402Challenge[] = [LIVE_CHALLENGE],
 ) {
   let constructed = 0;
   let paid = 0;
+  let challenged = 0;
   const payer: X402Payer = {
     address: "0x4444444444444444444444444444444444444444",
     async pay(request) {
@@ -187,13 +229,25 @@ function harness(
     reservations: store.port,
     expectedAuthorizer: privateKeyToAccount(AUTH_KEY).address,
     target: TARGET_CONFIG,
+    async challengeFetcher() {
+      const challenge = challenges[Math.min(challenged, challenges.length - 1)];
+      challenged += 1;
+      if (!challenge) throw new Error("missing challenge fixture");
+      return challenge;
+    },
     payerFactory() {
       constructed += 1;
       return payer;
     },
     nowMs: () => NOW,
   });
-  return { executor, store, constructed: () => constructed, paid: () => paid };
+  return {
+    executor,
+    store,
+    challenged: () => challenged,
+    constructed: () => constructed,
+    paid: () => paid,
+  };
 }
 
 describe("isolated executor", () => {
@@ -203,6 +257,7 @@ describe("isolated executor", () => {
     strictEqual(settlement.status, "settled");
     strictEqual(h.constructed(), 1);
     strictEqual(h.paid(), 1);
+    strictEqual(h.challenged(), 1);
   });
 
   it("rejects a forged authorization before the payer exists", async () => {
@@ -213,6 +268,7 @@ describe("isolated executor", () => {
     );
     strictEqual(h.constructed(), 0);
     strictEqual(h.paid(), 0);
+    strictEqual(h.challenged(), 0, "forged authority cannot trigger merchant I/O");
   });
 
   it("rejects replay before a second signing attempt", async () => {
@@ -293,6 +349,121 @@ describe("isolated executor", () => {
     );
     strictEqual(h.constructed(), 0);
     strictEqual(h.store.status(), "AUTHORIZED", "the reservation is left untouched");
+  });
+});
+
+describe("exact live x402 challenge binding", () => {
+  const attacks: Array<{
+    name: string;
+    challenge: X402Challenge;
+    code: X402ChallengeError["code"];
+  }> = [
+    {
+      name: "amount 5 USDC → 50 USDC",
+      challenge: challengeWith({ amount: "50000000" }),
+      code: "AMOUNT_MISMATCH",
+    },
+    {
+      name: "payee Alice → attacker",
+      challenge: challengeWith({ payTo: "0x2222222222222222222222222222222222222222" }),
+      code: "PAYEE_MISMATCH",
+    },
+    {
+      name: "wrong token",
+      challenge: challengeWith({ asset: "0x2222222222222222222222222222222222222222" }),
+      code: "TOKEN_MISMATCH",
+    },
+    {
+      name: "wrong chain",
+      challenge: challengeWith({ network: "eip155:8453" }),
+      code: "NETWORK_MISMATCH",
+    },
+    {
+      name: "wrong scheme",
+      challenge: challengeWith({ scheme: "upto" }),
+      code: "SCHEME_MISMATCH",
+    },
+    {
+      name: "wrong EIP-712 token domain",
+      challenge: challengeWith({ extra: { name: "Fake USDC", version: "2" } }),
+      code: "EIP712_DOMAIN_MISMATCH",
+    },
+    {
+      name: "transfer-method switch",
+      challenge: challengeWith({
+        extra: { name: "USDC", version: "2", assetTransferMethod: "permit2" },
+      }),
+      code: "TRANSFER_METHOD_MISMATCH",
+    },
+    {
+      name: "wrong x402 protocol version",
+      challenge: {
+        ...LIVE_CHALLENGE,
+        paymentRequired: {
+          ...LIVE_CHALLENGE.paymentRequired,
+          x402Version: 1,
+        } as unknown as X402Challenge["paymentRequired"],
+      },
+      code: "VERSION_MISMATCH",
+    },
+  ];
+
+  for (const attack of attacks) {
+    it(`rejects ${attack.name} before the payment key exists`, async () => {
+      const h = harness(undefined, undefined, undefined, [attack.challenge]);
+      const envelope = await signed();
+      await rejects(
+        () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+        (error) => error instanceof X402ChallengeError && error.code === attack.code,
+      );
+      strictEqual(h.challenged(), 1);
+      strictEqual(h.constructed(), 0);
+      strictEqual(h.paid(), 0);
+      strictEqual(h.store.status(), "AUTHORIZED");
+      deepStrictEqual(h.store.calls, []);
+    });
+  }
+
+  it("rejects a wrong resource before the payment key exists", async () => {
+    const malicious: X402Challenge = {
+      ...LIVE_CHALLENGE,
+      paymentRequired: {
+        ...LIVE_CHALLENGE.paymentRequired,
+        resource: {
+          ...LIVE_CHALLENGE.paymentRequired.resource,
+          url: "http://localhost:4021/pay/attacker?amount=0.5",
+        },
+      },
+    };
+    const h = harness(undefined, undefined, undefined, [malicious]);
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof X402ChallengeError && error.code === "RESOURCE_MISMATCH",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("leaves authority reusable after mismatch because no signature was constructed", async () => {
+    const h = harness(
+      undefined,
+      undefined,
+      undefined,
+      [challengeWith({ amount: "50000000" }), LIVE_CHALLENGE],
+    );
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof X402ChallengeError && error.code === "AMOUNT_MISMATCH",
+    );
+    strictEqual(h.store.status(), "AUTHORIZED");
+    strictEqual(h.constructed(), 0);
+
+    const settlement = await h.executor.execute({ audit_id: AUDIT.audit_id, envelope });
+    strictEqual(settlement.status, "settled");
+    strictEqual(h.constructed(), 1);
+    strictEqual(h.paid(), 1);
   });
 });
 

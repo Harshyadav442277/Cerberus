@@ -1,18 +1,22 @@
 /**
  * The only module in SAFR Runtime that talks to x402.
  *
- * Rules R6 / Bible Section 6: this must only ever be imported from
- * apps/agent/src/settlement/. The agent's orchestrator calls the Disposition
- * Engine first and only reaches this module on ALLOW, or on ESCALATE that a
- * human approved. Nothing here evaluates a mandate.
+ * Rules R6 / Bible Section 6: this is imported only by the isolated executor and
+ * standalone rail diagnostics. The untrusted agent never imports this package and
+ * never receives the signer. Nothing here evaluates a mandate.
  */
 import { x402Client, x402HTTPClient } from "@x402/core/client";
 import type { SettleResponse } from "@x402/core/types";
-import { wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 import type { X402Env } from "./env.js";
-import type { PaymentRequest } from "./challenge.js";
+import {
+  isValidatedX402Challenge,
+  type ValidatedX402Challenge,
+} from "./challenge.js";
+
+type Fetch = typeof fetch;
+const defaultFetch: Fetch = (...args) => globalThis.fetch(...args);
 
 /**
  * Mirrors the `settlement` object of the Audit Log record (Bible Section 7.5) so the
@@ -30,7 +34,8 @@ export interface SettlementResult {
 export interface X402Payer {
   /** Address the payments are signed from. */
   address: string;
-  pay(request: PaymentRequest): Promise<SettlementResult>;
+  /** Signs and submits only the already-fetched, already-validated live challenge. */
+  pay(challenge: ValidatedX402Challenge): Promise<SettlementResult>;
 }
 
 function isSettleResponse(header: unknown): header is SettleResponse {
@@ -38,10 +43,13 @@ function isSettleResponse(header: unknown): header is SettleResponse {
 }
 
 /**
- * Builds a payer bound to a single signer. Constructed once and reused, so the
- * signer and scheme registration are not rebuilt per payment.
+ * Builds a payer bound to a single signer. The isolated executor deliberately calls
+ * this factory only after validating the merchant's exact live challenge.
  */
-export function createX402Payer(env: X402Env): X402Payer {
+export function createX402Payer(
+  env: X402Env,
+  fetchImpl: Fetch = defaultFetch,
+): X402Payer {
   const signer = privateKeyToAccount(env.privateKey as `0x${string}`);
 
   const client = new x402Client();
@@ -50,18 +58,31 @@ export function createX402Payer(env: X402Env): X402Payer {
     schemeOptions: { rpcUrl: env.rpcUrl },
   });
 
-  const fetchWithPayment = wrapFetchWithPayment(fetch, client);
   const httpClient = new x402HTTPClient(client);
 
   return {
     address: signer.address,
 
-    async pay(request: PaymentRequest): Promise<SettlementResult> {
-      const url = new URL(`${env.merchantBaseUrl}/pay/${request.counterparty}`);
-      url.searchParams.set("amount", String(request.amount));
-      if (request.reference) url.searchParams.set("reference", request.reference);
+    async pay(challenge: ValidatedX402Challenge): Promise<SettlementResult> {
+      if (!isValidatedX402Challenge(challenge)) {
+        throw new Error("x402 challenge was not validated by Cerberus");
+      }
 
-      const response = await fetchWithPayment(url.toString(), { method: "GET" });
+      // Manual v2.21.0 flow: create a payload for the ONE pinned requirement and
+      // submit it directly. The convenience wrapper is deliberately not used because
+      // it would fetch a second, potentially different 402 before signing.
+      const paymentPayload = await client.createPaymentPayload(challenge.paymentRequired);
+      const headers = new Headers(httpClient.encodePaymentSignatureHeader(paymentPayload));
+      headers.set("Access-Control-Expose-Headers", "PAYMENT-RESPONSE,X-PAYMENT-RESPONSE");
+      const response = await fetchImpl(new Request(challenge.requestUrl, {
+        method: challenge.method,
+        headers,
+      }));
+      await httpClient.processPaymentResult(
+        paymentPayload,
+        (name) => response.headers.get(name),
+        response.status,
+      );
       const result = await httpClient.processResponse(response);
 
       if (result.paymentStatus === "settled" && isSettleResponse(result.header)) {

@@ -4,7 +4,11 @@ import {
   AuthorizationError,
   SignedExecutionAuthorizationSchema,
 } from "@safr/execution-authorization";
-import { createX402Payer } from "@safr/x402-client";
+import {
+  X402ChallengeError,
+  createX402Payer,
+  fetchX402Challenge,
+} from "@safr/x402-client";
 import {
   dbAuthorizationUseStore,
   dbExecutionContext,
@@ -28,6 +32,8 @@ const executor = createIsolatedExecutor({
   useStore: dbAuthorizationUseStore,
   expectedAuthorizer: executorEnv.expectedAuthorizer,
   target: executorEnv.target,
+  challengeFetcher: (request) =>
+    fetchX402Challenge(request, executorEnv.target.merchantBaseUrl),
   payerFactory: () => createX402Payer(executorEnv.x402),
 });
 
@@ -44,7 +50,11 @@ app.post("/execute", async (req, res, next) => {
     const settlement = await executor.execute(input);
     res.json({ settlement });
   } catch (error) {
-    if (error instanceof AuthorizationError || error instanceof ExecutionRefusedError) {
+    if (
+      error instanceof AuthorizationError ||
+      error instanceof ExecutionRefusedError ||
+      error instanceof X402ChallengeError
+    ) {
       const replay =
         (error instanceof AuthorizationError && error.code === "AUTHORIZATION_REPLAY") ||
         (error instanceof ExecutionRefusedError && error.code === "RESERVATION_NOT_EXECUTABLE");

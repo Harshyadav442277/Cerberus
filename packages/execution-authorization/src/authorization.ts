@@ -130,12 +130,14 @@ export interface VerifyAuthorizationInput {
   nowMs?: number;
 }
 
+export type VerifyAuthorizationContextInput = Omit<VerifyAuthorizationInput, "useStore">;
+
 function sameAddress(left: string, right: string): boolean {
   return getAddress(left) === getAddress(right);
 }
 
-export async function verifyAndConsumeExecutionAuthorization(
-  input: VerifyAuthorizationInput,
+export async function verifyExecutionAuthorization(
+  input: VerifyAuthorizationContextInput,
 ): Promise<ExecutionAuthorization> {
   const envelope = SignedExecutionAuthorizationSchema.parse(input.envelope);
   const authorization = envelope.authorization;
@@ -178,10 +180,24 @@ export async function verifyAndConsumeExecutionAuthorization(
     throw new AuthorizationError("RESOURCE_MISMATCH");
   }
 
-  // The one-shot boundary. The executor crosses it before constructing the payer, so
-  // a replay is refused while the payment key still does not exist in the process.
-  if (!(await input.useStore.consume(authorization.authorizationId, authorization.nonce))) {
+  return authorization;
+}
+
+/** Crosses the one-shot boundary after all pre-signature checks have passed. */
+export async function consumeExecutionAuthorization(
+  authorization: ExecutionAuthorization,
+  useStore: AuthorizationUseStore,
+): Promise<void> {
+  if (!(await useStore.consume(authorization.authorizationId, authorization.nonce))) {
     throw new AuthorizationError("AUTHORIZATION_REPLAY");
   }
+}
+
+/** Backwards-compatible combined operation for callers without an external pre-signature gate. */
+export async function verifyAndConsumeExecutionAuthorization(
+  input: VerifyAuthorizationInput,
+): Promise<ExecutionAuthorization> {
+  const authorization = await verifyExecutionAuthorization(input);
+  await consumeExecutionAuthorization(authorization, input.useStore);
   return authorization;
 }
