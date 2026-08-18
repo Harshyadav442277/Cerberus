@@ -18,7 +18,9 @@ import {
 import {
   PaymentAttemptPersistenceError,
   paymentRequestUrl,
+  reconcileEip3009,
   validateX402Challenge,
+  type Eip3009ChainReader,
   type PaymentRequest,
   type PaymentAttemptCorrelation,
   type X402Challenge,
@@ -111,6 +113,8 @@ export interface ExecutorOptions {
   payerFactory: () => X402Payer;
   /** Unsigned transport path. It has no signer and receives no payment credentials. */
   challengeFetcher: (request: PaymentRequest) => Promise<X402Challenge>;
+  /** Read-only chain evidence. Merchant settlement headers are never authoritative. */
+  chain: Eip3009ChainReader;
   useStore?: AuthorizationUseStore;
   nowMs?: () => number;
 }
@@ -307,13 +311,39 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       }
 
       if (result.status === "settled") {
-        await options.reservations.markSettled(reservation.reservation_id, result.tx_hash);
-        return {
-          status: result.status,
-          tx_hash: result.tx_hash,
-          rail: result.rail,
-          settled_at: result.settled_at,
-        };
+        try {
+          const proof = await reconcileEip3009(
+            {
+              token: freshAuthorization.token,
+              payer: prepared.correlation.payer,
+              nonce: prepared.correlation.nonce,
+              validBefore: prepared.correlation.validBefore,
+              submissionBlock: prepared.correlation.submissionBlock,
+              payTo: freshAuthorization.payTo,
+              amount: freshAuthorization.amount,
+            },
+            options.chain,
+          );
+          if (proof.outcome === "settled") {
+            // Financial truth comes from the chain, not the merchant-provided hash.
+            await options.reservations.markSettled(
+              reservation.reservation_id,
+              proof.transactionHash,
+            );
+            return {
+              status: "settled",
+              tx_hash: proof.transactionHash,
+              rail: result.rail,
+              settled_at: result.settled_at,
+            };
+          }
+        } catch {
+          // RPC failure or temporarily unavailable evidence is ambiguity, not failure.
+        }
+        await options.reservations.markOutcomeUnknown(reservation.reservation_id);
+        throw new SettlementOutcomeUnknownError(
+          `merchant success was not proven on chain (claimed ${result.tx_hash ?? "no transaction"})`,
+        );
       }
 
       // Even a well-formed x402 failure response is controlled by the merchant. Once

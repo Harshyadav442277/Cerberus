@@ -11,10 +11,12 @@ import {
 import {
   X402ChallengeError,
   paymentRequestUrl,
+  type Eip3009ChainReader,
   type SettlementResult,
   type X402Challenge,
   type X402Payer,
 } from "@safr/x402-client";
+import type { Address, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   createIsolatedExecutor,
@@ -26,6 +28,8 @@ const AUTH_KEY = `0x${"11".repeat(32)}` as const;
 const RESERVATION_ID = "res_phase2_fixture";
 const AUTHORIZATION_ID = "auth_1";
 const BAD_KEY = `0x${"22".repeat(32)}` as const;
+const CHAIN_TX = `0x${"aa".repeat(32)}` as Hex;
+const MERCHANT_TX = `0x${"bb".repeat(32)}` as Hex;
 const NOW = 1_800_000_000_000;
 const TARGET_CONFIG = {
   chainId: 84532,
@@ -230,6 +234,29 @@ const APPROVAL: HumanApprovalBinding = {
   expires_at: new Date(NOW + 60_000).toISOString(),
 };
 
+function chainReader(options: {
+  used?: boolean;
+  transactions?: Hex[];
+  exact?: boolean;
+  error?: Error;
+} = {}): Eip3009ChainReader {
+  return {
+    async latestTimestamp() {
+      return 1_800_000_000n;
+    },
+    async authorizationState(_token: Address, _payer: Address, _nonce: Hex) {
+      if (options.error) throw options.error;
+      return options.used ?? true;
+    },
+    async authorizationTransactions() {
+      return options.transactions ?? [CHAIN_TX];
+    },
+    async hasExactSuccessfulTransfer() {
+      return options.exact ?? true;
+    },
+  };
+}
+
 function harness(
   context: {
     audit: AuditLogRecord;
@@ -254,6 +281,7 @@ function harness(
       approval: HumanApprovalBinding | null;
     }>;
     challengeFetcher?: () => Promise<X402Challenge>;
+    chain?: Eip3009ChainReader;
   } = {},
 ) {
   let constructed = 0;
@@ -279,7 +307,7 @@ function harness(
           if (payerImpl) return payerImpl();
           return {
             status: "settled",
-            tx_hash: "0xdeadbeef",
+            tx_hash: MERCHANT_TX,
             rail: "x402",
             settled_at: "2026-08-18T10:00:01.000Z",
           };
@@ -303,6 +331,7 @@ function harness(
       },
     },
     reservations: store.port,
+    chain: runtime.chain ?? chainReader(),
     expectedAuthorizer: privateKeyToAccount(AUTH_KEY).address,
     target: TARGET_CONFIG,
     async challengeFetcher() {
@@ -678,11 +707,50 @@ describe("committed financial state gates execution", () => {
     strictEqual(store.status(), "SETTLED");
   });
 
-  it("settles the reservation on a known successful payment", async () => {
+  it("settles only with the chain-proven transaction, not the merchant-provided hash", async () => {
     const h = harness();
-    await h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() });
-    deepStrictEqual(h.store.calls, ["settled:0xdeadbeef"]);
+    const settlement = await h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() });
+    strictEqual(settlement.tx_hash, CHAIN_TX);
+    deepStrictEqual(h.store.calls, [`settled:${CHAIN_TX}`]);
     strictEqual(h.store.status(), "SETTLED");
+  });
+
+  it("keeps a fake merchant success and fake transaction OUTCOME_UNKNOWN", async () => {
+    const h = harness(undefined, undefined, undefined, undefined, {
+      chain: chainReader({ used: false }),
+    });
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+  });
+
+  for (const mismatch of ["recipient", "amount"] as const) {
+    it(`keeps merchant success with the wrong chain ${mismatch} OUTCOME_UNKNOWN`, async () => {
+      const h = harness(undefined, undefined, undefined, undefined, {
+        chain: chainReader({ exact: false }),
+      });
+      await rejects(
+        async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+        (error) => error instanceof SettlementOutcomeUnknownError,
+      );
+      deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+      strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+    });
+  }
+
+  it("keeps merchant success OUTCOME_UNKNOWN while chain RPC is unavailable", async () => {
+    const h = harness(undefined, undefined, undefined, undefined, {
+      chain: chainReader({ error: new Error("RPC unavailable") }),
+    });
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
   });
 
   it("keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission", async () => {

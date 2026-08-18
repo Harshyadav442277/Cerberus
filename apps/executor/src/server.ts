@@ -6,6 +6,7 @@ import {
 } from "@safr/execution-authorization";
 import {
   X402ChallengeError,
+  createEip3009ChainReader,
   createX402Payer,
   fetchX402Challenge,
 } from "@safr/x402-client";
@@ -38,6 +39,7 @@ const executor = createIsolatedExecutor({
   target: executorEnv.target,
   challengeFetcher: (request) =>
     fetchX402Challenge(request, executorEnv.target.merchantBaseUrl),
+  chain: createEip3009ChainReader(executorEnv.x402.rpcUrl),
   payerFactory: () => createX402Payer(executorEnv.x402),
 });
 
