@@ -1,12 +1,16 @@
 import {
   beginSubmission,
+  consumeAuthorization,
+  getActiveMandate,
   getAuditLogRecord,
+  getHumanApproval,
   getLiveReservationForAudit,
   getProposedAction,
   markFailed,
   markOutcomeUnknown,
   markSettled,
 } from "@safr/db";
+import type { AuthorizationUseStore } from "@safr/execution-authorization";
 import {
   ExecutionRefusedError,
   type ExecutionContextPort,
@@ -22,7 +26,14 @@ export const dbExecutionContext: ExecutionContextPort = {
     // Financial state is read here, from the database, rather than accepted from the
     // caller. A compromised agent cannot hand the executor a reservation.
     const reservation = await getLiveReservationForAudit(auditId);
-    return { audit, action, reservation };
+    // Resolved at execution time, not at issuance time. This is the current-authority
+    // half of the question; the audit record answers the historical half.
+    const active = await getActiveMandate(audit.agent_id, new Date().toISOString());
+    const currentMandate = active
+      ? { mandate_id: active.mandate_id, version: active.version }
+      : null;
+    const approval = await getHumanApproval(auditId);
+    return { audit, action, reservation, currentMandate, approval };
   },
 };
 
@@ -31,4 +42,15 @@ export const dbReservations: ExecutionReservationPort = {
   markSettled,
   markFailed,
   markOutcomeUnknown,
+};
+
+/**
+ * Durable one-shot consumption, shared by every executor process.
+ *
+ * Phase 1 used a Set in this process. That could not survive a restart and a second
+ * executor could not see it, so the guarantee was only as strong as one process's
+ * uptime. This is a compare-and-set on a row.
+ */
+export const dbAuthorizationUseStore: AuthorizationUseStore = {
+  consume: (authorizationId, nonce) => consumeAuthorization(authorizationId, nonce),
 };
