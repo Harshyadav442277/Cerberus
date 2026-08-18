@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { deepStrictEqual, ok, strictEqual } from "node:assert/strict";
+import { deepStrictEqual, ok, rejects, strictEqual } from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { closePool, getPool } from "../pool.js";
 import {
@@ -577,6 +577,30 @@ describe("durable outcome reconciliation state", () => {
     );
     strictEqual(audit.rows[0]!.settlement.status, "settled");
     strictEqual(audit.rows[0]!.settlement.tx_hash, "0xrecovered");
+  });
+
+  it("rejects ordinary and direct FAILED transitions after correlation is persisted", async () => {
+    const id = await submission("recon_correlated_failure_guard");
+
+    await markFailed(id, AT);
+    strictEqual(
+      (await getReservation(id))!.status,
+      "SUBMITTING",
+      "ordinary executor failure cannot release a transmitted authorization",
+    );
+
+    await rejects(
+      () => getPool().query(
+        `UPDATE payment_reservation SET status = 'FAILED' WHERE reservation_id = $1`,
+        [id],
+      ),
+      (error: unknown) =>
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23514",
+    );
+    strictEqual((await getReservation(id))!.status, "SUBMITTING");
   });
 
   it("keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment", async () => {

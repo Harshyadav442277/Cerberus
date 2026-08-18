@@ -558,19 +558,22 @@ export async function markSettled(
 }
 
 /**
- * Positively known non-payment. This is the ONLY outcome-driven release.
+ * Positively known pre-transport non-payment.
  *
- * Reachable only from a settlement result that explicitly reported failure — never
- * from a thrown exception, which carries no evidence either way.
+ * Once correlation exists, a merchant possesses a live signed EIP-3009 authorization;
+ * neither a returned failure nor an exception proves it cannot settle later. The
+ * database trigger independently enforces that correlated failure can occur only
+ * through the fenced reconciler after expiry and an unused nonce are proven.
  */
 export async function markFailed(
   reservationId: string,
   at = new Date().toISOString(),
 ): Promise<void> {
   await getPool().query(
-    `UPDATE payment_reservation
+      `UPDATE payment_reservation
         SET status = 'FAILED', updated_at = $2::timestamptz
-      WHERE reservation_id = $1 AND status = 'SUBMITTING'`,
+      WHERE reservation_id = $1 AND status = 'SUBMITTING'
+        AND payment_nonce IS NULL`,
     [reservationId, at],
   );
 }
