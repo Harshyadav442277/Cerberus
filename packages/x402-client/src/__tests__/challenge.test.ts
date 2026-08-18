@@ -58,6 +58,20 @@ function changed(update: Partial<PaymentRequired["accepts"][number]>): PaymentRe
   };
 }
 
+function testPayer(fetchImpl: typeof fetch) {
+  return createX402Payer(
+    {
+      privateKey: `0x${"44".repeat(32)}`,
+      network: "eip155:84532",
+      facilitatorUrl: "https://x402.org/facilitator",
+      rpcUrl: "https://sepolia.base.org",
+      merchantBaseUrl: "http://localhost:4021",
+    },
+    fetchImpl,
+    async () => 12_345_678n,
+  );
+}
+
 async function rejectsWith(run: () => unknown, code: X402ChallengeError["code"]): Promise<void> {
   await rejects(
     async () => run(),
@@ -226,5 +240,63 @@ describe("paid retry uses only the pinned challenge", () => {
     const prepared = await payer.prepare(validated);
     await rejects(() => prepared.submit(async () => false));
     strictEqual(paidRequests, 0);
+  });
+
+  it("exposes a valid merchant-reported settlement failure only after transmission", async () => {
+    let persisted = false;
+    let signedRequest = false;
+    const payer = testPayer(async (input) => {
+      const request = input instanceof Request ? input : new Request(input);
+      strictEqual(persisted, true, "correlation commits before the merchant receives authority");
+      signedRequest = request.headers.has("PAYMENT-SIGNATURE");
+      return new Response(JSON.stringify({ error: "merchant refused" }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
+          "PAYMENT-RESPONSE": encodePaymentResponseHeader({
+            success: false,
+            transaction: "",
+            network: "eip155:84532",
+            errorReason: "merchant_reported_failure",
+          }),
+        },
+      });
+    });
+    const prepared = await payer.prepare(validateX402Challenge(challenge(), EXPECTED));
+    const result = await prepared.submit(async () => {
+      persisted = true;
+      return true;
+    });
+    strictEqual(persisted, true);
+    strictEqual(signedRequest, true);
+    strictEqual(result.status, "failed");
+  });
+
+  it("treats HTTP 500 as a post-signature non-settled result", async () => {
+    let transmitted = false;
+    const payer = testPayer(async (input) => {
+      const request = input instanceof Request ? input : new Request(input);
+      transmitted = request.headers.has("PAYMENT-SIGNATURE");
+      return new Response("merchant error", { status: 500 });
+    });
+    const prepared = await payer.prepare(validateX402Challenge(challenge(), EXPECTED));
+    const result = await prepared.submit(async () => true);
+    strictEqual(transmitted, true);
+    strictEqual(result.status, "failed");
+  });
+
+  it("throws on malformed JSON only after the signed request was transmitted", async () => {
+    let transmitted = false;
+    const payer = testPayer(async (input) => {
+      const request = input instanceof Request ? input : new Request(input);
+      transmitted = request.headers.has("PAYMENT-SIGNATURE");
+      return new Response("{", {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    const prepared = await payer.prepare(validateX402Challenge(challenge(), EXPECTED));
+    await rejects(() => prepared.submit(async () => true));
+    strictEqual(transmitted, true);
   });
 });

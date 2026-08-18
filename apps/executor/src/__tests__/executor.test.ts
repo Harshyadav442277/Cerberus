@@ -16,7 +16,11 @@ import {
   type X402Payer,
 } from "@safr/x402-client";
 import { privateKeyToAccount } from "viem/accounts";
-import { createIsolatedExecutor, ExecutionRefusedError } from "../execution.js";
+import {
+  createIsolatedExecutor,
+  ExecutionRefusedError,
+  SettlementOutcomeUnknownError,
+} from "../execution.js";
 
 const AUTH_KEY = `0x${"11".repeat(32)}` as const;
 const RESERVATION_ID = "res_phase2_fixture";
@@ -208,6 +212,7 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
       },
     },
     status: () => current?.status ?? null,
+    correlated: () => typeof current?.payment_nonce === "string",
   };
 }
 
@@ -680,7 +685,7 @@ describe("committed financial state gates execution", () => {
     strictEqual(h.store.status(), "SETTLED");
   });
 
-  it("releases the reservation only on a positively reported failure", async () => {
+  it("keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission", async () => {
     const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => ({
       status: "failed" as const,
       tx_hash: null,
@@ -688,10 +693,40 @@ describe("committed financial state gates execution", () => {
       settled_at: null,
       error: "insufficient_funds",
     }));
-    const settlement = await h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() });
-    strictEqual(settlement.status, "failed");
-    deepStrictEqual(h.store.calls, ["failed"]);
-    strictEqual(h.store.status(), "FAILED");
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    strictEqual(h.store.correlated(), true, "the merchant received a persisted authorization");
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+  });
+
+  it("keeps malformed post-signature responses OUTCOME_UNKNOWN", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => {
+      throw new SyntaxError("malformed JSON response");
+    });
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+  });
+
+  it("keeps HTTP 500 after signature transmission OUTCOME_UNKNOWN", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => {
+      throw new Error("merchant HTTP 500 after PAYMENT-SIGNATURE");
+    });
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
   });
 
   it("refuses to spend under a mandate that has been superseded", async () => {

@@ -15,7 +15,11 @@ import {
   dbReservations,
 } from "./db-context.js";
 import { configureExecutorDatabase, executorEnv } from "./env.js";
-import { createIsolatedExecutor, ExecutionRefusedError } from "./execution.js";
+import {
+  createIsolatedExecutor,
+  ExecutionRefusedError,
+  SettlementOutcomeUnknownError,
+} from "./execution.js";
 
 configureExecutorDatabase();
 
@@ -50,6 +54,10 @@ app.post("/execute", async (req, res, next) => {
     const settlement = await executor.execute(input);
     res.json({ settlement });
   } catch (error) {
+    if (error instanceof SettlementOutcomeUnknownError) {
+      res.status(503).json({ error: "OUTCOME_UNKNOWN", signing_key_used: true });
+      return;
+    }
     if (
       error instanceof AuthorizationError ||
       error instanceof ExecutionRefusedError ||

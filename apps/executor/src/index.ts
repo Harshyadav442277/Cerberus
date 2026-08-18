@@ -1,4 +1,8 @@
-export { createIsolatedExecutor, ExecutionRefusedError } from "./execution.js";
+export {
+  createIsolatedExecutor,
+  ExecutionRefusedError,
+  SettlementOutcomeUnknownError,
+} from "./execution.js";
 export type {
   ExecuteInput,
   ExecutionContextPort,

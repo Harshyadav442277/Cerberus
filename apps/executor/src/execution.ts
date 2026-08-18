@@ -47,6 +47,18 @@ export class ExecutionRefusedError extends Error {
   }
 }
 
+/**
+ * A signed payment authorization left the executor, but settlement is not proven.
+ * The caller must not interpret this as failure or retry; only reconciliation may
+ * resolve the durable reservation.
+ */
+export class SettlementOutcomeUnknownError extends Error {
+  constructor(detail: string) {
+    super(`OUTCOME_UNKNOWN: ${detail}`);
+    this.name = "SettlementOutcomeUnknownError";
+  }
+}
+
 export interface TrustedExecutionContext {
   audit: AuditLogRecord;
   action: ProposedAction;
@@ -287,26 +299,29 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
         // A thrown settlement error is NOT evidence that no money moved — the payment
         // may already have been broadcast and accepted with only the response lost.
         // Releasing the capacity here is precisely how a system double-pays, so the
-        // reservation keeps holding it. Phase 5 adds the reconciler that resolves this
-        // against chain state; nothing retries it in the meantime.
+        // reservation keeps holding it until the reconciler resolves chain state.
         await options.reservations.markOutcomeUnknown(reservation.reservation_id);
-        throw error;
+        throw new SettlementOutcomeUnknownError(
+          error instanceof Error ? error.message : String(error),
+        );
       }
 
       if (result.status === "settled") {
         await options.reservations.markSettled(reservation.reservation_id, result.tx_hash);
-      } else {
-        // Positive evidence of non-payment, reported by the rail itself. This is the
-        // only outcome that gives the capacity back.
-        await options.reservations.markFailed(reservation.reservation_id);
+        return {
+          status: result.status,
+          tx_hash: result.tx_hash,
+          rail: result.rail,
+          settled_at: result.settled_at,
+        };
       }
 
-      return {
-        status: result.status,
-        tx_hash: result.tx_hash,
-        rail: result.rail,
-        settled_at: result.settled_at,
-      };
+      // Even a well-formed x402 failure response is controlled by the merchant. Once
+      // PAYMENT-SIGNATURE was transmitted, that merchant still possesses a live
+      // EIP-3009 authorization and can settle it until validBefore. Hold capacity and
+      // let chain reconciliation prove either exact settlement or expired-unused.
+      await options.reservations.markOutcomeUnknown(reservation.reservation_id);
+      throw new SettlementOutcomeUnknownError(result.error ?? "merchant reported non-settlement");
     },
   };
 }
