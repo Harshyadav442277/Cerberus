@@ -127,6 +127,7 @@ function reservations(options: { ceiling?: number; velocityEscalation?: boolean 
           authorization_id: null,
           settlement_tx: null,
           payment_payer: null,
+          payment_pay_to: null,
           payment_nonce: null,
           payment_payload_hash: null,
           payment_valid_before: null,

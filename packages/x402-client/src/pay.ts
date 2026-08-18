@@ -42,6 +42,7 @@ export interface X402Payer {
 
 export interface PaymentAttemptCorrelation {
   payer: string;
+  payTo: string;
   nonce: string;
   payloadHash: string;
   validBefore: string;
@@ -154,6 +155,7 @@ function paymentCorrelation(
   const payload = paymentPayload.payload as {
     authorization?: {
       from?: unknown;
+      to?: unknown;
       nonce?: unknown;
       validBefore?: unknown;
     };
@@ -161,6 +163,7 @@ function paymentCorrelation(
   const authorization = payload.authorization;
   if (
     typeof authorization?.from !== "string" ||
+    typeof authorization.to !== "string" ||
     typeof authorization.nonce !== "string" ||
     typeof authorization.validBefore !== "string" ||
     !/^0x[0-9a-fA-F]{64}$/.test(authorization.nonce) ||
@@ -170,6 +173,7 @@ function paymentCorrelation(
   }
   return {
     payer: authorization.from,
+    payTo: authorization.to,
     nonce: authorization.nonce,
     validBefore: authorization.validBefore,
     payloadHash: keccak256(stringToHex(JSON.stringify(paymentPayload))),

@@ -72,6 +72,7 @@ export interface PaymentReservation {
   authorization_id: string | null;
   settlement_tx: string | null;
   payment_payer: string | null;
+  payment_pay_to: string | null;
   payment_nonce: string | null;
   payment_payload_hash: string | null;
   payment_valid_before: string | null;
@@ -88,7 +89,8 @@ export interface PaymentReservation {
 
 const COLUMNS = `reservation_id, audit_id, action_id, agent_id, mandate_id, mandate_version,
   budget_key, currency, amount_decimal, amount_atomic, chain_id, token, status,
-  authorization_id, settlement_tx, payment_payer, payment_nonce, payment_payload_hash,
+  authorization_id, settlement_tx, payment_payer, payment_pay_to, payment_nonce,
+  payment_payload_hash,
   payment_valid_before, submission_block, reconcile_after, reconciliation_attempts,
   reconciliation_token, reconciliation_error, counts_at, expires_at, created_at, updated_at`;
 
@@ -383,13 +385,13 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
          reservation_id, audit_id, action_id, agent_id, mandate_id, mandate_version,
          budget_key, currency, amount_decimal, amount_atomic, chain_id, token,
          status, authorization_id, settlement_tx,
-         payment_payer, payment_nonce, payment_payload_hash, payment_valid_before,
+         payment_payer, payment_pay_to, payment_nonce, payment_payload_hash, payment_valid_before,
          submission_block, reconcile_after, reconciliation_attempts, reconciliation_token,
          reconciliation_error,
          counts_at, expires_at, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::numeric, $10::numeric, $11, $12,
                'RESERVED', NULL, NULL,
-               NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL,
+               NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL,
                $13::timestamptz, $13::timestamptz + make_interval(secs => $14::int),
                $13::timestamptz, $13::timestamptz)
        RETURNING ${COLUMNS}`,
@@ -492,6 +494,7 @@ export async function beginSubmission(
 
 export interface PaymentAttemptCorrelation {
   payer: string;
+  payTo: string;
   nonce: string;
   payloadHash: string;
   validBefore: string;
@@ -513,13 +516,14 @@ export async function recordPaymentAttempt(
   const { rows } = await getPool().query(
     `UPDATE payment_reservation
         SET payment_payer = $2,
-            payment_nonce = $3,
-            payment_payload_hash = $4,
-            payment_valid_before = $5::bigint,
-            submission_block = $6::bigint,
-            reconcile_after = $7::timestamptz,
+            payment_pay_to = $3,
+            payment_nonce = $4,
+            payment_payload_hash = $5,
+            payment_valid_before = $6::bigint,
+            submission_block = $7::bigint,
+            reconcile_after = $8::timestamptz,
             reconciliation_error = NULL,
-            updated_at = $8::timestamptz
+            updated_at = $9::timestamptz
       WHERE reservation_id = $1
         AND status = 'SUBMITTING'
         AND payment_nonce IS NULL
@@ -527,6 +531,7 @@ export async function recordPaymentAttempt(
     [
       reservationId,
       correlation.payer,
+      correlation.payTo,
       correlation.nonce,
       correlation.payloadHash,
       correlation.validBefore,
@@ -664,16 +669,41 @@ export async function markReconciledSettled(
   settlementTx: string,
   at = new Date().toISOString(),
 ): Promise<boolean> {
-  const { rowCount } = await getPool().query(
-    `UPDATE payment_reservation
-        SET status = 'SETTLED', settlement_tx = $3, reconcile_after = NULL,
-            reconciliation_token = NULL, reconciliation_error = NULL,
-            updated_at = $4::timestamptz
-      WHERE reservation_id = $1 AND status = 'RECONCILING'
-        AND reconciliation_token = $2`,
-    [reservationId, reconciliationToken, settlementTx, at],
-  );
-  return (rowCount ?? 0) > 0;
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const changed = await client.query<{ audit_id: string }>(
+      `UPDATE payment_reservation
+          SET status = 'SETTLED', settlement_tx = $3, reconcile_after = NULL,
+              reconciliation_token = NULL, reconciliation_error = NULL,
+              updated_at = $4::timestamptz
+        WHERE reservation_id = $1 AND status = 'RECONCILING'
+          AND reconciliation_token = $2
+        RETURNING audit_id`,
+      [reservationId, reconciliationToken, settlementTx, at],
+    );
+    if (!changed.rows[0]) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+    const audit = await client.query(
+      `UPDATE audit_log
+          SET settlement = $2::jsonb
+        WHERE audit_id = $1 AND settlement IS NULL`,
+      [
+        changed.rows[0].audit_id,
+        JSON.stringify({ status: "settled", tx_hash: settlementTx, rail: "x402", settled_at: at }),
+      ],
+    );
+    if ((audit.rowCount ?? 0) !== 1) throw new Error("reconciled audit is not writable");
+    await client.query("COMMIT");
+    return true;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /** Chain-proven non-payment after authorization expiry; capacity is safe to release. */
@@ -683,16 +713,41 @@ export async function markReconciledFailed(
   reason: string,
   at = new Date().toISOString(),
 ): Promise<boolean> {
-  const { rowCount } = await getPool().query(
-    `UPDATE payment_reservation
-        SET status = 'FAILED', reconcile_after = NULL,
-            reconciliation_token = NULL, reconciliation_error = $3,
-            updated_at = $4::timestamptz
-      WHERE reservation_id = $1 AND status = 'RECONCILING'
-        AND reconciliation_token = $2`,
-    [reservationId, reconciliationToken, reason, at],
-  );
-  return (rowCount ?? 0) > 0;
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const changed = await client.query<{ audit_id: string }>(
+      `UPDATE payment_reservation
+          SET status = 'FAILED', reconcile_after = NULL,
+              reconciliation_token = NULL, reconciliation_error = $3,
+              updated_at = $4::timestamptz
+        WHERE reservation_id = $1 AND status = 'RECONCILING'
+          AND reconciliation_token = $2
+        RETURNING audit_id`,
+      [reservationId, reconciliationToken, reason, at],
+    );
+    if (!changed.rows[0]) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+    const audit = await client.query(
+      `UPDATE audit_log
+          SET settlement = $2::jsonb
+        WHERE audit_id = $1 AND settlement IS NULL`,
+      [
+        changed.rows[0].audit_id,
+        JSON.stringify({ status: "failed", tx_hash: null, rail: "x402", settled_at: null }),
+      ],
+    );
+    if ((audit.rowCount ?? 0) !== 1) throw new Error("reconciled audit is not writable");
+    await client.query("COMMIT");
+    return true;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function getReservation(reservationId: string): Promise<PaymentReservation | null> {

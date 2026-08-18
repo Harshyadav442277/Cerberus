@@ -1,6 +1,8 @@
 import {
   beginSubmission,
+  claimReconciliation,
   consumeAuthorization,
+  deferReconciliation,
   getActiveMandate,
   getAuditLogRecord,
   getHumanApproval,
@@ -8,6 +10,8 @@ import {
   getProposedAction,
   markFailed,
   markOutcomeUnknown,
+  markReconciledFailed,
+  markReconciledSettled,
   markSettled,
   recordPaymentAttempt,
 } from "@safr/db";
@@ -17,6 +21,7 @@ import {
   type ExecutionContextPort,
   type ExecutionReservationPort,
 } from "./execution.js";
+import type { ReconciliationStore } from "./reconciliation.js";
 
 export const dbExecutionContext: ExecutionContextPort = {
   async resolve(auditId) {
@@ -55,4 +60,11 @@ export const dbReservations: ExecutionReservationPort = {
  */
 export const dbAuthorizationUseStore: AuthorizationUseStore = {
   consume: (authorizationId, nonce) => consumeAuthorization(authorizationId, nonce),
+};
+
+export const dbReconciliationStore: ReconciliationStore = {
+  claim: claimReconciliation,
+  settle: markReconciledSettled,
+  fail: markReconciledFailed,
+  defer: deferReconciliation,
 };

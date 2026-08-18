@@ -28,6 +28,12 @@ const roles: RuntimeRole[] = [
     urlName: "EXECUTOR_DATABASE_URL",
     groupRole: "cerberus_executor_role",
   },
+  {
+    label: "reconciler",
+    envFile: ".env.reconciler",
+    urlName: "RECONCILER_DATABASE_URL",
+    groupRole: "cerberus_executor_role",
+  },
 ];
 
 function readRuntimeUrl(role: RuntimeRole): URL {

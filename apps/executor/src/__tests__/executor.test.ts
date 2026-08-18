@@ -125,6 +125,7 @@ const RESERVATION: PaymentReservation = {
   authorization_id: AUTHORIZATION_ID,
   settlement_tx: null,
   payment_payer: null,
+  payment_pay_to: null,
   payment_nonce: null,
   payment_payload_hash: null,
   payment_valid_before: null,
@@ -170,6 +171,7 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
         reservationId: string,
         correlation: {
           payer: string;
+          payTo: string;
           nonce: string;
           payloadHash: string;
           validBefore: string;
@@ -183,6 +185,7 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
         current = {
           ...current,
           payment_payer: correlation.payer,
+          payment_pay_to: correlation.payTo,
           payment_nonce: correlation.nonce,
           payment_payload_hash: correlation.payloadHash,
           payment_valid_before: correlation.validBefore,
@@ -257,6 +260,7 @@ function harness(
     async prepare() {
       const correlation = {
         payer: "0x4444444444444444444444444444444444444444",
+        payTo: TARGET_CONFIG.payTo,
         nonce: `0x${"77".repeat(32)}`,
         payloadHash: `0x${"88".repeat(32)}`,
         validBefore: "1800000300",

@@ -465,6 +465,7 @@ describe("durable outcome reconciliation state", () => {
         reservationId,
         {
           payer: "0x4444444444444444444444444444444444444444",
+          payTo: "0x1111111111111111111111111111111111111111",
           nonce: `0x${"55".repeat(32)}`,
           payloadHash: `0x${"66".repeat(32)}`,
           validBefore: "1800000300",
