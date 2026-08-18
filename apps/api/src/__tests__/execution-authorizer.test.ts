@@ -1,7 +1,13 @@
 import { ok, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
-import type { PaymentReservation, ReserveBudgetInput, ReserveBudgetResult } from "@safr/db";
+import type {
+  HumanApprovalBinding,
+  PaymentReservation,
+  ReserveBudgetInput,
+  ReserveBudgetResult,
+} from "@safr/db";
+import { hashProposal } from "@safr/execution-authorization";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   AuthorizationIssuanceError,
@@ -121,6 +127,9 @@ function reservations(options: { ceiling?: number } = {}) {
         rows.set(reservation.reservation_id, reservation);
         return { outcome: "created", reservation };
       },
+      async recordIssued() {
+        return undefined;
+      },
       async bindAuthorization(reservationId: string, authorizationId: string) {
         calls.bind += 1;
         const row = rows.get(reservationId);
@@ -137,14 +146,43 @@ function reservations(options: { ceiling?: number } = {}) {
   };
 }
 
-function authorizer(action = ACTION, audit = AUDIT, store = reservations()) {
+/** An approval bound to exactly this proposal under exactly this mandate version. */
+function approval(overrides: Partial<HumanApprovalBinding> = {}): HumanApprovalBinding {
+  return {
+    audit_id: AUDIT.audit_id,
+    action_id: ACTION.action_id,
+    agent_id: ACTION.agent_id,
+    proposal_hash: hashProposal(ACTION),
+    mandate_id: MANDATE.mandate_id,
+    mandate_version: MANDATE.version,
+    reviewer_id: "compliance_officer_01",
+    decision: "approved",
+    decided_at: "2027-01-15T22:00:00.000Z",
+    expires_at: "2027-01-15T22:30:00.000Z",
+    ...overrides,
+  };
+}
+
+function authorizer(
+  action = ACTION,
+  audit = AUDIT,
+  store = reservations(),
+  options: { mandate?: Mandate; currentMandate?: Mandate | null; approval?: HumanApprovalBinding | null } = {},
+) {
+  const historical = options.mandate ?? MANDATE;
+  const current = options.currentMandate === undefined ? historical : options.currentMandate;
   return createExecutionAuthorizer({
     context: {
       async getAudit() { return audit; },
       async getAction() { return action; },
-      async loadEvaluationContext() {
-        return { mandate: MANDATE, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
+      async loadEvaluationContext(_agentId: string, at: string) {
+        // The authorizer asks twice: once at proposed_at for the historical record,
+        // once at "now" for current authority. Answering differently is what lets a
+        // revoked or superseded mandate be tested at all.
+        const mandate = at === action.proposed_at ? historical : current;
+        return { mandate, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
       },
+      async getApproval() { return options.approval ?? null; },
     },
     reservations: store.port,
     authorizerPrivateKey: KEY,
@@ -153,7 +191,7 @@ function authorizer(action = ACTION, audit = AUDIT, store = reservations()) {
       payTo: "0x1111111111111111111111111111111111111111",
       merchantBaseUrl: "http://localhost:4021",
     },
-    nowMs: () => 1_800_000_000_000,
+    nowMs: () => Date.parse("2027-01-15T22:05:00.000Z"),
   });
 }
 
@@ -168,6 +206,7 @@ describe("trusted execution authorizer", () => {
           reads += 1;
           return { mandate: MANDATE, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
         },
+        async getApproval() { reads += 1; return null; },
       },
       reservations: reservations().port,
       authorizerPrivateKey: `0x${"00".repeat(32)}`,
@@ -269,5 +308,138 @@ describe("authorization is backed by committed capacity", () => {
     const breach = { ...ACTION, payload: { ...ACTION.payload, amount: 5 } };
     await rejects(() => authorizer(breach, AUDIT, store).issue(AUDIT.audit_id));
     strictEqual(store.calls.reserve, 0, "a denied proposal never touches financial state");
+  });
+});
+
+describe("current authority is checked, not just historical", () => {
+  it("refuses when the mandate has been superseded since the decision", async () => {
+    const store = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { currentMandate: { ...MANDATE, version: 2 } })
+        .issue(AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "STALE_MANDATE",
+    );
+    strictEqual(store.calls.reserve, 0, "stale authority never reaches financial state");
+  });
+
+  it("refuses when no mandate authorises the agent any more", async () => {
+    const store = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { currentMandate: null }).issue(AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "MANDATE_REVOKED",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("refuses when limits were tightened in place, without a version bump", async () => {
+    // Editing controls without moving the version is exactly the case a version
+    // comparison alone would miss, so the rules are re-run under current authority.
+    const tightened: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        spend_caps: { per_transaction_max: 0.1, rolling_window: { window: "24h", max_total: 3 } },
+      },
+    };
+    const store = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { currentMandate: tightened }).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "CURRENT_AUTHORITY_DENIES",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("turns a settled ALLOW into an escalation when the counterparty is removed", async () => {
+    // The audit record correctly says ALLOW: at proposed_at, merchant_xyz was on the
+    // allowlist. It no longer is, so executing now needs a human who never saw it.
+    const removed: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        counterparty_policy: { ...MANDATE.controls.counterparty_policy, allowlist: [] },
+      },
+    };
+    const store = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { currentMandate: removed }).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "HUMAN_APPROVAL_REQUIRED",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+});
+
+describe("human approval must still cover what is about to happen", () => {
+  const ESCALATED_ACTION = {
+    ...ACTION,
+    action_id: "action_new",
+    payload: { ...ACTION.payload, counterparty: "merchant_new" },
+  };
+  const ESCALATED_AUDIT = {
+    ...AUDIT,
+    action_id: ESCALATED_ACTION.action_id,
+    disposition: "ESCALATE" as const,
+    reason: "counterparty_not_on_allowlist",
+    rule_triggered: "counterparty_policy",
+  };
+  const bound = () =>
+    approval({
+      audit_id: ESCALATED_AUDIT.audit_id,
+      action_id: ESCALATED_ACTION.action_id,
+      proposal_hash: hashProposal(ESCALATED_ACTION),
+    });
+
+  it("issues when the approval binds this proposal under the current version", async () => {
+    const envelope = await authorizer(ESCALATED_ACTION, ESCALATED_AUDIT, reservations(), {
+      approval: bound(),
+    }).issue(ESCALATED_AUDIT.audit_id);
+    strictEqual(envelope.authorization.proposalHash, hashProposal(ESCALATED_ACTION));
+  });
+
+  it("refuses an approval that has aged out", async () => {
+    const store = reservations();
+    await rejects(
+      () =>
+        authorizer(ESCALATED_ACTION, ESCALATED_AUDIT, store, {
+          approval: { ...bound(), expires_at: "2027-01-15T22:01:00.000Z" },
+        }).issue(ESCALATED_AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "STALE_APPROVAL",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("refuses an approval bound to a different proposal", async () => {
+    // The payload was edited after the reviewer looked at it.
+    const store = reservations();
+    await rejects(
+      () =>
+        authorizer(ESCALATED_ACTION, ESCALATED_AUDIT, store, {
+          approval: { ...bound(), proposal_hash: hashProposal(ACTION) },
+        }).issue(ESCALATED_AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "STALE_APPROVAL",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("refuses a denial recorded as a decision", async () => {
+    await rejects(
+      () =>
+        authorizer(ESCALATED_ACTION, ESCALATED_AUDIT, reservations(), {
+          approval: { ...bound(), decision: "denied" },
+        }).issue(ESCALATED_AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "HUMAN_APPROVAL_REQUIRED",
+    );
+  });
+
+  it("refuses an escalation with no recorded decision at all", async () => {
+    await rejects(
+      () =>
+        authorizer(ESCALATED_ACTION, ESCALATED_AUDIT, reservations(), { approval: null })
+          .issue(ESCALATED_AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "HUMAN_APPROVAL_REQUIRED",
+    );
   });
 });

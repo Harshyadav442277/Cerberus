@@ -1,12 +1,21 @@
-import { randomUUID } from "node:crypto";
-import type { AuditLogRecord, ProposedAction } from "@safr/core";
+import { randomBytes, randomUUID } from "node:crypto";
+import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
 import { evaluate } from "@safr/disposition-engine";
-import type { PaymentReservation, ReserveBudgetInput, ReserveBudgetResult } from "@safr/db";
+import type {
+  ApprovalFreshness,
+  HumanApprovalBinding,
+  PaymentReservation,
+  RecordAuthorizationInput,
+  ReserveBudgetInput,
+  ReserveBudgetResult,
+} from "@safr/db";
+import { evaluateApprovalFreshness } from "@safr/db";
 import {
   BASE_SEPOLIA_USDC,
   atomicUnitsToDecimal,
   buildExecutionTarget,
   exactDecimalString,
+  hashProposal,
   isValidPrivateKey,
   issueExecutionAuthorization,
   type SignedExecutionAuthorization,
@@ -29,23 +38,32 @@ export class AuthorizationIssuanceError extends Error {
       /** The shared mandate budget cannot cover this proposal right now. */
       | "INSUFFICIENT_BUDGET"
       /** This reservation already backs an authorization. One proposal, one capability. */
-      | "AUTHORIZATION_ALREADY_ISSUED",
+      | "AUTHORIZATION_ALREADY_ISSUED"
+      /** No mandate authorises this agent at execution time. Revoked, or lapsed. */
+      | "MANDATE_REVOKED"
+      /** The mandate in force now is not the one this decision was made under. */
+      | "STALE_MANDATE"
+      /** Current authority no longer permits this proposal: limits or allowlist changed. */
+      | "CURRENT_AUTHORITY_DENIES"
+      /** The human approval no longer covers what is about to happen. */
+      | "STALE_APPROVAL",
   ) {
     super(code);
     this.name = "AuthorizationIssuanceError";
   }
 }
 
+export interface EvaluationContext {
+  mandate: Mandate | null;
+  counters: Counters;
+}
+
 export interface AuthorizationContextPort {
   getAudit(auditId: string): Promise<AuditLogRecord | null>;
   getAction(actionId: string): Promise<ProposedAction | null>;
-  loadEvaluationContext(
-    agentId: string,
-    at: string,
-  ): Promise<{
-    mandate: import("@safr/core").Mandate | null;
-    counters: Counters;
-  }>;
+  loadEvaluationContext(agentId: string, at: string): Promise<EvaluationContext>;
+  /** The approval binding for an escalated audit, if a human ever decided it. */
+  getApproval(auditId: string): Promise<HumanApprovalBinding | null>;
 }
 
 /** The financial-state boundary. Injected so the authorizer stays unit-testable. */
@@ -55,6 +73,7 @@ export interface ReservationPort {
     reservationId: string,
     authorizationId: string,
   ): Promise<PaymentReservation | null>;
+  recordIssued(input: RecordAuthorizationInput): Promise<unknown>;
 }
 
 export interface ExecutionAuthorizerOptions {
@@ -63,6 +82,15 @@ export interface ExecutionAuthorizerOptions {
   authorizerPrivateKey: string;
   target: Omit<TargetConfig, "token"> & { token?: string };
   nowMs?: () => number;
+}
+
+/** Maps a stale-approval reason onto the refusal the caller sees. */
+function approvalRefusal(freshness: Extract<ApprovalFreshness, { usable: false }>) {
+  return new AuthorizationIssuanceError(
+    freshness.reason === "MISSING" || freshness.reason === "DENIED"
+      ? "HUMAN_APPROVAL_REQUIRED"
+      : "STALE_APPROVAL",
+  );
 }
 
 export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): {
@@ -79,14 +107,22 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
       ) {
         throw new AuthorizationIssuanceError("AUTHORIZER_NOT_CONFIGURED");
       }
+      const nowMs = options.nowMs?.() ?? Date.now();
+      const nowIso = new Date(nowMs).toISOString();
+
       const audit = await options.context.getAudit(auditId);
       if (!audit) throw new AuthorizationIssuanceError("AUDIT_NOT_FOUND");
       const action = await options.context.getAction(audit.action_id);
       if (!action) throw new AuthorizationIssuanceError("ACTION_NOT_FOUND");
-      const { mandate, counters } = await options.context.loadEvaluationContext(
+
+      // ── Historical question: was this proposal within its mandate when proposed? ──
+      // This is what the audit record asserts, and it is reconstructed at proposed_at
+      // so a later mandate edit cannot retroactively rewrite a past decision.
+      const historical = await options.context.loadEvaluationContext(
         action.agent_id,
         action.proposed_at,
       );
+      const mandate = historical.mandate;
       if (!mandate) throw new AuthorizationIssuanceError("NO_ACTIVE_MANDATE");
       if (
         audit.action_id !== action.action_id ||
@@ -97,32 +133,64 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
         throw new AuthorizationIssuanceError("AUDIT_CONTEXT_MISMATCH");
       }
 
-      const disposition = evaluate(action, mandate, counters);
+      const disposition = evaluate(action, mandate, historical.counters);
       if (disposition.disposition === "DENY") {
         throw new AuthorizationIssuanceError("DISPOSITION_NOT_EXECUTABLE");
-      }
-      if (disposition.disposition === "ESCALATE" && audit.human_review?.decision !== "approved") {
-        throw new AuthorizationIssuanceError("HUMAN_APPROVAL_REQUIRED");
       }
       if (audit.disposition !== disposition.disposition) {
         throw new AuthorizationIssuanceError("AUDIT_CONTEXT_MISMATCH");
       }
 
+      // ── Current question: is it still permitted, right now? ──
+      // A correct historical record is not permission. The mandate may have been
+      // revoked, superseded, had its limits tightened, or had the counterparty
+      // removed since the proposal was evaluated, and none of that changes what the
+      // audit record correctly says about the past.
+      const current = await options.context.loadEvaluationContext(action.agent_id, nowIso);
+      if (!current.mandate) throw new AuthorizationIssuanceError("MANDATE_REVOKED");
+      if (
+        current.mandate.mandate_id !== audit.mandate_id ||
+        current.mandate.version !== audit.mandate_version
+      ) {
+        throw new AuthorizationIssuanceError("STALE_MANDATE");
+      }
+
+      // Re-run the rules under current authority. This is what catches limits edited
+      // in place and a counterparty removed from the allowlist — changes that do not
+      // move the version number but do change what the agent may do.
+      const currentDisposition = evaluate(action, current.mandate, current.counters);
+      if (currentDisposition.disposition === "DENY") {
+        throw new AuthorizationIssuanceError("CURRENT_AUTHORITY_DENIES");
+      }
+
+      // An escalation needs a human decision that still covers this exact proposal,
+      // under this exact mandate version, and has not aged out. The audit record's
+      // human_review says a human decided; the binding says what they decided about.
+      if (disposition.disposition === "ESCALATE" || currentDisposition.disposition === "ESCALATE") {
+        const freshness = evaluateApprovalFreshness(
+          await options.context.getApproval(audit.audit_id),
+          {
+            proposalHash: hashProposal(action),
+            currentMandateId: current.mandate.mandate_id,
+            currentMandateVersion: current.mandate.version,
+            nowMs,
+          },
+        );
+        if (!freshness.usable) throw approvalRefusal(freshness);
+      }
+
       const token = options.target.token ?? BASE_SEPOLIA_USDC;
       const target = buildExecutionTarget(action, { ...options.target, token });
 
-      // Phase 2 gate. `evaluate()` above answers the HISTORICAL question — was this
-      // proposal within its mandate at proposed_at — from counters that only see
-      // spend which already settled. That is the right basis for the audit record and
-      // the wrong basis for spending money: two concurrent proposals both read the
-      // same headroom there. The reservation below is the financial gate, taken under
-      // a lock on the mandate itself, and it is what actually bounds the budget.
+      // Phase 2 gate. `evaluate()` answers a policy question from settled-only
+      // counters; two concurrent proposals both read the same headroom there. The
+      // reservation is the financial gate, taken under a lock on the mandate itself.
       const reservation = await options.reservations.reserve({
         auditId: audit.audit_id,
         actionId: action.action_id,
         agentId: action.agent_id,
-        mandateId: mandate.mandate_id,
-        mandateVersion: mandate.version,
+        mandateId: current.mandate.mandate_id,
+        mandateVersion: current.mandate.version,
         currency: action.payload.currency,
         // Derived from the atomic amount rather than from the payload float, so the
         // amount reserved and the amount paid cannot drift apart.
@@ -130,17 +198,16 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
         amountAtomic: target.amount,
         chainId: target.chainId,
         token: target.token,
-        maxTotal: exactDecimalString(mandate.controls.spend_caps.rolling_window.max_total),
-        rollingWindow: mandate.controls.spend_caps.rolling_window.window,
+        maxTotal: exactDecimalString(current.mandate.controls.spend_caps.rolling_window.max_total),
+        rollingWindow: current.mandate.controls.spend_caps.rolling_window.window,
       });
       if (reservation.outcome === "insufficient_budget") {
         throw new AuthorizationIssuanceError("INSUFFICIENT_BUDGET");
       }
 
-      // One reservation backs at most one Execution Authorization, ever. The identifier
-      // is durably bound BEFORE it is signed, so a second request for the same audit
-      // loses this compare-and-set instead of minting a second executable capability.
-      // This is the fix for "same audit -> AUTH A + AUTH B -> both execute".
+      // One reservation backs at most one Execution Authorization, ever. The
+      // identifier is durably bound BEFORE it is signed, so a second request for the
+      // same audit loses this compare-and-set instead of minting a second capability.
       const authorizationId = `auth_${randomUUID()}`;
       const bound = await options.reservations.bindAuthorization(
         reservation.reservation.reservation_id,
@@ -151,15 +218,37 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
       // above and here. Both refuse, and refusing is the only safe reading of either.
       if (!bound) throw new AuthorizationIssuanceError("AUTHORIZATION_ALREADY_ISSUED");
 
+      // The capability is recorded BEFORE it is signed. There is therefore never a
+      // moment where a validly signed authorization is in circulation that the durable
+      // one-shot store has not heard of. A crash between these two statements leaves an
+      // ISSUED row that no signature exists for, which is inert and expires on its own.
+      const ttlSeconds = 60;
+      const nonce = `0x${randomBytes(32).toString("hex")}` as Hex;
+      const expiresAtSeconds = Math.floor(nowMs / 1000) + ttlSeconds;
+      await options.reservations.recordIssued({
+        authorizationId,
+        reservationId: bound.reservation_id,
+        auditId: audit.audit_id,
+        actionId: action.action_id,
+        proposalHash: hashProposal(action),
+        mandateId: current.mandate.mandate_id,
+        mandateVersion: current.mandate.version,
+        nonce,
+        expiresAt: new Date(expiresAtSeconds * 1000).toISOString(),
+        issuedAt: nowIso,
+      });
+
       return issueExecutionAuthorization({
         action,
-        mandateId: mandate.mandate_id,
-        mandateVersion: mandate.version,
+        mandateId: current.mandate.mandate_id,
+        mandateVersion: current.mandate.version,
         reservationId: bound.reservation_id,
         target,
         authorizerPrivateKey: options.authorizerPrivateKey as Hex,
         authorizationId,
-        nowMs: options.nowMs?.(),
+        nonce,
+        ttlSeconds,
+        nowMs,
       });
     },
   };
