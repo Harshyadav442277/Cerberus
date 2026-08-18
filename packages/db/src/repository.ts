@@ -54,6 +54,9 @@ export async function getAgentIdentity(agentId: string): Promise<AgentIdentity |
 
 export async function insertMandate(mandate: Mandate): Promise<void> {
   const parsed = MandateSchema.parse(mandate);
+  // The conflict branch supports idempotent seed/provisioning calls and the two
+  // one-way lifecycle fields. Migration 006 rejects every policy-bearing difference,
+  // so changing policy requires inserting a new version rather than rewriting one.
   await getPool().query(
     `INSERT INTO mandate
        (mandate_id, agent_id, version, effective_from, effective_to, status,

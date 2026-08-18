@@ -7,7 +7,9 @@ import {
   closePool,
   getHumanApproval,
   getAuditLogRecord,
+  getIssuedAuthorization,
   getLiveReservationForAudit,
+  getMandate,
   getPool,
   getProposedAction,
   insertAgentIdentity,
@@ -38,7 +40,7 @@ const AT = "2026-08-18T10:00:00.000Z";
 const MANDATE: Mandate = {
   mandate_id: "mandate_pg",
   agent_id: AGENT,
-  version: 1,
+  version: 17,
   effective_from: "2026-08-01T00:00:00.000Z",
   effective_to: null,
   status: "active",
@@ -196,5 +198,85 @@ describe("execution authorizer over PostgreSQL", () => {
     ok(refused && refused.status === "rejected");
     ok(refused.reason instanceof AuthorizationIssuanceError);
     strictEqual(refused.reason.code, "INSUFFICIENT_BUDGET");
+  });
+
+  it("rejects an in-place v17 policy mutation after authorization before key use", async () => {
+    const auditId = await seed("immutable_v17", 0.5);
+    const envelope = await authorizer.issue(auditId);
+    strictEqual(envelope.authorization.mandateVersion, 17);
+
+    let paymentKeyBoundaryReached = 0;
+    await rejects(
+      async () => {
+        await getPool().query(
+          `UPDATE mandate
+              SET controls = jsonb_set(controls, '{spend_caps,per_transaction_max}', '0.1')
+            WHERE mandate_id = $1 AND version = $2`,
+          [MANDATE.mandate_id, MANDATE.version],
+        );
+        // Represents the first executor step that could construct the payer. The
+        // database rejection aborts the attack before this boundary is reachable.
+        paymentKeyBoundaryReached += 1;
+      },
+      (error) =>
+        (error as { code?: string; constraint?: string }).code === "23514" &&
+        (error as { constraint?: string }).constraint ===
+          "mandate_published_content_immutable",
+    );
+
+    strictEqual(paymentKeyBoundaryReached, 0, "the payment key boundary was not reached");
+    const stored = await getMandate(MANDATE.mandate_id, MANDATE.version);
+    strictEqual(stored?.controls.spend_caps.per_transaction_max, 1);
+    const issued = await getIssuedAuthorization(envelope.authorization.authorizationId);
+    strictEqual(issued?.status, "ISSUED", "the rejected edit did not consume authority");
+  });
+
+  it("rejects every policy-bearing field rewrite for the same version", async () => {
+    const attacks: Array<[string, string]> = [
+      ["mandate identity", "mandate_id = 'mandate_rewritten'"],
+      ["version", "version = 18"],
+      ["agent binding", "agent_id = 'agent_attacker'"],
+      ["effective authority start", "effective_from = '2026-07-01T00:00:00.000Z'"],
+      ["scope", "scope = '{\"action_types\":[\"payment\"],\"currencies\":[\"USDT\"]}'::jsonb"],
+      ["default disposition", "default_disposition_on_breach = 'ALLOW'"],
+      ["creator", "created_by = 'attacker'"],
+      ["approver", "approved_by = 'attacker'"],
+    ];
+
+    for (const [label, assignment] of attacks) {
+      await rejects(
+        () =>
+          getPool().query(
+            `UPDATE mandate SET ${assignment} WHERE mandate_id = $1 AND version = $2`,
+            [MANDATE.mandate_id, MANDATE.version],
+          ),
+        (error) =>
+          (error as { code?: string; constraint?: string }).code === "23514" &&
+          (error as { constraint?: string }).constraint ===
+            "mandate_published_content_immutable",
+        label,
+      );
+    }
+  });
+
+  it("allows one-way lifecycle closure but rejects reopening or rewriting it", async () => {
+    const closedAt = "2026-09-01T00:00:00.000Z";
+    await insertMandate({ ...MANDATE, status: "superseded", effective_to: closedAt });
+    const closed = await getMandate(MANDATE.mandate_id, MANDATE.version);
+    strictEqual(closed?.status, "superseded");
+    strictEqual(closed?.effective_to, closedAt);
+
+    await rejects(
+      () => insertMandate(MANDATE),
+      (error) =>
+        (error as { code?: string; constraint?: string }).code === "23514" &&
+        (error as { constraint?: string }).constraint === "mandate_lifecycle_monotonic",
+    );
+    await rejects(
+      () => insertMandate({ ...MANDATE, status: "revoked", effective_to: closedAt }),
+      (error) =>
+        (error as { code?: string; constraint?: string }).code === "23514" &&
+        (error as { constraint?: string }).constraint === "mandate_lifecycle_monotonic",
+    );
   });
 });
