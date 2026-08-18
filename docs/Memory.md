@@ -43,7 +43,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   obtains a fresh clock/context read and rechecks authorization, mandate, approval,
   and reservation authority before consuming or signing. The unsigned request has a
   10-second timeout, and the final database CAS operations enforce expiry. The full
-  suite is now 255/255 across 48 suites after Phase 5.1. Phase 5
+  suite is now 259/259 across 48 suites after Phase 5.2. Phase 5
   `OUTCOME_UNKNOWN` reconciliation is complete: correlation is durable before
   transport, a keyless fenced worker resolves
   exact settlement or expired-unused non-payment, and audit/dashboard state preserves
@@ -53,7 +53,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **255/255 across 48 suites**, Aug 19 after Stage-2 Phase 5.1, against
+- **Test count:** **259/259 across 48 suites**, Aug 19 after Stage-2 Phase 5.2, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
@@ -74,7 +74,9 @@ uses a new timestamp, and both final database transitions independently require
 unexpired authority/reservation state. These guarantees passed the
 real-PostgreSQL restart/concurrency suite. `OUTCOME_UNKNOWN` now persists its exact
 EIP-3009 correlation before transport and is resolved by a keyless, leased chain-state
-worker without constructing a second payment.
+worker without constructing a second payment. Merchant success is non-authoritative:
+the executor records SETTLED only after the same chain reader proves the exact
+AuthorizationUsed/receipt/USDC transfer, and records the chain-derived transaction.
 The legacy policy-layer rolling-spend counter still hardcodes a 24h window and measures
 settled-only spend; the reservation layer parses `rolling_window.window` and is the
 actual financial gate. The hourly velocity counter now reads committed/executing
@@ -212,6 +214,32 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 5.2: chain-proven merchant success
+
+**Trust gap closed.** The x402 SDK decodes the merchant's `PAYMENT-RESPONSE`, but its
+`success: true` and transaction field no longer create terminal financial truth. The
+executor now runs the persisted EIP-3009 correlation through the existing read-only
+Base Sepolia evidence verifier before `markSettled()`. It requires the payer/nonce's
+`AuthorizationUsed`, a successful receipt, and the exact token/from/to/value transfer;
+the recorded transaction comes from chain evidence rather than the merchant header.
+
+**Fail-closed behavior.** A fake transaction, wrong recipient, wrong amount, missing
+or not-yet-indexed evidence, and RPC failure all become `OUTCOME_UNKNOWN`. Capacity
+remains held and the existing fenced reconciler retries without constructing another
+payment. No new secret or payment authority was added; the executor reuses its public
+Base Sepolia RPC configuration and the keyless reader.
+
+**Verification.** The new adversarial executor tests pass 41/41. The complete suite
+passes **259/259 tests across 48 suites** against real PostgreSQL; typecheck, the
+seven-route dashboard production build, and the solc 0.8.36 contract compile are
+clean.
+
+**Remaining boundary.** Reconciled records still need durable audit-anchor
+finalization, and the reconciler login still inherits the broader executor database
+role. Fresh funded hardened-path evidence remains pending. Phase 6 has not started.
+
+**Next:** Phase 6 consolidated adversarial command. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 5.1: post-signature failure safety
 

@@ -102,9 +102,9 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 
 ## Current phase boundary
 
-Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5 are complete. The Phase 5 release
-gate passed the full **255/255-test suite across 48 suites** against real PostgreSQL.
-Phase 6 has not started.
+Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5, including review hardening
+through Phase 5.2, are complete. The release gate passed the full **259/259-test
+suite across 48 suites** against real PostgreSQL. Phase 6 has not started.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -182,6 +182,14 @@ cannot release capacity. The executor and agent both classify every non-settled 
 as UNKNOWN. Migration 010 additionally rejects a correlated transition to `FAILED`
 unless it comes from a fenced `RECONCILING` row; only chain-proven expired-unused
 authorization reaches that transition.
+
+Phase 5.2 closes the symmetric merchant-success trust gap. A decoded x402 success
+header and its transaction hash are hints, not settlement authority. Before writing
+`SETTLED`, the executor uses the read-only Base Sepolia reader to require the persisted
+payer/nonce's `AuthorizationUsed`, a successful receipt, and the exact USDC
+from/to/value `Transfer`. The chain-derived transaction is recorded even when it
+differs from the merchant claim. Missing, mismatched, or unavailable evidence becomes
+`OUTCOME_UNKNOWN` and is retried by the existing keyless reconciler.
 
 What may **not** yet be claimed:
 
