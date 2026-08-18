@@ -195,3 +195,144 @@ export async function committedSpend(options: {
   );
   return rows[0]!.committed;
 }
+
+/** Releases pre-broadcast reservations whose TTL has passed. Never touches SUBMITTING. */
+async function expireWithin(client: PoolClient, budgetKey: string, at: string): Promise<void> {
+  await client.query(
+    `UPDATE payment_reservation
+        SET status = 'EXPIRED', updated_at = $2::timestamptz
+      WHERE budget_key = $1
+        AND status = ANY($3)
+        AND expires_at <= $2::timestamptz`,
+    [budgetKey, at, PRE_BROADCAST_STATUSES],
+  );
+}
+
+async function findLive(
+  client: PoolClient,
+  auditId: string,
+  actionId: string,
+): Promise<PaymentReservation | null> {
+  const { rows } = await client.query(
+    `SELECT ${COLUMNS}
+       FROM payment_reservation
+      WHERE (audit_id = $1 OR action_id = $2)
+        AND status = ANY($3)
+      ORDER BY created_at ASC
+      LIMIT 1`,
+    [auditId, actionId, LIVE_RESERVATION_STATUSES],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
+/**
+ * Commits capacity for one proposal, atomically, against the shared budget.
+ *
+ *   BEGIN
+ *     lock the budget authority        <- every competing request serialises here
+ *     expire stale pre-broadcast holds
+ *     return an existing live hold     <- idempotency: one proposal, one effect
+ *     recompute settled + reserved
+ *     capacity check                   <- all money arithmetic stays in NUMERIC
+ *     INSERT the reservation
+ *   COMMIT
+ *
+ * The transaction ends before any authorization is signed and long before x402 is
+ * called, so no database transaction is ever open across a network round trip.
+ */
+export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveBudgetResult> {
+  const at = input.at ?? new Date().toISOString();
+  const ttlSeconds = input.ttlSeconds ?? 120;
+  if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0 || ttlSeconds > 3600) {
+    throw new Error("reservation TTL must be between 1 and 3600 seconds");
+  }
+  const budgetKey = budgetKeyForMandate(input.mandateId);
+  const hours = windowHours(input.rollingWindow);
+
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+
+    // The whole point of Phase 2. Transaction-scoped, so it is released by COMMIT or
+    // ROLLBACK — including when a connection dies — and it is taken on the mandate,
+    // the real shared financial authority, rather than on the agent.
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [budgetKey]);
+
+    await expireWithin(client, budgetKey, at);
+
+    const existing = await findLive(client, input.auditId, input.actionId);
+    if (existing) {
+      await client.query("COMMIT");
+      return { outcome: "existing", reservation: existing };
+    }
+
+    const { rows } = await client.query<{
+      committed: string;
+      requested: string;
+      ceiling: string;
+      fits: boolean;
+    }>(
+      `SELECT c.committed::text AS committed,
+              $5::numeric::text AS requested,
+              $6::numeric::text AS ceiling,
+              (c.committed + $5::numeric) <= $6::numeric AS fits
+         FROM (${COMMITTED_SPEND_SQL}) c`,
+      [budgetKey, input.currency, at, hours, input.amountDecimal, input.maxTotal],
+    );
+    const capacity = rows[0]!;
+    if (!capacity.fits) {
+      await client.query("COMMIT");
+      return {
+        outcome: "insufficient_budget",
+        committed: capacity.committed,
+        requested: capacity.requested,
+        limit: capacity.ceiling,
+      };
+    }
+
+    const inserted = await client.query(
+      `INSERT INTO payment_reservation (
+         reservation_id, audit_id, action_id, agent_id, mandate_id, mandate_version,
+         budget_key, currency, amount_decimal, amount_atomic, chain_id, token,
+         status, authorization_id, settlement_tx,
+         counts_at, expires_at, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::numeric, $10::numeric, $11, $12,
+               'RESERVED', NULL, NULL,
+               $13::timestamptz, $13::timestamptz + make_interval(secs => $14::int),
+               $13::timestamptz, $13::timestamptz)
+       RETURNING ${COLUMNS}`,
+      [
+        `res_${randomUUID()}`,
+        input.auditId,
+        input.actionId,
+        input.agentId,
+        input.mandateId,
+        input.mandateVersion,
+        budgetKey,
+        input.currency,
+        input.amountDecimal,
+        input.amountAtomic,
+        input.chainId,
+        input.token,
+        at,
+        ttlSeconds,
+      ],
+    );
+    await client.query("COMMIT");
+    return { outcome: "created", reservation: toReservation(inserted.rows[0]!) };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+
+    // The partial unique indexes are an independent guard, for any caller that ever
+    // reaches this table without taking the budget lock. Losing that race is not an
+    // error — it means somebody else already holds the capacity for this proposal.
+    if ((error as { code?: string }).code === "23505") {
+      // Never let the recovery read mask the original failure.
+      const winner = await findLive(client, input.auditId, input.actionId).catch(() => null);
+      if (winner) return { outcome: "existing", reservation: winner };
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+}
