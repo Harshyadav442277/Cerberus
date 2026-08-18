@@ -392,14 +392,18 @@ describe("atomic velocity reservations", () => {
     strictEqual(await committedVelocityCount({ agentId, at: AT }), 5);
   });
 
-  it("gives every same-agent race one correct winner across repeated rounds", async () => {
+  it("serializes one agent's velocity across distinct mandate budget locks", async () => {
     for (let round = 0; round < 10; round += 1) {
       const agentId = `agent_velocity_round_${round}`;
-      const mandateId = `m_velocity_round_${round}`;
+      const firstMandate = `m_velocity_round_${round}_a`;
+      const secondMandate = `m_velocity_round_${round}_b`;
       await seedAgent(agentId);
-      await insertMandate(mandateFixture({ mandateId, agentId, maxTotal: 100 }));
-      const first = await seedProposal({ id: `velocity_round_${round}_a`, agentId, mandateId, amount: 1 });
-      const second = await seedProposal({ id: `velocity_round_${round}_b`, agentId, mandateId, amount: 1 });
+      // Distinct mandate ids deliberately produce distinct budget advisory locks.
+      // Only the per-agent velocity lock can serialize this race.
+      await insertMandate(mandateFixture({ mandateId: firstMandate, agentId, maxTotal: 100 }));
+      await insertMandate(mandateFixture({ mandateId: secondMandate, agentId, maxTotal: 100 }));
+      const first = await seedProposal({ id: `velocity_round_${round}_a`, agentId, mandateId: firstMandate, amount: 1 });
+      const second = await seedProposal({ id: `velocity_round_${round}_b`, agentId, mandateId: secondMandate, amount: 1 });
       const results = await race(2, (index) =>
         reserveBudget(
           reserveInput(index === 0 ? first : second, 100, { velocityLimit: 1 }),

@@ -23,7 +23,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 10:** repository-side technical copy and evidence are complete. Team identity and portal submission state are human-only and intentionally not inferred here.
 - **Stage-2 finalist hardening:** active under `Critique.md`. Phase 1 (signer
   isolation, Execution Authorization) and Stage-2 Phase 2 (atomic budget reservations)
-  are complete on `codex/finalist-hardening`. Stage-2 Phase 3 (durable replay plus
+  are complete on `main`. Stage-2 Phase 3 (durable replay plus
   mandate/human-approval freshness) is complete and verified: typecheck, dashboard
   production build, contract compile, migration 004 down/up, and 176/176 tests across
   36 suites pass against real PostgreSQL. Phase 3.5A reviewer authentication is also
@@ -34,32 +34,36 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   control-plane, and executor PostgreSQL roles enforce the authority boundary with
   GRANT/REVOKE, and agent-credential attacks fail at the database. Phase 3.5C mandate
   immutability is complete: published policy fields cannot change in place, and only
-  one-way lifecycle closure remains mutable. The full suite is now 194/194 across 40
-  suites. Phases 3.5D and 4–8 have not started. The fresh funded
+  one-way lifecycle closure remains mutable. Phase 3.5D concurrent velocity
+  enforcement is complete: a per-agent transactional lock counts committed/executing
+  reservations, promotes a raced ALLOW to ESCALATE through the trusted control plane,
+  and requires a bound human approval before one retry. The full suite is now 202/202
+  across 41 suites. Phases 4–8 have not started. The fresh funded
   hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **194/194 across 40 suites**, Aug 19 after Stage-2 Phase 3.5C, against
+- **Test count:** **202/202 across 41 suites**, Aug 19 after Stage-2 Phase 3.5D, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** begin Phase 3.5D concurrent velocity enforcement. The fresh
+- **Next concrete step:** begin Phase 4 exact live x402 challenge binding. The fresh
   funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
   hardened path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 3.5C implementation):** the
+**Current finalist claim limits (after Stage-2 Phase 3.5D implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
 by a durable database compare-and-set; human approvals bind proposal, mandate version,
 and expiry; and both the authorizer and executor fail closed on stale authority before
 key use. These guarantees passed the real-PostgreSQL restart/concurrency suite. The
 resource hash covers the intended request URL, not the live 402 challenge (Phase 4), and
 `OUTCOME_UNKNOWN` holds capacity but has no chain-state reconciler (Phase 5).
-The legacy policy-layer counters in `controls-repository` still hardcode a 24h window
-and still measure settled-only spend; the reservation layer parses
-`rolling_window.window` and is the actual financial gate. The prototype isolates secrets by application process and configuration, not
+The legacy policy-layer rolling-spend counter still hardcodes a 24h window and measures
+settled-only spend; the reservation layer parses `rolling_window.window` and is the
+actual financial gate. The hourly velocity counter now reads committed/executing
+reservation state plus non-duplicated legacy settlements. The prototype isolates secrets by application process and configuration, not
 by a separate OS/container security principal; production must run the executor under
 a distinct identity or managed secret boundary before claiming resistance to
 arbitrary same-host filesystem compromise. The older sequential-demo limitations
@@ -67,7 +71,7 @@ remain: overnight time-window wrap is unsupported. Reviewer authentication and
 least-privilege PostgreSQL roles are now enforced. The schema-owner URL is loaded only
 by operator CLIs/tests, not the shared DB package or runtime applications. Published
 mandate policy bodies are database-immutable by version. Transaction-count velocity
-is not yet concurrency-safe until 3.5D.
+is concurrency-safe at reservation time and preserves ESCALATE semantics.
 
 **Command reference** (run from repo root; no nested pnpm):
 `npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
@@ -191,6 +195,45 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 3.5D: concurrent velocity enforcement
+
+**Vulnerability closed.** Hourly velocity no longer depends on a settled-only
+check-then-act counter. `reserveBudget()` takes a transaction-scoped advisory lock on
+`velocity:<agent_id>` before the existing shared-mandate budget lock, checks financial
+capacity first to preserve rule ordering, then counts hourly committed/executing
+reservations. `SETTLED`, `SUBMITTING`, and `OUTCOME_UNKNOWN` always count;
+unexpired `RESERVED`/`AUTHORIZED` count; `FAILED`/`EXPIRED` do not. Legacy settled
+audits without reservations are included once.
+
+**ESCALATE semantics.** If the serialized count reaches the mandate limit, no
+reservation or Execution Authorization is created. The trusted control plane narrowly
+promotes the raced ALLOW/OBSERVE audit to `ESCALATE` with rule
+`velocity.max_transactions_per_hour`; the agent role cannot update those audit
+columns. Orchestration waits for authenticated reviewer authority. Denial never
+constructs settlement; a fresh approval bound to the exact proposal and mandate
+permits one authorization retry with an explicit velocity override.
+
+**Adversarial evidence.** At limit 1, two concurrent authorizer requests produce one
+authorization and one promoted escalation. A 20-request burst at limit 5 produces
+exactly five reservations and fifteen escalations. Repeated same-agent races use two
+different mandate budget locks, proving the separate per-agent velocity lock rather
+than accidentally relying on budget serialization. Mutation-checking removed that
+lock and the test failed with two `created` outcomes; restoring it returned the test
+to green. Real agent credentials receive SQLSTATE `42501` when attempting to forge the
+promoted verdict.
+
+**Verification.** Migration `007_concurrent_velocity_enforcement` rolled down and
+back up cleanly. The full suite passed **202/202 tests across 41 suites** against real
+PostgreSQL on port 5544. Typecheck, the seven-route dashboard production build,
+263-byte contract compile, schema/demo verification, and `git diff --check` pass.
+
+**Remaining boundary.** The executor still validates the intended target rather than
+the merchant's exact live HTTP 402 challenge (Phase 4). `OUTCOME_UNKNOWN` still holds
+capacity without reconciliation (Phase 5). Host-level secret isolation remains a
+deployment responsibility.
+
+**Next:** Phase 4 exact live x402 challenge binding. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 3.5C: mandate immutability/content freshness
 
