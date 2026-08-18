@@ -213,10 +213,12 @@ export async function updateAuditSettlement(
   auditId: string,
   settlement: Settlement,
 ): Promise<void> {
-  await getPool().query(`UPDATE audit_log SET settlement = $2 WHERE audit_id = $1`, [
-    auditId,
-    JSON.stringify(settlement),
-  ]);
+  // Terminal settlement is first-writer-wins. In particular, a late HTTP result must
+  // never overwrite the reconciler's stronger chain evidence.
+  await getPool().query(
+    `UPDATE audit_log SET settlement = $2 WHERE audit_id = $1 AND settlement IS NULL`,
+    [auditId, JSON.stringify(settlement)],
+  );
 }
 
 /** Feed row for the dashboard: §7.5 record + the proposal that produced it. */

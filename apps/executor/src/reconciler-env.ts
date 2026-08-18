@@ -7,14 +7,23 @@ function parse(path: string): Record<string, string> {
   return values;
 }
 
-const publicConfig = parse(resolve(import.meta.dirname, "../../../.env"));
 const reconcilerConfig = parse(resolve(import.meta.dirname, "../../../.env.reconciler"));
-delete publicConfig["DATABASE_URL"];
+
+// Scrub inherited authority before any runtime component is constructed. The worker
+// is read-only on chain and must not possess a payment, authorization, reviewer, or
+// audit-anchor signing credential even if its parent shell happens to export one.
+const FORBIDDEN_AUTHORITY = [
+  "EVM_PRIVATE_KEY",
+  "EXECUTOR_EVM_PRIVATE_KEY",
+  "EXECUTION_AUTH_PRIVATE_KEY",
+  "AUDIT_ANCHOR_PRIVATE_KEY",
+  "REVIEWER_API_TOKEN",
+] as const;
+for (const name of FORBIDDEN_AUTHORITY) delete process.env[name];
 
 function value(name: string, fallback = ""): string {
   return process.env[name]?.trim() ||
     reconcilerConfig[name]?.trim() ||
-    publicConfig[name]?.trim() ||
     fallback;
 }
 
@@ -32,6 +41,6 @@ export function configureReconcilerDatabase(): void {
   delete process.env.AGENT_DATABASE_URL;
   delete process.env.CONTROL_PLANE_DATABASE_URL;
   delete process.env.EXECUTOR_DATABASE_URL;
-  delete process.env.EXECUTOR_EVM_PRIVATE_KEY;
+  for (const name of FORBIDDEN_AUTHORITY) delete process.env[name];
   process.env.DATABASE_URL = reconcilerEnv.databaseUrl;
 }

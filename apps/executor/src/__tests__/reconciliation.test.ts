@@ -1,4 +1,6 @@
 import { deepStrictEqual, strictEqual } from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import type { PaymentReservation } from "@safr/db";
 import type { Eip3009ChainReader } from "@safr/x402-client";
@@ -82,6 +84,17 @@ function harness(
 }
 
 describe("OUTCOME_UNKNOWN reconciliation worker", () => {
+  it("has no source or config path to payment or operator authority", () => {
+    const envSource = readFileSync(resolve(import.meta.dirname, "../reconciler-env.ts"), "utf8");
+    const workerSource = readFileSync(resolve(import.meta.dirname, "../reconcile-cli.ts"), "utf8");
+    const coreSource = readFileSync(resolve(import.meta.dirname, "../reconciliation.ts"), "utf8");
+
+    strictEqual(envSource.includes('"../../../.env"'), false, "must not read schema-owner config");
+    strictEqual(envSource.includes('"../../../.env.executor"'), false, "must not read payment config");
+    strictEqual(/createX402Payer|privateKeyToAccount/.test(workerSource + coreSource), false);
+    strictEqual(envSource.includes('delete process.env[name]'), true, "inherited authority is scrubbed");
+  });
+
   it("recovers a settled payment after restart without constructing a second payment", async () => {
     const h = harness(RESERVATION, { used: true, exact: true });
     deepStrictEqual(

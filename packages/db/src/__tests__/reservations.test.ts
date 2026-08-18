@@ -23,6 +23,7 @@ import {
   windowHours,
   type ReserveBudgetResult,
 } from "../reservations.js";
+import { updateAuditSettlement } from "../repository.js";
 import {
   AT,
   insertMandate,
@@ -534,6 +535,22 @@ describe("durable outcome reconciliation state", () => {
     );
     strictEqual(settledAudit.rows[0]!.settlement.status, "settled");
     strictEqual(settledAudit.rows[0]!.settlement.tx_hash, "0xsettled");
+
+    await updateAuditSettlement(terminal.audit_id, {
+      status: "failed",
+      tx_hash: null,
+      rail: "x402",
+      settled_at: null,
+    });
+    const afterLateHttp = await getPool().query<{ settlement: { status: string } }>(
+      `SELECT settlement FROM audit_log WHERE audit_id = $1`,
+      [terminal.audit_id],
+    );
+    strictEqual(
+      afterLateHttp.rows[0]!.settlement.status,
+      "settled",
+      "a late HTTP failure cannot overwrite chain-proven settlement",
+    );
   });
 
   it("keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment", async () => {
