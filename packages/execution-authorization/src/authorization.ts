@@ -42,8 +42,14 @@ export class AuthorizationError extends Error {
 }
 
 export interface AuthorizationUseStore {
-  /** Atomic check-and-consume. False means either ID or nonce was already used. */
-  consume(authorizationId: string, nonce: string): boolean;
+  /**
+   * Atomic check-and-consume. False means either ID or nonce was already used.
+   *
+   * Allowed to be asynchronous so the durable Phase 3 store — a compare-and-set on a
+   * row, visible to every executor process — satisfies the same interface the Phase 1
+   * in-memory store did.
+   */
+  consume(authorizationId: string, nonce: string): boolean | Promise<boolean>;
 }
 
 export class InMemoryAuthorizationUseStore implements AuthorizationUseStore {
@@ -172,9 +178,9 @@ export async function verifyAndConsumeExecutionAuthorization(
     throw new AuthorizationError("RESOURCE_MISMATCH");
   }
 
-  // This synchronous call is the one-shot boundary. The executor invokes it before
-  // constructing the payer, so concurrent replays in one executor process cannot both win.
-  if (!input.useStore.consume(authorization.authorizationId, authorization.nonce)) {
+  // The one-shot boundary. The executor crosses it before constructing the payer, so
+  // a replay is refused while the payment key still does not exist in the process.
+  if (!(await input.useStore.consume(authorization.authorizationId, authorization.nonce))) {
     throw new AuthorizationError("AUTHORIZATION_REPLAY");
   }
   return authorization;
