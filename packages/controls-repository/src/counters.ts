@@ -1,12 +1,14 @@
 import type { Counters } from "@safr/disposition-engine";
-import { getPool } from "@safr/db";
+import { committedVelocityCount, getPool } from "@safr/db";
 
 /**
  * Counter state for the Disposition Engine.
  *
- * Both counters are measured on the same basis: transactions that actually SETTLED.
- * A denied proposal never moved money, and a failed settlement never moved money, so
- * neither consumes the agent's budget or its velocity allowance.
+ * Rolling spend remains settled-only at this compatibility layer; the reservation
+ * transaction is the authoritative monetary gate. Velocity includes committed and
+ * executing reservations immediately, so sequential evaluations see occupied slots
+ * before settlement. The reservation transaction independently rechecks it under a
+ * per-agent lock to close concurrent check-then-act races.
  *
  * This basis is a judgment call — Bible Section 7.4 specifies `get_rolling_total` and
  * `get_hourly_tx_count` without defining what counts. Settled spend was chosen
@@ -36,18 +38,9 @@ export async function getRollingTotal(
   return Number(rows[0]?.total ?? 0);
 }
 
-/** Settled transactions for an agent in the hour ending at `at`. */
+/** Committed, executing, or settled transactions in the hour ending at `at`. */
 export async function getHourlyTxCount(agentId: string, at: string): Promise<number> {
-  const { rows } = await getPool().query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count
-       FROM audit_log
-      WHERE agent_id = $1
-        AND settlement ->> 'status' = 'settled'
-        AND evaluated_at > ($2::timestamptz - interval '1 hour')
-        AND evaluated_at <= $2::timestamptz`,
-    [agentId, at],
-  );
-  return Number(rows[0]?.count ?? 0);
+  return committedVelocityCount({ agentId, at });
 }
 
 /** Both counters for a single evaluation, read at the action's proposed_at. */

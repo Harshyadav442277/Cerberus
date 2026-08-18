@@ -181,6 +181,33 @@ export async function getAuditLogRecord(auditId: string): Promise<AuditLogRecord
   return rows[0] ? AuditLogRecordSchema.parse(rows[0]) : null;
 }
 
+/**
+ * Converts a clean policy decision into the velocity escalation discovered by the
+ * atomic reservation gate.
+ *
+ * The pure evaluator can legitimately observe count=0 for two concurrent actions.
+ * The reservation transaction serializes them and discovers that the second action
+ * needs review. Only the trusted control plane may make this narrow transition; the
+ * agent role has no UPDATE privilege on these columns.
+ */
+export async function promoteAuditToVelocityEscalation(auditId: string): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE audit_log
+        SET disposition = 'ESCALATE',
+            reason = 'velocity_threshold_exceeded',
+            rule_triggered = 'velocity.max_transactions_per_hour'
+      WHERE audit_id = $1
+        AND disposition IN ('ALLOW', 'OBSERVE')
+        AND human_review IS NULL
+        AND settlement IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM payment_reservation r WHERE r.audit_id = audit_log.audit_id
+        )`,
+    [auditId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 /** Settlement is written back after the payment resolves, so it starts null. */
 export async function updateAuditSettlement(
   auditId: string,

@@ -6,6 +6,7 @@ import {
   getAuditLogRecord,
   getHumanApproval,
   getProposedAction,
+  promoteAuditToVelocityEscalation,
   recordIssuedAuthorization,
   reserveBudget,
 } from "@safr/db";
@@ -35,6 +36,7 @@ const authorizer = createExecutionAuthorizer({
     reserve: reserveBudget,
     bindAuthorization,
     recordIssued: recordIssuedAuthorization,
+    promoteVelocityEscalation: promoteAuditToVelocityEscalation,
   },
   target: {
     chainId: chainId(apiEnv.network),

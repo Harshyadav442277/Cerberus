@@ -6,6 +6,7 @@ import { closePool, getPool } from "../pool.js";
 import {
   beginSubmission,
   bindAuthorization,
+  committedVelocityCount,
   committedSpend,
   expireStaleReservations,
   getLiveReservationForAudit,
@@ -178,7 +179,7 @@ describe("atomic budget reservations", () => {
 
     strictEqual(created(results).length, 1);
     const ids = new Set(
-      results.flatMap((r) => (r.outcome === "insufficient_budget" ? [] : [r.reservation.reservation_id])),
+      results.flatMap((r) => ("reservation" in r ? [r.reservation.reservation_id] : [])),
     );
     strictEqual(ids.size, 1, "every caller must see the same single reservation");
     strictEqual(await activeAmounts("m_4"), 10, "capacity is consumed once, not eight times");
@@ -347,5 +348,67 @@ describe("atomic budget reservations", () => {
     const fits = await seedProposal({ id: `${RUN_LABEL}_fits`, agentId: "agent_a", mandateId: "m_mix", amount: 30 });
     strictEqual((await reserveBudget(reserveInput(fits, 100))).outcome, "created");
     strictEqual(await activeAmounts("m_mix"), 100, "settled + reserved may reach the ceiling exactly");
+  });
+});
+
+describe("atomic velocity reservations", () => {
+  it("allows at most one of two concurrent actions below a limit of one", async () => {
+    await seedAgent("agent_velocity_pair");
+    await insertMandate(
+      mandateFixture({ mandateId: "m_velocity_pair", agentId: "agent_velocity_pair", maxTotal: 100 }),
+    );
+    const proposals = await Promise.all([
+      seedProposal({ id: "velocity_pair_a", agentId: "agent_velocity_pair", mandateId: "m_velocity_pair", amount: 1 }),
+      seedProposal({ id: "velocity_pair_b", agentId: "agent_velocity_pair", mandateId: "m_velocity_pair", amount: 1 }),
+    ]);
+
+    const results = await race(2, (index) =>
+      reserveBudget(reserveInput(proposals[index]!, 100, { velocityLimit: 1 })),
+    );
+    strictEqual(results.filter((result) => result.outcome === "created").length, 1);
+    strictEqual(results.filter((result) => result.outcome === "velocity_escalation").length, 1);
+    strictEqual(
+      await committedVelocityCount({ agentId: "agent_velocity_pair", at: AT }),
+      1,
+    );
+  });
+
+  it("holds the configured transaction count across a concurrent burst", async () => {
+    const agentId = "agent_velocity_burst";
+    const mandateId = "m_velocity_burst";
+    await seedAgent(agentId);
+    await insertMandate(mandateFixture({ mandateId, agentId, maxTotal: 100 }));
+    const proposals = await Promise.all(
+      Array.from({ length: 20 }, (_, index) =>
+        seedProposal({ id: `velocity_burst_${index}`, agentId, mandateId, amount: 1 }),
+      ),
+    );
+
+    const results = await race(20, (index) =>
+      reserveBudget(reserveInput(proposals[index]!, 100, { velocityLimit: 5 })),
+    );
+    strictEqual(results.filter((result) => result.outcome === "created").length, 5);
+    strictEqual(results.filter((result) => result.outcome === "velocity_escalation").length, 15);
+    strictEqual(await committedVelocityCount({ agentId, at: AT }), 5);
+  });
+
+  it("gives every same-agent race one correct winner across repeated rounds", async () => {
+    for (let round = 0; round < 10; round += 1) {
+      const agentId = `agent_velocity_round_${round}`;
+      const mandateId = `m_velocity_round_${round}`;
+      await seedAgent(agentId);
+      await insertMandate(mandateFixture({ mandateId, agentId, maxTotal: 100 }));
+      const first = await seedProposal({ id: `velocity_round_${round}_a`, agentId, mandateId, amount: 1 });
+      const second = await seedProposal({ id: `velocity_round_${round}_b`, agentId, mandateId, amount: 1 });
+      const results = await race(2, (index) =>
+        reserveBudget(
+          reserveInput(index === 0 ? first : second, 100, { velocityLimit: 1 }),
+        ),
+      );
+      deepStrictEqual(
+        results.map((result) => result.outcome).sort(),
+        ["created", "velocity_escalation"],
+      );
+    }
   });
 });

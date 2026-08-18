@@ -74,10 +74,10 @@ const AUDIT: AuditLogRecord = {
  * runs against a real PostgreSQL; this fake exists so the authorizer's ORDERING can be
  * asserted without one.
  */
-function reservations(options: { ceiling?: number } = {}) {
+function reservations(options: { ceiling?: number; velocityEscalation?: boolean } = {}) {
   const ceiling = options.ceiling ?? 100;
   const rows = new Map<string, PaymentReservation>();
-  const calls = { reserve: 0, bind: 0 };
+  const calls = { reserve: 0, bind: 0, promote: 0 };
 
   function committed(): number {
     return [...rows.values()]
@@ -101,6 +101,13 @@ function reservations(options: { ceiling?: number } = {}) {
             committed: committed().toString(),
             requested: input.amountDecimal,
             limit: ceiling.toString(),
+          };
+        }
+        if (options.velocityEscalation && !input.velocityOverrideApproved) {
+          return {
+            outcome: "velocity_escalation",
+            committed: input.velocityLimit,
+            limit: input.velocityLimit,
           };
         }
         const reservation: PaymentReservation = {
@@ -129,6 +136,10 @@ function reservations(options: { ceiling?: number } = {}) {
       },
       async recordIssued() {
         return undefined;
+      },
+      async promoteVelocityEscalation() {
+        calls.promote += 1;
+        return true;
       },
       async bindAuthorization(reservationId: string, authorizationId: string) {
         calls.bind += 1;
@@ -281,6 +292,19 @@ describe("authorization is backed by committed capacity", () => {
         error instanceof AuthorizationIssuanceError && error.code === "INSUFFICIENT_BUDGET",
     );
     strictEqual(store.calls.bind, 0, "nothing is signed when capacity is refused");
+  });
+
+  it("records a transaction-time velocity race as ESCALATE before refusing authority", async () => {
+    const store = reservations({ velocityEscalation: true });
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError &&
+        error.code === "VELOCITY_ESCALATION_REQUIRED",
+    );
+    strictEqual(store.calls.promote, 1, "the trusted control plane records the escalation");
+    strictEqual(store.calls.bind, 0, "no authorization is bound before human review");
+    strictEqual(store.rows.size, 0, "the raced request holds no financial capacity");
   });
 
   it("gives one audit a single executable authorization however often it asks", async () => {

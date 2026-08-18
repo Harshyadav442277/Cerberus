@@ -121,6 +121,10 @@ export interface ReserveBudgetInput {
   /** The mandate's rolling-window ceiling, as an exact decimal string. */
   maxTotal: string;
   rollingWindow: string;
+  /** Per-agent transaction ceiling for the rolling hour. */
+  velocityLimit: number;
+  /** A human approved this exact proposal, so the velocity escalation may proceed. */
+  velocityOverrideApproved: boolean;
   ttlSeconds?: number;
   /** Instant capacity is committed at. Injectable so tests are deterministic. */
   at?: string;
@@ -130,7 +134,8 @@ export type ReserveBudgetResult =
   | { outcome: "created"; reservation: PaymentReservation }
   /** An earlier identical proposal already holds the capacity. Not a second effect. */
   | { outcome: "existing"; reservation: PaymentReservation }
-  | { outcome: "insufficient_budget"; committed: string; requested: string; limit: string };
+  | { outcome: "insufficient_budget"; committed: string; requested: string; limit: string }
+  | { outcome: "velocity_escalation"; committed: number; limit: number };
 
 /**
  * Committed spend for a budget authority, as one NUMERIC expression.
@@ -173,6 +178,38 @@ const COMMITTED_SPEND_SQL = `
 `;
 
 /**
+ * Transactions that already occupy one of an agent's hourly velocity slots.
+ *
+ * Active/executing reservations count immediately, before settlement, which closes
+ * the check-then-act race in the old settled-only counter. Legacy settled audit rows
+ * without a reservation are included once so pre-reservation history is preserved.
+ */
+const COMMITTED_VELOCITY_SQL = `
+  WITH reserved AS (
+    SELECT COUNT(*)::bigint AS total
+      FROM payment_reservation
+     WHERE agent_id  = $1
+       AND counts_at >  ($2::timestamptz - interval '1 hour')
+       AND counts_at <= $2::timestamptz
+       AND (
+             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN')
+             OR (status IN ('RESERVED', 'AUTHORIZED') AND expires_at > $2::timestamptz)
+           )
+  ),
+  legacy AS (
+    SELECT COUNT(*)::bigint AS total
+      FROM audit_log al
+      LEFT JOIN payment_reservation r ON r.audit_id = al.audit_id
+     WHERE al.agent_id = $1
+       AND al.settlement ->> 'status' = 'settled'
+       AND r.reservation_id IS NULL
+       AND al.evaluated_at >  ($2::timestamptz - interval '1 hour')
+       AND al.evaluated_at <= $2::timestamptz
+  )
+  SELECT ((SELECT total FROM reserved) + (SELECT total FROM legacy))::text AS committed
+`;
+
+/**
  * Committed spend against a budget authority: the left-hand side of the invariant.
  *
  * Exposed so the concurrency tests can assert the invariant directly against the
@@ -194,6 +231,18 @@ export async function committedSpend(options: {
     ],
   );
   return rows[0]!.committed;
+}
+
+/** Current committed/executing transaction count for one agent's rolling hour. */
+export async function committedVelocityCount(options: {
+  agentId: string;
+  at?: string;
+}): Promise<number> {
+  const { rows } = await getPool().query<{ committed: string }>(COMMITTED_VELOCITY_SQL, [
+    options.agentId,
+    options.at ?? new Date().toISOString(),
+  ]);
+  return Number(rows[0]!.committed);
 }
 
 /** Releases pre-broadcast reservations whose TTL has passed. Never touches SUBMITTING. */
@@ -246,16 +295,21 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
   if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0 || ttlSeconds > 3600) {
     throw new Error("reservation TTL must be between 1 and 3600 seconds");
   }
+  if (!Number.isInteger(input.velocityLimit) || input.velocityLimit <= 0) {
+    throw new Error("velocity limit must be a positive integer");
+  }
   const budgetKey = budgetKeyForMandate(input.mandateId);
+  const velocityKey = `velocity:${input.agentId}`;
   const hours = windowHours(input.rollingWindow);
 
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
 
-    // The whole point of Phase 2. Transaction-scoped, so it is released by COMMIT or
-    // ROLLBACK — including when a connection dies — and it is taken on the mandate,
-    // the real shared financial authority, rather than on the agent.
+    // Every transaction takes locks in this order: per-agent velocity, then shared
+    // mandate budget. Same-agent requests serialize before reading the count, while
+    // different agents still converge on one shared budget lock without deadlock.
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [velocityKey]);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [budgetKey]);
 
     await expireWithin(client, budgetKey, at);
@@ -287,6 +341,26 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
         committed: capacity.committed,
         requested: capacity.requested,
         limit: capacity.ceiling,
+      };
+    }
+
+    // Budget is check 2 and velocity is check 5, so capacity is deliberately checked
+    // first. This transactional recheck preserves the engine's rule ordering while
+    // preventing two requests from both acting on the same stale hourly count.
+    const velocity = await client.query<{ committed: string }>(COMMITTED_VELOCITY_SQL, [
+      input.agentId,
+      at,
+    ]);
+    const committedVelocity = Number(velocity.rows[0]!.committed);
+    if (
+      committedVelocity >= input.velocityLimit &&
+      !input.velocityOverrideApproved
+    ) {
+      await client.query("COMMIT");
+      return {
+        outcome: "velocity_escalation",
+        committed: committedVelocity,
+        limit: input.velocityLimit,
       };
     }
 

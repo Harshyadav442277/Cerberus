@@ -37,6 +37,8 @@ export class AuthorizationIssuanceError extends Error {
       | "AUTHORIZER_NOT_CONFIGURED"
       /** The shared mandate budget cannot cover this proposal right now. */
       | "INSUFFICIENT_BUDGET"
+      /** Atomic velocity enforcement found that this proposal now needs review. */
+      | "VELOCITY_ESCALATION_REQUIRED"
       /** This reservation already backs an authorization. One proposal, one capability. */
       | "AUTHORIZATION_ALREADY_ISSUED"
       /** No mandate authorises this agent at execution time. Revoked, or lapsed. */
@@ -74,6 +76,8 @@ export interface ReservationPort {
     authorizationId: string,
   ): Promise<PaymentReservation | null>;
   recordIssued(input: RecordAuthorizationInput): Promise<unknown>;
+  /** Trusted audit transition when the transaction-time velocity check escalates. */
+  promoteVelocityEscalation(auditId: string): Promise<boolean>;
 }
 
 export interface ExecutionAuthorizerOptions {
@@ -137,7 +141,16 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
       if (disposition.disposition === "DENY") {
         throw new AuthorizationIssuanceError("DISPOSITION_NOT_EXECUTABLE");
       }
-      if (audit.disposition !== disposition.disposition) {
+      // A concurrent velocity race is discovered only when reservation transactions
+      // serialize. The trusted control plane records that later, stronger verdict on
+      // the original audit row. It is the sole legitimate difference from the pure
+      // historical evaluation; every other mismatch remains evidence of tampering.
+      const velocityPromotedAudit =
+        audit.disposition === "ESCALATE" &&
+        audit.reason === "velocity_threshold_exceeded" &&
+        audit.rule_triggered === "velocity.max_transactions_per_hour" &&
+        (disposition.disposition === "ALLOW" || disposition.disposition === "OBSERVE");
+      if (audit.disposition !== disposition.disposition && !velocityPromotedAudit) {
         throw new AuthorizationIssuanceError("AUDIT_CONTEXT_MISMATCH");
       }
 
@@ -166,7 +179,12 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
       // An escalation needs a human decision that still covers this exact proposal,
       // under this exact mandate version, and has not aged out. The audit record's
       // human_review says a human decided; the binding says what they decided about.
-      if (disposition.disposition === "ESCALATE" || currentDisposition.disposition === "ESCALATE") {
+      let velocityOverrideApproved = false;
+      if (
+        disposition.disposition === "ESCALATE" ||
+        currentDisposition.disposition === "ESCALATE" ||
+        velocityPromotedAudit
+      ) {
         const freshness = evaluateApprovalFreshness(
           await options.context.getApproval(audit.audit_id),
           {
@@ -177,6 +195,9 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
           },
         );
         if (!freshness.usable) throw approvalRefusal(freshness);
+        // The decision binds this exact proposal and current mandate version. It may
+        // therefore occupy a velocity slot beyond the automatic threshold.
+        velocityOverrideApproved = true;
       }
 
       const token = options.target.token ?? BASE_SEPOLIA_USDC;
@@ -200,9 +221,16 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
         token: target.token,
         maxTotal: exactDecimalString(current.mandate.controls.spend_caps.rolling_window.max_total),
         rollingWindow: current.mandate.controls.spend_caps.rolling_window.window,
+        velocityLimit: current.mandate.controls.velocity.max_transactions_per_hour,
+        velocityOverrideApproved,
       });
       if (reservation.outcome === "insufficient_budget") {
         throw new AuthorizationIssuanceError("INSUFFICIENT_BUDGET");
+      }
+      if (reservation.outcome === "velocity_escalation") {
+        const promoted = await options.reservations.promoteVelocityEscalation(audit.audit_id);
+        if (!promoted) throw new AuthorizationIssuanceError("AUDIT_CONTEXT_MISMATCH");
+        throw new AuthorizationIssuanceError("VELOCITY_ESCALATION_REQUIRED");
       }
 
       // One reservation backs at most one Execution Authorization, ever. The

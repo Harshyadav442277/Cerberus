@@ -16,6 +16,7 @@ import {
   insertAuditLogRecord,
   insertMandate,
   insertProposedAction,
+  promoteAuditToVelocityEscalation,
   recordIssuedAuthorization,
   reserveBudget,
 } from "@safr/db";
@@ -112,6 +113,7 @@ const authorizer = createExecutionAuthorizer({
     reserve: reserveBudget,
     bindAuthorization,
     recordIssued: recordIssuedAuthorization,
+    promoteVelocityEscalation: promoteAuditToVelocityEscalation,
   },
   authorizerPrivateKey: KEY,
   target: {
@@ -198,6 +200,51 @@ describe("execution authorizer over PostgreSQL", () => {
     ok(refused && refused.status === "rejected");
     ok(refused.reason instanceof AuthorizationIssuanceError);
     strictEqual(refused.reason.code, "INSUFFICIENT_BUDGET");
+  });
+
+  it("atomically escalates one of two concurrent actions at a velocity limit of one", async () => {
+    // Re-publish the fixture with the same frozen identity but a one-transaction
+    // velocity limit. No authority rows reference it yet in this freshly reset test.
+    await getPool().query(`DELETE FROM mandate WHERE mandate_id = $1`, [MANDATE.mandate_id]);
+    await insertMandate({
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        velocity: { max_transactions_per_hour: 1 },
+      },
+    });
+
+    const first = await seed("velocity_1a", 0.1);
+    const second = await seed("velocity_1b", 0.1);
+    const results = await Promise.allSettled([
+      authorizer.issue(first),
+      authorizer.issue(second),
+    ]);
+
+    strictEqual(
+      results.filter((result) => result.status === "fulfilled").length,
+      1,
+      "exactly one action may obtain automatic execution authority",
+    );
+    const refused = results.find((result) => result.status === "rejected");
+    ok(refused && refused.status === "rejected");
+    ok(refused.reason instanceof AuthorizationIssuanceError);
+    strictEqual(refused.reason.code, "VELOCITY_ESCALATION_REQUIRED");
+
+    const refusedAuditId = results[0]?.status === "rejected" ? first : second;
+    const promoted = await getAuditLogRecord(refusedAuditId);
+    strictEqual(promoted?.disposition, "ESCALATE");
+    strictEqual(promoted?.reason, "velocity_threshold_exceeded");
+    strictEqual(promoted?.rule_triggered, "velocity.max_transactions_per_hour");
+    strictEqual(await getLiveReservationForAudit(refusedAuditId), null);
+
+    const { rows } = await getPool().query<{ reservations: string; authorizations: string }>(
+      `SELECT
+         (SELECT COUNT(*)::text FROM payment_reservation) AS reservations,
+         (SELECT COUNT(*)::text FROM execution_authorization) AS authorizations`,
+    );
+    strictEqual(rows[0]?.reservations, "1");
+    strictEqual(rows[0]?.authorizations, "1");
   });
 
   it("rejects an in-place v17 policy mutation after authorization before key use", async () => {

@@ -190,6 +190,8 @@ export function reserveInput(
     token: TOKEN,
     maxTotal: maxTotal.toString(),
     rollingWindow: "24h",
+    velocityLimit: 1000,
+    velocityOverrideApproved: false,
     at: AT,
     ...overrides,
   };

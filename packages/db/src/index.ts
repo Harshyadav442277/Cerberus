@@ -13,6 +13,7 @@ export {
   insertProposedAction,
   listAuditFeed,
   listPendingEscalations,
+  promoteAuditToVelocityEscalation,
   updateAuditSettlement,
 } from "./repository.js";
 export type { AuditFeedItem } from "./repository.js";
@@ -21,6 +22,7 @@ export {
   beginSubmission,
   bindAuthorization,
   budgetKeyForMandate,
+  committedVelocityCount,
   committedSpend,
   expireStaleReservations,
   getLiveReservationForAudit,
