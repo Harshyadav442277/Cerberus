@@ -336,3 +336,29 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
     client.release();
   }
 }
+
+/**
+ * Binds the one and only Execution Authorization this reservation will ever back.
+ *
+ * RESERVED -> AUTHORIZED, compare-and-set. A second authorization request for the
+ * same audit loses here and gets null, which is what stops
+ * "same audit -> AUTH A + AUTH B -> both execute". The database, not process memory,
+ * is the source of truth for whether a proposal is committed to execution.
+ */
+export async function bindAuthorization(
+  reservationId: string,
+  authorizationId: string,
+  at = new Date().toISOString(),
+): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'AUTHORIZED', authorization_id = $2, updated_at = $3::timestamptz
+      WHERE reservation_id = $1
+        AND status = 'RESERVED'
+        AND authorization_id IS NULL
+        AND expires_at > $3::timestamptz
+      RETURNING ${COLUMNS}`,
+    [reservationId, authorizationId, at],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
