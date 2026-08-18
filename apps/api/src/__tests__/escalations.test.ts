@@ -3,11 +3,19 @@ import { describe, it } from "node:test";
 import { DecisionBodySchema } from "../decision-body.js";
 
 describe("escalation decision body", () => {
-  it("defaults reviewer and the Bible §9 example note", () => {
+  it("defaults the Bible §9 example note without accepting reviewer authority", () => {
     const parsed = DecisionBodySchema.parse({ decision: "approved" });
-    assert.equal(parsed.reviewer_id, "compliance_officer_01");
     assert.equal(parsed.note, "Verified merchant_new via out-of-band call");
     assert.equal(parsed.decision, "approved");
+    assert.equal("reviewer_id" in parsed, false);
+  });
+
+  it("strips a forged reviewer_id from the untrusted body", () => {
+    const parsed = DecisionBodySchema.parse({
+      decision: "approved",
+      reviewer_id: "agent_self_approved",
+    });
+    assert.equal("reviewer_id" in parsed, false);
   });
 
   it("accepts deny", () => {

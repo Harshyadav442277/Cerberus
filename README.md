@@ -110,6 +110,8 @@ cp .env.example .env
 cp .env.agent.example .env.agent
 cp .env.executor.example .env.executor
 cp .env.authorizer.example .env.authorizer
+cp .env.reviewer.example .env.reviewer
+cp apps/dashboard/.env.local.example apps/dashboard/.env.local
 npm run wallets:new
 ```
 
@@ -120,13 +122,20 @@ Copy-Item .env.example .env
 Copy-Item .env.agent.example .env.agent
 Copy-Item .env.executor.example .env.executor
 Copy-Item .env.authorizer.example .env.authorizer
+Copy-Item .env.reviewer.example .env.reviewer
+Copy-Item apps/dashboard/.env.local.example apps/dashboard/.env.local
 npm run wallets:new
 ```
 
 Copy each generated value into the file named by the command: public addresses into
 `.env`, the x402 payment key into `.env.executor`, and the authorization/anchor keys
 into `.env.authorizer`. Copy the audit-anchor key into `.env.agent` only when on-chain
-anchoring is enabled. All four files are gitignored. Never paste a private key into an
+anchoring is enabled. Generate one high-entropy `REVIEWER_API_TOKEN` and copy it into
+`.env.authorizer`, `.env.reviewer`, and `apps/dashboard/.env.local`; it must never use
+the `NEXT_PUBLIC_` prefix or appear in `.env.agent`. Set a separate
+`REVIEWER_DASHBOARD_PASSWORD` in `apps/dashboard/.env.local`; the browser prompts the
+human reviewer for it when `/escalations` opens. All runtime files are gitignored.
+Never paste a private key or reviewer credential into an
 issue, screenshot, commit, shared shell profile, or demo.
 
 You may leave `ANTHROPIC_API_KEY`, `AUDIT_ANCHOR_ADDRESS`, and
@@ -161,11 +170,12 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **143 tests, 30 suites, 143 passed, 0 failed**.
+- The test runner reports **183 tests, 38 suites, 183 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency tests assert a database property (a transaction-scoped lock plus a
   NUMERIC capacity check) and would prove nothing against a stub.
-- The Next.js production build completes and lists six application routes.
+- The Next.js production build completes and lists seven application routes, including
+  the server-only reviewer proxy.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.
 
 The tests include the structural guarantee that `DENY` reaches neither authorization
@@ -219,9 +229,11 @@ role `isolated-payment-executor`, and an HTTP success response from the dashboar
 
 ### 6. Reproduce ALLOW, DENY, and ESCALATE
 
-In a fifth terminal, run the deterministic three-scenario sequence:
+In a fifth terminal, start the trusted scripted reviewer, then run the deterministic
+three-scenario sequence in a sixth terminal:
 
 ```bash
+npm run reviewer:auto
 npm run demo:script
 ```
 
@@ -238,6 +250,7 @@ human_review  persisted on scenario 3           ✓
 Run the reliability check with three clean resets:
 
 ```bash
+npm run reviewer:auto -- --count=3
 npm run demo:script -- --thrice
 ```
 
@@ -250,18 +263,18 @@ settlements will not have transaction hashes.
 With the API and dashboard still running:
 
 ```bash
-npm run demo -- new_counterparty --live-escalation
+npm run demo -- new_counterparty
 ```
 
 Then open <http://localhost:3000/escalations>. The agent remains blocked until you
 click **Approve** or **Deny**. Approve should unblock the separate agent process,
 persist `human_review`, and reach settlement; Deny should leave settlement null.
 
-To run the complete three-scenario script with a real click for scenario 3:
-
-```bash
-npm run demo:script -- --live
-```
+The browser never receives the API reviewer token: opening `/escalations` first
+requires the separate human reviewer login, and the authenticated decision is then
+forwarded by a server-only Next.js route. Direct calls to either the proxy or API
+without their respective credentials are rejected before `human_review` or
+`human_approval` can be written.
 
 ### 8. Reproduce live settlement and on-chain anchoring
 
@@ -345,7 +358,10 @@ npm run executor
 # Terminal 4 — agent proposes, engine decides, settlement only if permitted.
 npm run demo
 npm run demo -- cap_breach                        # one scenario
-npm run demo -- new_counterparty --deny-escalation # reviewer rejects
+
+# To script a rejection, start this trusted command in another terminal first.
+npm run reviewer:auto -- --decision=denied
+npm run demo -- new_counterparty
 ```
 
 Output reports, per scenario, the disposition, the rule that fired, and — the line
@@ -403,8 +419,8 @@ npm run executor
 # Terminal 3 — Next.js dashboard at http://localhost:3000
 npm run dashboard
 
-# Terminal 4 — hold an escalation for a real Approve click
-npm run demo -- new_counterparty --live-escalation
+# Terminal 4 — hold an escalation for a real authenticated Approve click
+npm run demo -- new_counterparty
 ```
 
 The Audit Log shows disposition colour, the rule path on DENY rows, and a live
@@ -412,15 +428,16 @@ indicator. Escalations is one-click Approve / Deny with no confirmation dialog.
 
 ## Judged demo script (Phase 7)
 
-Bible Section 9 in order, with a pre-staged ESCALATE approval and a clean reset
-between attempts:
+Bible Section 9 in order, with approval supplied by a separate trusted reviewer
+process and a clean reset between attempts:
 
 ```bash
 npm run merchant          # terminal 1
 npm run api               # terminal 2
 npm run executor          # terminal 3
-npm run demo:script       # terminal 4, one run (resets first)
-npm run demo:script -- --thrice   # Phase 7 DoD: three consecutive clean runs
+npm run reviewer:auto     # terminal 4, trusted control plane
+npm run demo:script       # terminal 5, agent process (resets first)
+npm run reviewer:auto -- --count=3  # use with demo:script -- --thrice
 ```
 
 Each run asserts ALLOW → DENY (`spend_caps.per_transaction_max`, x402 never
@@ -443,6 +460,7 @@ apps/
   agent/                LLM agent + orchestrator — owns the gate
     src/settlement/     HTTP clients for authorizer and executor; no signer or x402
   executor/             isolated payment-key process; the only payer importer
+  reviewer/             trusted scripted-reviewer process; holds reviewer credential
   merchant/             x402 resource server (the payee)
   api/                  dashboard REST + SSE live feed
   dashboard/            Next.js compliance dashboard

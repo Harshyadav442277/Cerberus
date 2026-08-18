@@ -21,6 +21,10 @@ export function loadAgentProcessEnv(): void {
   delete process.env.EVM_PRIVATE_KEY;
   delete process.env.EXECUTOR_EVM_PRIVATE_KEY;
   delete process.env.EXECUTION_AUTH_PRIVATE_KEY;
+  delete process.env.REVIEWER_API_TOKEN;
+  delete process.env.REVIEWER_ID;
+  delete process.env.REVIEWER_DASHBOARD_USERNAME;
+  delete process.env.REVIEWER_DASHBOARD_PASSWORD;
   for (const name of [
     "ANTHROPIC_API_KEY",
     "AUDIT_ANCHOR_ADDRESS",

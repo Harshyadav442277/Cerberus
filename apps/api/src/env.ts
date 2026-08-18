@@ -28,4 +28,12 @@ export const apiEnv = {
   merchantBaseUrl: optional("MERCHANT_BASE_URL", "http://localhost:4021"),
   payTo: optional("EVM_ADDRESS", ""),
   network: optional("X402_NETWORK", "eip155:84532"),
+  // Reviewer authority is loaded only from the trusted API environment. In
+  // particular, never fall back to the shared root .env read by agent-side packages.
+  reviewerApiToken:
+    process.env.REVIEWER_API_TOKEN?.trim() || authorizer["REVIEWER_API_TOKEN"]?.trim() || "",
+  reviewerId:
+    process.env.REVIEWER_ID?.trim() ||
+    authorizer["REVIEWER_ID"]?.trim() ||
+    "compliance_officer_01",
 };

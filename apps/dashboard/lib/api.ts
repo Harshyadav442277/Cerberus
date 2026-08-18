@@ -62,7 +62,7 @@ export async function submitDecision(
    */
   mandateVersion?: number,
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/escalations/${actionId}/decision`, {
+  const res = await fetch(`/api/escalations/${encodeURIComponent(actionId)}/decision`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ decision, note, mandate_version: mandateVersion }),

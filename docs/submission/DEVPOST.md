@@ -302,7 +302,7 @@ easy, avoidable errors:
   implementation; lead with the pre-execution gate and the enforcement test, and let
   the name be a label.
 - **Do not claim production-readiness.** Known limitations, stated plainly if asked:
-  concurrent evaluate→settle is not locked (the sequential demo path is unaffected);
-  the rolling-window period is fixed at 24 hours matching the seeded mandate;
-  overnight time-window wrap is unsupported; the local escalation endpoint has no auth
-  because the demo stack is closed and local.
+  reviewer requests are authenticated but database roles are not yet separated;
+  transaction-count velocity is not yet reserved atomically; exact live x402 challenge
+  binding and `OUTCOME_UNKNOWN` reconciliation remain pending; overnight time-window
+  wrap is unsupported.

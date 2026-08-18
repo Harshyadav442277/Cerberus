@@ -15,6 +15,7 @@
     "demo:script": "tsx apps/agent/src/cli/section9.ts",
     "api": "tsx apps/api/src/server.ts",
     "executor": "tsx apps/executor/src/server.ts",
+    "reviewer:auto": "tsx apps/reviewer/src/index.ts",
     "dashboard": "npm run dev --prefix apps/dashboard",
     "contracts:compile": "tsx contracts/src/compile.ts",
     "contracts:deploy": "tsx contracts/src/deploy.ts",

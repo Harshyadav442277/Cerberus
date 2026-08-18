@@ -40,7 +40,7 @@ function stripComments(source: string): string {
 
 function stripSecretScrubs(source: string): string {
   return source.replace(
-    /delete\s+process\.env\.(?:EVM_PRIVATE_KEY|EXECUTOR_EVM_PRIVATE_KEY|EXECUTION_AUTH_PRIVATE_KEY)\s*;/g,
+    /delete\s+process\.env\.(?:EVM_PRIVATE_KEY|EXECUTOR_EVM_PRIVATE_KEY|EXECUTION_AUTH_PRIVATE_KEY|REVIEWER_API_TOKEN|REVIEWER_ID|REVIEWER_DASHBOARD_USERNAME|REVIEWER_DASHBOARD_PASSWORD)\s*;/g,
     "",
   );
 }
@@ -67,10 +67,18 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
     process.env.EVM_PRIVATE_KEY = `0x${"aa".repeat(32)}`;
     process.env.EXECUTOR_EVM_PRIVATE_KEY = `0x${"bb".repeat(32)}`;
     process.env.EXECUTION_AUTH_PRIVATE_KEY = `0x${"cc".repeat(32)}`;
+    process.env.REVIEWER_API_TOKEN = "reviewer-authority-must-not-enter-agent";
+    process.env.REVIEWER_ID = "trusted_reviewer";
+    process.env.REVIEWER_DASHBOARD_USERNAME = "reviewer";
+    process.env.REVIEWER_DASHBOARD_PASSWORD = "human-reviewer-password";
     loadAgentProcessEnv();
     strictEqual(process.env.EVM_PRIVATE_KEY, undefined);
     strictEqual(process.env.EXECUTOR_EVM_PRIVATE_KEY, undefined);
     strictEqual(process.env.EXECUTION_AUTH_PRIVATE_KEY, undefined);
+    strictEqual(process.env.REVIEWER_API_TOKEN, undefined);
+    strictEqual(process.env.REVIEWER_ID, undefined);
+    strictEqual(process.env.REVIEWER_DASHBOARD_USERNAME, undefined);
+    strictEqual(process.env.REVIEWER_DASHBOARD_PASSWORD, undefined);
   });
 
   it("loads only the agent-specific environment file", () => {
@@ -82,6 +90,19 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
     strictEqual(envModule!.code.includes('"../../../.env"'), false);
     strictEqual(envModule!.code.includes('"../../../.env.authorizer"'), false);
     strictEqual(envModule!.code.includes('"../../../.env.executor"'), false);
+    strictEqual(envModule!.code.includes('"../../../.env.reviewer"'), false);
+  });
+
+  it("the agent has no reviewer credential, decision client, or trusted config path", () => {
+    const agentFiles = FILES.filter((file) => file.path.startsWith(join("apps", "agent") + sep));
+    const offenders = agentFiles
+      .filter((file) =>
+        /REVIEWER_API_TOKEN|REVIEWER_DASHBOARD_|\.env\.reviewer|\/escalations\/.*\/decision|createAutoEscalationPort/.test(
+          stripSecretScrubs(file.code),
+        ),
+      )
+      .map((file) => file.path);
+    strictEqual(offenders.length, 0, `reviewer authority leaked into agent: ${offenders.join(", ")}`);
   });
   it("only the isolated executor and x402 diagnostics import @safr/x402-client", () => {
     // The x402 package's own source and scripts are naturally exempt.

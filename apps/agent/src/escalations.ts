@@ -1,5 +1,4 @@
 import { HumanReviewSchema, type HumanReview } from "@safr/core";
-import { agentEnv } from "./env.js";
 import type { EscalationPort } from "./ports.js";
 
 /**
@@ -47,50 +46,6 @@ export function createEscalationRegistry(): EscalationRegistry {
 
     pending(): string[] {
       return [...waiting.keys()];
-    },
-  };
-}
-
-/**
- * Pre-stages a decision through the trusted control plane, without waiting for a human.
- *
- * For automated runs and the scripted demo. Bible Section 9's reliability note prefers
- * a fast, pre-staged approval during judging over an open-ended live pause.
- *
- * It posts to the same endpoint the dashboard uses rather than fabricating a review
- * locally, and that is a security property, not a convenience. An approval is what
- * grants an escalated payment its authority; if this process could mint one, a
- * compromised agent could approve itself and the human-in-the-loop path would be
- * decorative. The control plane is the only writer of approvals, so a pre-staged
- * decision is still subject to the same staleness checks a reviewer's click is.
- *
- * The API is already a hard prerequisite for any settlement — the agent has no payment
- * key and must ask it for an Execution Authorization — so this adds no new dependency.
- */
-export function createAutoEscalationPort(
-  decision: "approved" | "denied",
-  reviewerId = "compliance_officer_01",
-  note = "Pre-staged decision for the scripted demo run (Bible Section 9).",
-  baseUrl = agentEnv.apiBaseUrl,
-): EscalationPort {
-  return {
-    async awaitDecision(actionId: string): Promise<HumanReview> {
-      const response = await fetch(`${baseUrl}/escalations/${actionId}/decision`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ decision, reviewer_id: reviewerId, note }),
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
-        throw new Error(
-          `escalation decision refused: ${
-            typeof body?.error === "string" ? body.error : `HTTP ${response.status}`
-          }`,
-        );
-      }
-      const body = (await response.json()) as { human_review?: unknown };
-      return HumanReviewSchema.parse(body.human_review);
     },
   };
 }

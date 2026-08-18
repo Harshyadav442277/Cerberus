@@ -84,7 +84,7 @@ most important frame in the video — do not rush it.*
 > unblocks, and only now does it settle.
 
 *On screen: dashboard → Escalations → click Approve → cut back to the terminal
-unblocking. Use `npm run demo -- new_counterparty --live-escalation` so this is a real
+unblocking. Use `npm run demo -- new_counterparty` so this is a real authenticated
 click, not a scripted pause.*
 
 ### 1:20–1:34 — the audit record

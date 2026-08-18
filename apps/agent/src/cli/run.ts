@@ -5,15 +5,14 @@
  * Usage:
  *   npm run demo                 all three Bible Section 9 scenarios
  *   npm run demo -- clean        one scenario: clean | cap_breach | new_counterparty
- *   npm run demo -- --deny-escalation   reviewer rejects instead of approving
- *   npm run demo -- new_counterparty --live-escalation
- *       wait for Approve/Deny from the dashboard API (Phase 6)
+ *   npm run demo -- new_counterparty
+ *       wait for Approve/Deny from the authenticated reviewer control plane
  */
 import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool } from "@safr/db";
 import { createAuditLog } from "../audit.js";
-import { createAutoEscalationPort, createDbEscalationPort } from "../escalations.js";
+import { createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator, type Scenario } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
 import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
@@ -24,9 +23,6 @@ loadAgentProcessEnv();
 const AGENT_ID = "agent_treasury_01";
 
 const args = process.argv.slice(2);
-const denyEscalation = args.includes("--deny-escalation");
-/** Wait for a real dashboard approval instead of auto-deciding (Phase 6). */
-const liveEscalation = args.includes("--live-escalation");
 const selected = args.filter((arg) => !arg.startsWith("--"));
 
 function describe(outcome: Outcome): string {
@@ -71,9 +67,7 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
   const outcome = await runAction(action, {
     controls: { loadEvaluationContext },
     audit: auditLog,
-    escalations: liveEscalation
-      ? createDbEscalationPort()
-      : createAutoEscalationPort(denyEscalation ? "denied" : "approved"),
+    escalations: createDbEscalationPort(),
     authorization: createAuthorizationPort,
     // A factory, so on DENY the settlement module is never even constructed.
     settlement: createSettlementPort,

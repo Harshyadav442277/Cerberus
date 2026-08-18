@@ -1,9 +1,9 @@
 /**
  * Phase 7 — Bible Section 9 demo script.
  *
- * Runs the three scenarios in order with a pre-staged ESCALATE approval (Bible §9
- * reliability decision). Asserts dispositions, rule paths, and the interception
- * constraint. Settlement hashes require a funded wallet (Memory.md B1).
+ * Runs the three scenarios in order. ESCALATE waits for an authenticated dashboard
+ * decision or the separate trusted reviewer:auto process. Asserts dispositions, rule
+ * paths, and the interception constraint.
  *
  * Prefer: npm run demo:script
  */
@@ -11,7 +11,7 @@ import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool, getAuditLogRecord, resetDemoState } from "@safr/db";
 import { createAuditLog } from "../audit.js";
-import { createAutoEscalationPort, createDbEscalationPort } from "../escalations.js";
+import { createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
 import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
@@ -25,7 +25,6 @@ const ORDER = ["clean", "cap_breach", "new_counterparty"] as const;
 const args = process.argv.slice(2);
 const thrice = args.includes("--thrice");
 const noReset = args.includes("--no-reset") && !thrice;
-const live = args.includes("--live");
 
 interface Expectation {
   disposition: "ALLOW" | "DENY" | "ESCALATE";
@@ -101,9 +100,7 @@ async function runOnce(runLabel: string): Promise<void> {
 
   const auditLog = createAuditLog();
   const generator = createIntentGenerator();
-  const escalations = live
-    ? createDbEscalationPort()
-    : createAutoEscalationPort("approved");
+  const escalations = createDbEscalationPort();
 
   const outcomes: Outcome[] = [];
   const started = Date.now();
@@ -117,8 +114,8 @@ async function runOnce(runLabel: string): Promise<void> {
       `  proposes  ${action.payload.amount} ${action.payload.currency} → ${action.payload.counterparty}`,
     );
 
-    if (live && key === "new_counterparty") {
-      console.log(`  waiting   Approve on Escalations (action ${action.action_id})`);
+    if (key === "new_counterparty") {
+      console.log(`  waiting   authenticated reviewer decision (action ${action.action_id})`);
     }
 
     const outcome = await runAction(action, {
@@ -186,11 +183,7 @@ async function runOnce(runLabel: string): Promise<void> {
 
 export async function main(): Promise<void> {
   console.log("\nCERBERUS — SAFR Runtime demo (Bible Section 9)");
-  console.log(
-    live
-      ? "Mode: live escalation (dashboard Approve required for scenario 3)"
-      : "Mode: pre-staged ESCALATE approval (Bible §9 reliability decision)",
-  );
+  console.log("Mode: authenticated reviewer approval required for scenario 3");
 
   const runs = thrice ? 3 : 1;
   for (let i = 1; i <= runs; i++) {

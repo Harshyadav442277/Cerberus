@@ -24,6 +24,17 @@ until the current phase passes its Definition of Done.
    state and bound human approvals are persisted; the authorizer and executor reject
    stale mandate/approval context before key use. Migration 004 applies and rolls back
    cleanly, and the full real-PostgreSQL suite passes 176/176 tests across 36 suites.
+3.5A. **Reviewer authentication — complete and verified.** The decision endpoint
+   requires a trusted bearer credential, reviewer identity is server-controlled, the
+   dashboard uses a server-only proxy, and the agent has no reviewer credential or
+   decision client. The protected dashboard proxy also rejects agent-style calls. The
+   full suite passes 183/183 tests across 38 suites.
+3.5B. **Database privilege separation — not started.** Enforce process roles with
+   PostgreSQL GRANT/REVOKE rather than TypeScript boundaries alone.
+3.5C. **Mandate immutability/content freshness — not started.** Published policy
+   contents must not change in place under the same version.
+3.5D. **Concurrent velocity enforcement — not started.** Transaction-count races must
+   preserve velocity breach → ESCALATE semantics.
 4. **Exact x402 binding — not started.** Bind authorization to the exact live payment
    challenge/resource rather than only the intended request target.
 5. **Ambiguous settlement reconciliation — not started.** Introduce

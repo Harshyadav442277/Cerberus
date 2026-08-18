@@ -150,6 +150,13 @@ npm run executor         # terminal 3 — :4060, isolated x402 signer
 npm run dashboard        # terminal 4 — :3000, compliance dashboard
 ```
 
+Reviewer decisions require the same high-entropy `REVIEWER_API_TOKEN` in the API's
+`.env.authorizer` and the dashboard server's `apps/dashboard/.env.local`. For the
+scripted control plane, also copy it to the ignored `.env.reviewer` file. Never place
+it in `.env.agent` or prefix it `NEXT_PUBLIC_`. Set a separate
+`REVIEWER_DASHBOARD_PASSWORD` in `apps/dashboard/.env.local`; the browser will prompt
+the human reviewer when the protected Escalations screen is opened.
+
 Confirm all three:
 
 ```bash
@@ -167,7 +174,9 @@ Expect merchant `status: ok`, API `ok: true` with `database: up`, executor role
 ## 3. Running the demo
 
 ```bash
-npm run demo:script              # one clean run: ALLOW → DENY → ESCALATE(approved)
+npm run reviewer:auto            # separate trusted terminal; approves one escalation
+npm run demo:script              # agent terminal: ALLOW → DENY → ESCALATE(approved)
+npm run reviewer:auto -- --count=3 # trusted terminal for the three-run check
 npm run demo:script -- --thrice  # the reliability check: three consecutive runs
 npm run demo:reset               # wipe audit log, re-seed agent + mandate
 ```
@@ -175,7 +184,7 @@ npm run demo:reset               # wipe audit log, re-seed agent + mandate
 For the live escalation (a real Approve click on the dashboard):
 
 ```bash
-npm run demo -- new_counterparty --live-escalation
+npm run demo -- new_counterparty
 ```
 
 That holds at ESCALATE until someone clicks Approve or Deny on

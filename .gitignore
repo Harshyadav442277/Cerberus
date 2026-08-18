@@ -9,6 +9,7 @@ out/
 .env.agent
 .env.executor
 .env.authorizer
+.env.reviewer
 .env.local
 .env.*.local
 

@@ -121,7 +121,7 @@ export default function EscalationsPage() {
           <p className="py-10 text-center text-[13px] text-mute">
             No pending escalations. Run{" "}
             <code className="font-mono">
-              npm run demo -- new_counterparty --live-escalation
+              npm run demo -- new_counterparty
             </code>{" "}
             with the API up.
           </p>

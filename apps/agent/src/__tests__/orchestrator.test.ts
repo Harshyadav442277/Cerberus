@@ -109,16 +109,32 @@ describe("ESCALATE — held until a human decides", () => {
   });
 
   it("never invokes pay() when the reviewer denies", async () => {
+    const registry = createEscalationRegistry();
     const { factory, spy } = settlementSpy();
-    const outcome = await runAction(action({ counterparty: "merchant_new", amount: 0.75 }), {
+    const auth = authorizationSpy();
+    const proposed = action({ counterparty: "merchant_new", amount: 0.75 });
+    const running = runAction(proposed, {
       controls: controlsPort(),
       audit: auditSpy(),
-      escalations: autoEscalation("denied"),
-      authorization: authorizationSpy().factory,
+      escalations: registry,
+      authorization: auth.factory,
       settlement: factory,
     });
 
+    await new Promise((resolve) => setImmediate(resolve));
+    strictEqual(auth.constructedCount(), 0, "unapproved ESCALATE must not reach authorizer");
+    strictEqual(spy.constructedCount, 0, "unapproved ESCALATE must not reach payment");
+
+    registry.submitDecision(proposed.action_id, {
+      reviewer_id: "compliance_officer_01",
+      decision: "denied",
+      decided_at: "2026-08-07T14:32:03.000Z",
+      note: "Could not verify counterparty",
+    });
+    const outcome = await running;
+
     strictEqual(outcome.status, "escalation_denied");
+    strictEqual(auth.constructedCount(), 0);
     strictEqual(spy.callCount, 0);
     strictEqual(spy.constructedCount, 0);
     strictEqual(outcome.humanReview?.decision, "denied");
