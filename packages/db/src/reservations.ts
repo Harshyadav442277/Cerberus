@@ -32,6 +32,7 @@ export type ReservationStatus =
   | "SETTLED"
   | "FAILED"
   | "OUTCOME_UNKNOWN"
+  | "RECONCILING"
   | "EXPIRED";
 
 /**
@@ -47,6 +48,7 @@ export const LIVE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
   "SUBMITTING",
   "SETTLED",
   "OUTCOME_UNKNOWN",
+  "RECONCILING",
 ];
 
 /** Pre-broadcast states. These, and only these, may be released by TTL. */
@@ -69,6 +71,15 @@ export interface PaymentReservation {
   status: ReservationStatus;
   authorization_id: string | null;
   settlement_tx: string | null;
+  payment_payer: string | null;
+  payment_nonce: string | null;
+  payment_payload_hash: string | null;
+  payment_valid_before: string | null;
+  submission_block: string | null;
+  reconcile_after: string | null;
+  reconciliation_attempts: number;
+  reconciliation_token: string | null;
+  reconciliation_error: string | null;
   counts_at: string;
   expires_at: string;
   created_at: string;
@@ -77,13 +88,16 @@ export interface PaymentReservation {
 
 const COLUMNS = `reservation_id, audit_id, action_id, agent_id, mandate_id, mandate_version,
   budget_key, currency, amount_decimal, amount_atomic, chain_id, token, status,
-  authorization_id, settlement_tx, counts_at, expires_at, created_at, updated_at`;
+  authorization_id, settlement_tx, payment_payer, payment_nonce, payment_payload_hash,
+  payment_valid_before, submission_block, reconcile_after, reconciliation_attempts,
+  reconciliation_token, reconciliation_error, counts_at, expires_at, created_at, updated_at`;
 
 function toReservation(row: Record<string, unknown>): PaymentReservation {
   return {
     ...(row as unknown as PaymentReservation),
     mandate_version: Number(row["mandate_version"]),
     chain_id: Number(row["chain_id"]),
+    reconciliation_attempts: Number(row["reconciliation_attempts"]),
   };
 }
 
@@ -158,7 +172,7 @@ const COMMITTED_SPEND_SQL = `
        AND counts_at  >  ($3::timestamptz - make_interval(hours => $4::int))
        AND counts_at  <= $3::timestamptz
        AND (
-             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN')
+             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN', 'RECONCILING')
              OR (status IN ('RESERVED', 'AUTHORIZED') AND expires_at > $3::timestamptz)
            )
   ),
@@ -192,7 +206,7 @@ const COMMITTED_VELOCITY_SQL = `
        AND counts_at >  ($2::timestamptz - interval '1 hour')
        AND counts_at <= $2::timestamptz
        AND (
-             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN')
+             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN', 'RECONCILING')
              OR (status IN ('RESERVED', 'AUTHORIZED') AND expires_at > $2::timestamptz)
            )
   ),
@@ -369,9 +383,13 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
          reservation_id, audit_id, action_id, agent_id, mandate_id, mandate_version,
          budget_key, currency, amount_decimal, amount_atomic, chain_id, token,
          status, authorization_id, settlement_tx,
+         payment_payer, payment_nonce, payment_payload_hash, payment_valid_before,
+         submission_block, reconcile_after, reconciliation_attempts, reconciliation_token,
+         reconciliation_error,
          counts_at, expires_at, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::numeric, $10::numeric, $11, $12,
                'RESERVED', NULL, NULL,
+               NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL,
                $13::timestamptz, $13::timestamptz + make_interval(secs => $14::int),
                $13::timestamptz, $13::timestamptz)
        RETURNING ${COLUMNS}`,
@@ -462,6 +480,54 @@ export async function beginSubmission(
   return rows[0] ? toReservation(rows[0]) : null;
 }
 
+export interface PaymentAttemptCorrelation {
+  payer: string;
+  nonce: string;
+  payloadHash: string;
+  validBefore: string;
+  submissionBlock: string;
+}
+
+/**
+ * Persists the chain-visible EIP-3009 identity before transport can submit it.
+ *
+ * A crash before this compare-and-set cannot have sent a payment: the x402 payer's
+ * submit method accepts only the branded object returned after this write succeeds.
+ */
+export async function recordPaymentAttempt(
+  reservationId: string,
+  correlation: PaymentAttemptCorrelation,
+  reconcileAfter: string,
+  at = new Date().toISOString(),
+): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `UPDATE payment_reservation
+        SET payment_payer = $2,
+            payment_nonce = $3,
+            payment_payload_hash = $4,
+            payment_valid_before = $5::bigint,
+            submission_block = $6::bigint,
+            reconcile_after = $7::timestamptz,
+            reconciliation_error = NULL,
+            updated_at = $8::timestamptz
+      WHERE reservation_id = $1
+        AND status = 'SUBMITTING'
+        AND payment_nonce IS NULL
+      RETURNING ${COLUMNS}`,
+    [
+      reservationId,
+      correlation.payer,
+      correlation.nonce,
+      correlation.payloadHash,
+      correlation.validBefore,
+      correlation.submissionBlock,
+      reconcileAfter,
+      at,
+    ],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
 /** Known success. Capacity converts from reserved to settled; the total is unchanged. */
 export async function markSettled(
   reservationId: string,
@@ -503,14 +569,120 @@ export async function markFailed(
  */
 export async function markOutcomeUnknown(
   reservationId: string,
+  reconcileAfter = new Date().toISOString(),
   at = new Date().toISOString(),
 ): Promise<void> {
   await getPool().query(
     `UPDATE payment_reservation
-        SET status = 'OUTCOME_UNKNOWN', updated_at = $2::timestamptz
+        SET status = 'OUTCOME_UNKNOWN', reconcile_after = $2::timestamptz,
+            updated_at = $3::timestamptz
       WHERE reservation_id = $1 AND status = 'SUBMITTING'`,
-    [reservationId, at],
+    [reservationId, reconcileAfter, at],
   );
+}
+
+export interface ClaimReconciliationOptions {
+  at?: string;
+  leaseSeconds?: number;
+}
+
+/**
+ * Atomically leases one ambiguous/stale submission to one worker.
+ *
+ * `FOR UPDATE SKIP LOCKED` permits many workers without duplicate ownership. An
+ * expired RECONCILING lease is reclaimable after a worker crash.
+ */
+export async function claimReconciliation(
+  options: ClaimReconciliationOptions = {},
+): Promise<PaymentReservation | null> {
+  const at = options.at ?? new Date().toISOString();
+  const leaseSeconds = options.leaseSeconds ?? 30;
+  if (!Number.isInteger(leaseSeconds) || leaseSeconds <= 0 || leaseSeconds > 300) {
+    throw new Error("reconciliation lease must be between 1 and 300 seconds");
+  }
+  const token = `recon_${randomUUID()}`;
+  const { rows } = await getPool().query(
+    `WITH candidate AS (
+       SELECT reservation_id
+         FROM payment_reservation
+        WHERE status IN ('SUBMITTING', 'OUTCOME_UNKNOWN', 'RECONCILING')
+          AND reconcile_after IS NOT NULL
+          AND reconcile_after <= $1::timestamptz
+        ORDER BY reconcile_after ASC, updated_at ASC
+        FOR UPDATE SKIP LOCKED
+        LIMIT 1
+     )
+     UPDATE payment_reservation r
+        SET status = 'RECONCILING',
+            reconciliation_attempts = reconciliation_attempts + 1,
+            reconcile_after = $1::timestamptz + make_interval(secs => $2::int),
+            reconciliation_token = $3,
+            reconciliation_error = NULL,
+            updated_at = $1::timestamptz
+      FROM candidate c
+      WHERE r.reservation_id = c.reservation_id
+      RETURNING r.*`,
+    [at, leaseSeconds, token],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
+/** Inconclusive chain evidence: keep capacity and schedule another durable attempt. */
+export async function deferReconciliation(
+  reservationId: string,
+  reconciliationToken: string,
+  reconcileAfter: string,
+  error: string | null,
+  at = new Date().toISOString(),
+): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'OUTCOME_UNKNOWN', reconcile_after = $3::timestamptz,
+            reconciliation_token = NULL,
+            reconciliation_error = $4, updated_at = $5::timestamptz
+      WHERE reservation_id = $1 AND status = 'RECONCILING'
+        AND reconciliation_token = $2`,
+    [reservationId, reconciliationToken, reconcileAfter, error, at],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/** Chain-proven success. Exactly one leased worker can win this terminal CAS. */
+export async function markReconciledSettled(
+  reservationId: string,
+  reconciliationToken: string,
+  settlementTx: string,
+  at = new Date().toISOString(),
+): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'SETTLED', settlement_tx = $3, reconcile_after = NULL,
+            reconciliation_token = NULL, reconciliation_error = NULL,
+            updated_at = $4::timestamptz
+      WHERE reservation_id = $1 AND status = 'RECONCILING'
+        AND reconciliation_token = $2`,
+    [reservationId, reconciliationToken, settlementTx, at],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/** Chain-proven non-payment after authorization expiry; capacity is safe to release. */
+export async function markReconciledFailed(
+  reservationId: string,
+  reconciliationToken: string,
+  reason: string,
+  at = new Date().toISOString(),
+): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'FAILED', reconcile_after = NULL,
+            reconciliation_token = NULL, reconciliation_error = $3,
+            updated_at = $4::timestamptz
+      WHERE reservation_id = $1 AND status = 'RECONCILING'
+        AND reconciliation_token = $2`,
+    [reservationId, reconciliationToken, reason, at],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function getReservation(reservationId: string): Promise<PaymentReservation | null> {

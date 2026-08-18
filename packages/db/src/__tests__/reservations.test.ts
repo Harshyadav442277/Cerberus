@@ -6,14 +6,19 @@ import { closePool, getPool } from "../pool.js";
 import {
   beginSubmission,
   bindAuthorization,
+  claimReconciliation,
   committedVelocityCount,
   committedSpend,
+  deferReconciliation,
   expireStaleReservations,
   getLiveReservationForAudit,
   getReservation,
   markFailed,
   markOutcomeUnknown,
+  markReconciledFailed,
+  markReconciledSettled,
   markSettled,
+  recordPaymentAttempt,
   reserveBudget,
   windowHours,
   type ReserveBudgetResult,
@@ -433,5 +438,141 @@ describe("atomic velocity reservations", () => {
         ["created", "velocity_escalation"],
       );
     }
+  });
+});
+
+describe("durable outcome reconciliation state", () => {
+  async function submission(id: string, withCorrelation = true) {
+    await seedAgent("agent_reconcile");
+    await insertMandate(mandateFixture({
+      mandateId: "m_reconcile",
+      agentId: "agent_reconcile",
+      maxTotal: 100,
+    }));
+    const proposal = await seedProposal({
+      id,
+      agentId: "agent_reconcile",
+      mandateId: "m_reconcile",
+      amount: 5,
+    });
+    const reserved = await reserveBudget(reserveInput(proposal, 100));
+    ok(reserved.outcome === "created");
+    const reservationId = reserved.reservation.reservation_id;
+    await bindAuthorization(reservationId, `auth_${id}`, AT);
+    ok(await beginSubmission(reservationId, `auth_${id}`, AT));
+    if (withCorrelation) {
+      ok(await recordPaymentAttempt(
+        reservationId,
+        {
+          payer: "0x4444444444444444444444444444444444444444",
+          nonce: `0x${"55".repeat(32)}`,
+          payloadHash: `0x${"66".repeat(32)}`,
+          validBefore: "1800000300",
+          submissionBlock: "12345678",
+        },
+        AT,
+        AT,
+      ));
+    }
+    return reservationId;
+  }
+
+  it("persists chain correlation and never frees UNKNOWN by reservation TTL", async () => {
+    const id = await submission("recon_correlation");
+    await markOutcomeUnknown(id, AT, AT);
+    const unknown = (await getReservation(id))!;
+    strictEqual(unknown.status, "OUTCOME_UNKNOWN");
+    strictEqual(unknown.payment_nonce, `0x${"55".repeat(32)}`);
+    strictEqual(unknown.submission_block, "12345678");
+
+    const afterTtl = new Date(Date.parse(unknown.expires_at) + 86_400_000).toISOString();
+    strictEqual(await expireStaleReservations(afterTtl), 0);
+    strictEqual((await getReservation(id))!.status, "OUTCOME_UNKNOWN");
+  });
+
+  it("lets only one of many reconciliation workers claim an ambiguous payment", async () => {
+    const id = await submission("recon_race");
+    await markOutcomeUnknown(id, AT, AT);
+    const claims = await race(8, () => claimReconciliation({ at: AT, leaseSeconds: 30 }));
+    const winners = claims.filter((claim) => claim !== null);
+    strictEqual(winners.length, 1);
+    strictEqual(winners[0]!.reservation_id, id);
+    strictEqual(winners[0]!.status, "RECONCILING");
+    strictEqual(winners[0]!.reconciliation_attempts, 1);
+    ok(winners[0]!.reconciliation_token);
+  });
+
+  it("reclaims a crashed worker lease and fences the stale worker", async () => {
+    const id = await submission("recon_restart");
+    await markOutcomeUnknown(id, AT, AT);
+    const first = await claimReconciliation({ at: AT, leaseSeconds: 1 });
+    ok(first?.reconciliation_token);
+
+    const afterLease = new Date(Date.parse(AT) + 2_000).toISOString();
+    const restarted = await claimReconciliation({ at: afterLease, leaseSeconds: 30 });
+    ok(restarted?.reconciliation_token);
+    strictEqual(restarted.reservation_id, id);
+    strictEqual(restarted.reconciliation_attempts, 2);
+    strictEqual(first.reconciliation_token === restarted.reconciliation_token, false);
+
+    strictEqual(
+      await markReconciledSettled(id, first.reconciliation_token, "0xstale", afterLease),
+      false,
+      "the expired worker cannot finalize after its lease is fenced",
+    );
+    strictEqual(
+      await markReconciledSettled(id, restarted.reconciliation_token, "0xsettled", afterLease),
+      true,
+    );
+    const terminal = (await getReservation(id))!;
+    strictEqual(terminal.status, "SETTLED");
+    strictEqual(terminal.settlement_tx, "0xsettled");
+  });
+
+  it("keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment", async () => {
+    const id = await submission("recon_defer");
+    await markOutcomeUnknown(id, AT, AT);
+    const first = await claimReconciliation({ at: AT });
+    ok(first?.reconciliation_token);
+    const retryAt = new Date(Date.parse(AT) + 60_000).toISOString();
+    strictEqual(
+      await deferReconciliation(id, first.reconciliation_token, retryAt, "authorization still live", AT),
+      true,
+    );
+    strictEqual((await getReservation(id))!.status, "OUTCOME_UNKNOWN");
+
+    const second = await claimReconciliation({ at: retryAt });
+    ok(second?.reconciliation_token);
+    strictEqual(
+      await markReconciledFailed(
+        id,
+        second.reconciliation_token,
+        "authorization expired unused; safe to retry",
+        retryAt,
+      ),
+      true,
+    );
+    strictEqual((await getReservation(id))!.status, "FAILED");
+  });
+
+  it("can safely release a stale SUBMITTING row with no persisted attempt", async () => {
+    const id = await submission("recon_pre_transport_crash", false);
+    await getPool().query(
+      `UPDATE payment_reservation SET reconcile_after = $2 WHERE reservation_id = $1`,
+      [id, AT],
+    );
+    const claim = await claimReconciliation({ at: AT });
+    ok(claim?.reconciliation_token);
+    strictEqual(claim.payment_nonce, null);
+    strictEqual(
+      await markReconciledFailed(
+        id,
+        claim.reconciliation_token,
+        "no persisted payment attempt; transport was unreachable",
+        AT,
+      ),
+      true,
+    );
+    strictEqual((await getReservation(id))!.status, "FAILED");
   });
 });
