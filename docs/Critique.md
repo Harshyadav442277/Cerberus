@@ -100,11 +100,9 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 
 ## Current phase boundary
 
-Phases 1, 2, 3, 3.5A, 3.5B, and 3.5C are complete. Phase 3.5C passed the full 194-test
-suite against real PostgreSQL. An authorization issued under mandate v17 cannot be
-followed by an in-place controls rewrite: PostgreSQL rejects the mutation before the
-payment-key boundary. Agent-login authority attacks continue to fail with SQLSTATE
-42501.
+Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, and 4 are complete. The post-challenge
+freshness hardening passed the full **232/232-test suite across 45 suites** against
+real PostgreSQL. Phase 5 reconciliation is active.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -150,13 +148,23 @@ controls, default disposition, creator, and approver cannot change in place. Pol
 change means publishing the next version. The only permitted updates are one-way
 lifecycle closure: `active → superseded|revoked` and `effective_to: NULL → timestamp`.
 
+Phase 3.5D serializes transaction-count velocity under a per-agent advisory lock while
+retaining the shared-mandate budget lock. A raced threshold breach becomes ESCALATE,
+not DENY or ALLOW, and no authorization exists until trusted human approval is bound.
+
+Phase 4 fetches the merchant's real x402 v2.21.0 challenge without a signature,
+validates protocol version, scheme, chain, token, atomic amount, payee, resource,
+EIP-712 identity, and transfer method, and pins the one matching offer. After the
+bounded network fetch it obtains a new clock value and fresh database context, then
+rechecks authorization expiry, current mandate, approval, and reservation immediately
+before consumption. The authorization and reservation database compare-and-sets also
+enforce expiry independently.
+
 What may **not** yet be claimed:
 
-- **Phase 3.5D.** Transaction-count velocity evaluation is not yet concurrency-safe.
-- **Phase 4.** The resource hash still covers the intended request URL, not the live
-  402 `PaymentRequirements`.
-- **Phase 5.** `OUTCOME_UNKNOWN` is recorded and holds its capacity, but nothing
-  reconciles it against chain state, and no worker resolves it.
+- **Phase 5.** `OUTCOME_UNKNOWN` is recorded and holds its capacity, but no durable
+  worker yet correlates its EIP-3009 authorization with chain state and resolves it.
+- The fresh funded hardened-path evidence run remains pending for Phase 8.
 
 ## Phase 2 verification notes
 

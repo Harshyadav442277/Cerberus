@@ -37,12 +37,17 @@ until the current phase passes its Definition of Done.
    rejects every policy-bearing rewrite of a published version; policy changes require
    a new version. Only one-way lifecycle closure remains mutable. The v17 post-auth
    mutation attack fails before key use, and the full suite passes 194/194 tests.
-3.5D. **Concurrent velocity enforcement — not started.** Transaction-count races must
-   preserve velocity breach → ESCALATE semantics.
-4. **Exact x402 binding — not started.** Bind authorization to the exact live payment
-   challenge/resource rather than only the intended request target.
-5. **Ambiguous settlement reconciliation — not started.** Introduce
-   `OUTCOME_UNKNOWN`; never blindly retry a payment that may have broadcast.
+3.5D. **Concurrent velocity enforcement — complete and verified.** Per-agent
+   transaction-count races serialize at reservation time, preserve velocity breach →
+   ESCALATE semantics, and require a bound human approval before one retry.
+4. **Exact x402 binding — complete and verified.** The executor validates and pins the
+   merchant's actual live challenge before key use. A bounded unsigned fetch is
+   followed by a fresh trusted-context/clock read; authorization, mandate, approval,
+   and reservation expiry are rechecked immediately before the final database CAS.
+   The full suite passes 232/232 tests across 45 suites.
+5. **Ambiguous settlement reconciliation — active.** `OUTCOME_UNKNOWN` already holds
+   capacity and is never blindly retried; durable EIP-3009 chain reconciliation is the
+   current phase.
 6. **Complete adversarial suite — not started.** Consolidate the critique's hostile
    cases as repeatable evidence.
 7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and

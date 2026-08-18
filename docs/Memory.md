@@ -40,14 +40,17 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   and requires a bound human approval before one retry. Stage-2 Phase 4 exact live
   x402 challenge binding is complete: the executor performs one unsigned request,
   validates and pins the merchant's actual v2.21.0 PaymentRequirements, and only then
-  consumes authority or constructs a payer/signature. The full suite is now 225/225
-  across 45 suites. Phases 5–8 have not started. The fresh funded
+  obtains a fresh clock/context read and rechecks authorization, mandate, approval,
+  and reservation authority before consuming or signing. The unsigned request has a
+  10-second timeout, and the final database CAS operations enforce expiry. The full
+  suite is now 232/232
+  across 45 suites. Phase 5 is active; Phases 6–8 have not started. The fresh funded
   hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **225/225 across 45 suites**, Aug 19 after Stage-2 Phase 4, against
+- **Test count:** **232/232 across 45 suites**, Aug 19 after Stage-2 Phase 4.1, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
@@ -63,7 +66,9 @@ and expiry; and both the authorizer and executor fail closed on stale authority 
 key use. The executor now fetches the live HTTP 402 without a payment signature and
 requires an exact match on protocol version, scheme, network, token contract, atomic
 amount, payee, resource URL, EIP-712 token identity, and transfer method before
-consuming the authorization or constructing the payer. These guarantees passed the
+performing a fresh authority read and constructing the payer. The post-fetch check
+uses a new timestamp, and both final database transitions independently require
+unexpired authority/reservation state. These guarantees passed the
 real-PostgreSQL restart/concurrency suite. `OUTCOME_UNKNOWN` holds capacity but has no
 chain-state reconciler (Phase 5).
 The legacy policy-layer rolling-spend counter still hardcodes a 24h window and measures
@@ -229,6 +234,14 @@ confirms its amount and payee came from that pinned challenge.
 **Verification.** The full suite passed **225/225 tests across 45 suites** against real
 PostgreSQL on port 5544. Typecheck, the seven-route dashboard production build,
 263-byte contract compile, and `git diff --check` pass.
+
+**Post-challenge freshness (Phase 4.1).** The unsigned merchant fetch is bounded at 10
+seconds. After it returns, the executor re-resolves trusted state with a fresh clock
+and re-verifies authorization expiry, current mandate, human approval, and reservation
+binding immediately before consumption. The database consumption and submission CAS
+operations enforce their own expiry boundaries. Delayed authorization expiry,
+mid-fetch mandate revocation, delayed approval expiry, and a non-responsive merchant
+all fail before payer construction. The expanded suite passes **232/232**.
 
 **Remaining boundary.** `OUTCOME_UNKNOWN` retains capacity and prevents blind retry,
 but no durable reconciler yet determines whether an ambiguous broadcast settled
