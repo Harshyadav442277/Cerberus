@@ -23,31 +23,31 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 10:** repository-side technical copy and evidence are complete. Team identity and portal submission state are human-only and intentionally not inferred here.
 - **Stage-2 finalist hardening:** active under `Critique.md`. Phase 1 (signer
   isolation, Execution Authorization) and Stage-2 Phase 2 (atomic budget reservations)
-  are code/test complete on `codex/finalist-hardening`. The fresh funded hardened-path
-  run is still pending because this clean worktree has no ignored runtime environment
-  files. Stage-2 Phases 3–8 have not started.
+  are complete on `codex/finalist-hardening`. Stage-2 Phase 3 (durable replay plus
+  mandate/human-approval freshness) is complete and verified: typecheck, dashboard
+  production build, contract compile, migration 004 down/up, and 176/176 tests across
+  36 suites pass against real PostgreSQL. Phases 4–8 have not started. The fresh funded
+  hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **143/143** across 30 suites, Aug 18 after Stage-2 Phase 2.
-  `npm test` now REQUIRES Postgres on `5544`: the reservation concurrency suite tests
-  a database property and is worthless against a stub. Test files run with
-  `--test-concurrency=1` because two suites share one database. Historical entries
-  below preserve the counts that were correct when written.
-- **Next concrete step:** configure the four ignored environment files on the funded
-  demo machine and run one ALLOW plus one dashboard-approved ESCALATE through the
-  reservation-backed executor, producing fresh explorer-verifiable hashes. Stage-2
-  Phase 3 waits on the project owner's approval of Phase 2.
+- **Test count:** **176/176 across 36 suites**, Aug 18 after Stage-2 Phase 3, against
+  real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
+  test database properties and are worthless against stubs. Test files run with
+  `--test-concurrency=1` because the database suites share one database. Historical
+  entries below preserve the counts correct when written.
+- **Next concrete step:** begin Phase 4 exact live x402 challenge binding. The fresh
+  funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
+  hardened path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 2):** a second authorization for
-the same audit is now refused by a database compare-and-set, and the reservation ID is
-real committed financial state. Still open: the executor keeps a process-local
-one-shot store alongside the durable CAS, and nothing re-checks that the mandate
-version or the human approval is still current at execution time (Phase 3); the
-resource hash covers the intended request URL, not the live 402 challenge (Phase 4);
-and `OUTCOME_UNKNOWN` is recorded and holds capacity but nothing reconciles it against
-chain state (Phase 5). These are Phases 3–5, not hidden defects in the Phase-2 claim.
+**Current finalist claim limits (after Stage-2 Phase 3 implementation):** the
+reservation ID is committed financial state; authorizations are recorded and consumed
+by a durable database compare-and-set; human approvals bind proposal, mandate version,
+and expiry; and both the authorizer and executor fail closed on stale authority before
+key use. These guarantees passed the real-PostgreSQL restart/concurrency suite. The
+resource hash covers the intended request URL, not the live 402 challenge (Phase 4), and
+`OUTCOME_UNKNOWN` holds capacity but has no chain-state reconciler (Phase 5).
 The legacy policy-layer counters in `controls-repository` still hardcode a 24h window
 and still measure settled-only spend; the reservation layer parses
 `rolling_window.window` and is the actual financial gate. The prototype isolates secrets by application process and configuration, not
@@ -68,6 +68,40 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
 Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
+
+---
+
+## Aug 18 — Stage-2 Phase 3: durable replay and authority freshness
+
+**Vulnerabilities closed.** Execution Authorization consumption no longer depends on
+an executor process's in-memory `Set`: every issued authorization is recorded before
+signing and consumed by a database compare-and-set shared across processes and
+restarts. Human decisions now have a separate binding to the exact proposal, mandate
+version, reviewer, decision, and expiry while the frozen Bible §7.5 `human_review`
+shape remains unchanged.
+
+**Freshness boundary.** The dashboard sends the mandate version it rendered; the API
+refuses stale-page decisions and writes the audit review plus approval binding in one
+transaction. The authorizer reconstructs historical context, then independently
+re-evaluates current authority and approval freshness. The executor re-reads the
+current mandate and approval immediately before capability consumption and payer
+construction, so a mandate change or approval expiry after signing still fails before
+the payment key is reached.
+
+**Verification.** Migration `004_durable_replay_and_freshness` rolled down and back up
+cleanly. The full suite passed **176/176 tests across 36 suites** against PostgreSQL
+18.6 on port 5544. The database cases prove replay refusal after a pool/process restart,
+exactly one winner among eight concurrent consumers, unknown/nonce-mismatched
+authorization refusal, atomic review/binding claims, and approval proposal/version/TTL
+freshness. Typecheck, the six-route dashboard production build, contract compile, and
+`git diff --check` also pass.
+
+**Environment.** Docker Desktop remained unable to start its Linux engine, as already
+documented below. The existing Scoop PostgreSQL test cluster was hung but recovered
+with a clean `pg_ctl stop -m fast` / `pg_ctl start`; application configuration and the
+database under test remained the same.
+
+**Next:** Phase 4 exact live x402 challenge binding.
 
 ---
 

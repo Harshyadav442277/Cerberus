@@ -28,10 +28,10 @@ npm run executor     # :4060, isolated x402 payment key
 npm run dashboard    # :3000
 ```
 
-Verify all four health endpoints before running the agent. Phase 1 currently provides
-process-local one-shot consumption only; durable replay state, atomic reservations,
-live challenge binding, and `OUTCOME_UNKNOWN` reconciliation are later phases in
-`Critique.md`. Do not claim them yet.
+Verify all four health endpoints before running the agent. Atomic reservations and
+durable one-shot authorization consumption are implemented and verified against real
+PostgreSQL. Live challenge binding and `OUTCOME_UNKNOWN` reconciliation remain Phases
+4 and 5 in `Critique.md`.
 
 ---
 

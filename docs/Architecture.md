@@ -30,12 +30,14 @@ to arbitrary same-host filesystem compromise additionally requires a different
 OS/container principal or managed secret boundary; this repository does not falsely
 claim that deployment control.
 
-The Phase 1 authorization already binds proposal, mandate/version, reservation ID,
-chain, token, atomic amount, payee, resource hash, expiry, and nonce. The reservation
-ID is an explicit `phase1_unreserved:*` marker until Phase 2 creates real atomic
-reservation rows. Replay consumption is process-local until Phase 3 makes it durable.
-The resource hash covers the intended HTTP resource; exact live x402 challenge
-inspection is Phase 4. See `Critique.md` for the fixed hardening order and claim limits.
+The authorization binds proposal, mandate/version, a real atomic reservation, chain,
+token, atomic amount, payee, resource hash, expiry, and nonce. Phase 3 records every
+issued capability in `execution_authorization` and consumes it with a database
+compare-and-set shared by every executor process. Human decisions are separately
+bound to the proposal, mandate version, and expiry; both the authorizer and executor
+re-check current authority before key use. The resource hash still covers the
+intended HTTP resource; exact live x402 challenge inspection is Phase 4. See
+`Critique.md` for the fixed hardening order and claim limits.
 
 ---
 
