@@ -20,11 +20,6 @@ export interface TargetConfig {
   merchantBaseUrl: string;
 }
 
-/** Temporary Phase 1 binding; Phase 2 replaces it with a real reservation row. */
-export function phase1ReservationId(auditId: string): string {
-  return `phase1_unreserved:${auditId}`;
-}
-
 /**
  * Exact decimal text for a policy-layer amount.
  *

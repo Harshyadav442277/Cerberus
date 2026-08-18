@@ -28,7 +28,6 @@ export {
   decimalToAtomicUnits,
   exactDecimalString,
   paymentResource,
-  phase1ReservationId,
 } from "./target.js";
 export type { ExecutionTarget, TargetConfig } from "./target.js";
 export { isValidPrivateKey } from "./keys.js";
