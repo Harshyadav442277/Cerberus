@@ -37,9 +37,12 @@ Cerberus places that missing control point before execution. Clear violations ar
   short-lived, signed, one-shot Execution Authorizations bound to the exact proposal,
   mandate version, chain, token, atomic amount, payee, and resource.
 - The controls repository enforces versioned mandates and rolling counters.
+- Budget capacity is committed atomically before authorization, under a lock on the
+  mandate rather than the agent, so concurrent requests — including two agents sharing
+  one corporate mandate — cannot overspend a rolling window.
 - The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
 - Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
-- **119 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+- **143 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
 
 Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://base-sepolia.blockscout.com/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
@@ -158,7 +161,10 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **119 tests, 26 suites, 119 passed, 0 failed**.
+- The test runner reports **143 tests, 30 suites, 143 passed, 0 failed**.
+  `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
+  concurrency tests assert a database property (a transaction-scoped lock plus a
+  NUMERIC capacity check) and would prove nothing against a stub.
 - The Next.js production build completes and lists six application routes.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.
 

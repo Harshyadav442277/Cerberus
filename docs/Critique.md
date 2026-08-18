@@ -94,9 +94,53 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 - Lost response after broadcast becomes `OUTCOME_UNKNOWN` and is reconciled before retry.
 - Positively known failure releases its reservation.
 
-## Current Phase 1 boundary
+## Current phase boundary
 
-Phase 1 introduces a trusted API/control-plane authorizer and an isolated executor.
-It deliberately does **not** claim atomic reservation, durable replay state, current
-mandate/review freshness, exact live 402-challenge inspection, or ambiguous-settlement
-reconciliation. Those claims become valid only after phases 2–5 respectively.
+Phases 1 and 2 are complete.
+
+Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
+Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
+financial state: a `payment_reservation` row created under a transaction-scoped
+advisory lock on the mandate, which is the shared financial authority. The invariant
+`settled + active reserved + requested <= rolling_window.max_total` is enforced per
+(mandate, currency) and is proven by concurrency tests against a real PostgreSQL.
+
+What may now be claimed:
+
+- Concurrent requests, including different agents sharing one mandate, cannot overspend.
+- One proposal produces one financial reservation, enforced by partial unique indexes
+  as well as by the lock.
+- One reservation backs at most one Execution Authorization, so the same audit cannot
+  obtain two independently executable capabilities.
+- A positively reported settlement failure releases its capacity; a thrown settlement
+  error does not, and is recorded as `OUTCOME_UNKNOWN`.
+- A reservation survives a process crash between reservation and authorization, and a
+  retry resumes the existing hold rather than taking a second one.
+
+What may **not** yet be claimed:
+
+- **Phase 3.** The executor still keeps a process-local one-shot store alongside the
+  durable reservation CAS, and neither the authorizer nor the executor re-checks that
+  the mandate version and human approval are still current at execution time.
+- **Phase 4.** The resource hash still covers the intended request URL, not the live
+  402 `PaymentRequirements`.
+- **Phase 5.** `OUTCOME_UNKNOWN` is recorded and holds its capacity, but nothing
+  reconciles it against chain state, and no worker resolves it.
+
+## Phase 2 verification notes
+
+The concurrency tests were checked by deleting the protections and confirming the
+tests fail, rather than by observing that the normal path behaves correctly:
+
+- removing the advisory lock fails the two-concurrent-80s, 20-way burst, and
+  shared-mandate tests;
+- removing the advisory lock and the partial unique indexes additionally fails the
+  duplicate-proposal test;
+- removing the `bindAuthorization` compare-and-set guard fails the
+  one-authorization-per-audit test.
+
+A single two-way race is timing-dependent and can pass by luck with no lock at all, so
+the two-party tests repeat their round ten times on a clean budget. `race()` in the
+fixtures pre-warms the connection pool and releases every caller from one barrier;
+without the pre-warm the first caller completes while the second is still finishing a
+TCP and auth handshake, and the test is quietly sequential.

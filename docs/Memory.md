@@ -21,32 +21,40 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 8:** narration recorded; final visual edit not completed to publication standard and intentionally omitted. Non-blocking: the architecture diagram and verified evidence satisfy the Stage 1 supporting-material requirement.
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Phase 10:** repository-side technical copy and evidence are complete. Team identity and portal submission state are human-only and intentionally not inferred here.
-- **Stage-2 finalist hardening:** active under `Critique.md`. Phase 1 signer isolation
-  and Execution Authorization are code/test complete on local branch
-  `codex/finalist-hardening`; the fresh funded hardened-path run is pending because
-  this clean worktree has no ignored runtime environment files. Phases 2–8 have not
-  started.
+- **Stage-2 finalist hardening:** active under `Critique.md`. Phase 1 (signer
+  isolation, Execution Authorization) and Stage-2 Phase 2 (atomic budget reservations)
+  are code/test complete on `codex/finalist-hardening`. The fresh funded hardened-path
+  run is still pending because this clean worktree has no ignored runtime environment
+  files. Stage-2 Phases 3–8 have not started.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **119/119**, re-verified Aug 18. Historical entries below preserve
-  the counts that were correct when written.
+- **Test count:** **143/143** across 30 suites, Aug 18 after Stage-2 Phase 2.
+  `npm test` now REQUIRES Postgres on `5544`: the reservation concurrency suite tests
+  a database property and is worthless against a stub. Test files run with
+  `--test-concurrency=1` because two suites share one database. Historical entries
+  below preserve the counts that were correct when written.
 - **Next concrete step:** configure the four ignored environment files on the funded
-  demo machine and run one ALLOW plus one dashboard-approved ESCALATE through the new
-  executor. Do not begin Stage-2 Phase 2 until that run succeeds and produces fresh
-  explorer-verifiable hashes.
+  demo machine and run one ALLOW plus one dashboard-approved ESCALATE through the
+  reservation-backed executor, producing fresh explorer-verifiable hashes. Stage-2
+  Phase 3 waits on the project owner's approval of Phase 2.
 
-**Current finalist claim limits:** authorization consumption is process-local and a
-second authorization can still be issued for the same audit; the reservation ID is a
-Phase-1 marker, not financial state; the resource hash covers the intended request,
-not the live 402 challenge; and a lost response after broadcast still maps to failed
-rather than `OUTCOME_UNKNOWN`. These are Phases 2–5, not hidden defects in the Phase-1
-claim. The prototype isolates secrets by application process and configuration, not
+**Current finalist claim limits (after Stage-2 Phase 2):** a second authorization for
+the same audit is now refused by a database compare-and-set, and the reservation ID is
+real committed financial state. Still open: the executor keeps a process-local
+one-shot store alongside the durable CAS, and nothing re-checks that the mandate
+version or the human approval is still current at execution time (Phase 3); the
+resource hash covers the intended request URL, not the live 402 challenge (Phase 4);
+and `OUTCOME_UNKNOWN` is recorded and holds capacity but nothing reconciles it against
+chain state (Phase 5). These are Phases 3–5, not hidden defects in the Phase-2 claim.
+The legacy policy-layer counters in `controls-repository` still hardcode a 24h window
+and still measure settled-only spend; the reservation layer parses
+`rolling_window.window` and is the actual financial gate. The prototype isolates secrets by application process and configuration, not
 by a separate OS/container security principal; production must run the executor under
 a distinct identity or managed secret boundary before claiming resistance to
 arbitrary same-host filesystem compromise. The older sequential-demo limitations
-remain: `rolling_window.window` is hardcoded to 24h, overnight time-window wrap is
+remain: overnight time-window wrap is
 unsupported, and no auth on the local escalation endpoint is intentional under Rules
 R2.
 
@@ -59,6 +67,57 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 **Stack as resolved on the Windows evidence machine:** TypeScript/Node 24, pnpm 10
 workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
 Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
+
+
+---
+
+## Aug 18 — Stage-2 Phase 2: atomic budget reservations
+
+**Vulnerability closed.** Remaining budget was derived from audit rows that had
+already SETTLED (`controls-repository/counters.ts`), keyed on `agent_id`. Two
+concurrent proposals therefore read the same headroom and both passed the
+rolling-window check. Separately, `POST /execution-authorizations` was unbounded: the
+same `audit_id` twice minted two validly signed authorizations with different ids and
+nonces, and the executor's one-shot store keyed on exactly those, so both passed and
+both saw `settlement === null`.
+
+**Schema.** New `payment_reservation` table (migration `003`). The frozen Bible
+Section 7 tables are untouched — reservations are execution state, so they live
+beside the records the way the Phase 5 anchor does. Partial unique indexes on
+`action_id`, `audit_id` and `authorization_id` enforce idempotency in the database
+rather than by application sequencing; `FAILED`/`EXPIRED` are outside the predicate so
+a positively-known non-payment can legitimately retry.
+
+**Locking.** `pg_advisory_xact_lock(hashtextextended(budget_key, 0))` where
+`budget_key = mandate:<mandate_id>`. Locked on the mandate, not the agent, because two
+agents under one corporate mandate share one budget. Transaction-scoped, so it is
+released by COMMIT, ROLLBACK or a dead connection. The reservation commits before any
+authorization is signed, so no DB transaction is ever open across x402.
+
+**Invariant.** Per (mandate, currency):
+`settled + active reserved + requested <= rolling_window.max_total`. All money
+arithmetic stays in Postgres NUMERIC; amounts cross process boundaries as strings and
+the reserved decimal is derived from the atomic amount so the two cannot drift.
+Pre-Phase-2 settled audit rows with no reservation are counted once via a LEFT JOIN
+anti-match, so history is neither lost nor double counted.
+
+**Capacity release rules.** Settled → SETTLED. Rail reported failure → FAILED,
+released. Thrown settlement error → OUTCOME_UNKNOWN, capacity held and NOT sweepable
+by TTL. Pre-broadcast RESERVED/AUTHORIZED expire on TTL, which bounds reservation
+griefing; SUBMITTING and OUTCOME_UNKNOWN never do.
+
+**Verification.** 143/143 tests, typecheck clean, dashboard production build clean,
+three consecutive green suite runs. The concurrency tests were validated by mutation:
+deleting the advisory lock fails tests 1/2/3; also dropping the partial unique indexes
+fails test 4; removing the `bindAuthorization` CAS guard fails test 5. A first attempt
+at tests 1 and 3 passed even with the lock deleted — a two-way race is timing
+dependent and the pool was opening a connection for the second caller while the first
+finished. Fixed with a pre-warmed pool, a shared barrier, and ten rounds per test.
+
+**Environment note.** Docker Desktop's Linux engine would not start on this machine
+(HTTP 500 from the API pipe), so the suite was run against a throwaway PostgreSQL 18.6
+cluster on `5544` created with the scoop-installed binaries. `docker compose up -d`
+remains the documented path and the schema is unchanged by this substitution.
 
 ---
 
