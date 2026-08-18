@@ -92,6 +92,26 @@ describe("unsigned x402 v2.21.0 challenge parsing", () => {
       "CHALLENGE_NOT_402",
     );
   });
+
+  it("times out a merchant that never answers without sending payment authority", async () => {
+    await rejectsWith(
+      () => fetchX402Challenge(
+        REQUEST,
+        "http://localhost:4021",
+        async (input) => {
+          const request = input instanceof Request ? input : new Request(input);
+          strictEqual(request.headers.has("PAYMENT-SIGNATURE"), false);
+          return new Promise<Response>((_resolve, reject) => {
+            request.signal.addEventListener("abort", () => reject(request.signal.reason), {
+              once: true,
+            });
+          });
+        },
+        5,
+      ),
+      "CHALLENGE_TIMEOUT",
+    );
+  });
 });
 
 describe("exact live challenge binding", () => {

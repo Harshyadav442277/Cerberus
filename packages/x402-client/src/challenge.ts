@@ -42,6 +42,7 @@ export class X402ChallengeError extends Error {
     public readonly code:
       | "CHALLENGE_NOT_402"
       | "CHALLENGE_INVALID"
+      | "CHALLENGE_TIMEOUT"
       | "VERSION_MISMATCH"
       | "RESOURCE_MISMATCH"
       | "SCHEME_MISMATCH"
@@ -74,9 +75,20 @@ export async function fetchX402Challenge(
   request: PaymentRequest,
   merchantBaseUrl: string,
   fetchImpl: Fetch = defaultFetch,
+  timeoutMs = 10_000,
 ): Promise<X402Challenge> {
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs >= 60_000) {
+    throw new Error("challenge timeout must be between 1 and 59999 milliseconds");
+  }
   const requestUrl = paymentRequestUrl(request, merchantBaseUrl);
-  const response = await fetchImpl(new Request(requestUrl, { method: "GET" }));
+  const signal = AbortSignal.timeout(timeoutMs);
+  let response: Response;
+  try {
+    response = await fetchImpl(new Request(requestUrl, { method: "GET", signal }));
+  } catch (error) {
+    if (signal.aborted) throw new X402ChallengeError("CHALLENGE_TIMEOUT");
+    throw error;
+  }
   if (response.status !== 402) throw new X402ChallengeError("CHALLENGE_NOT_402");
 
   let body: unknown;

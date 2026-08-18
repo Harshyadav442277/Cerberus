@@ -97,7 +97,8 @@ export async function consumeAuthorization(
         SET status = 'CONSUMED', consumed_at = $3::timestamptz
       WHERE authorization_id = $1
         AND nonce = $2
-        AND status = 'ISSUED'`,
+        AND status = 'ISSUED'
+        AND expires_at > $3::timestamptz`,
     [authorizationId, nonce, at],
   );
   return (rowCount ?? 0) > 0;

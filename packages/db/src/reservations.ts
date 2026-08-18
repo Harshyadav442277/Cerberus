@@ -455,6 +455,7 @@ export async function beginSubmission(
       WHERE reservation_id = $1
         AND authorization_id = $2
         AND status = 'AUTHORIZED'
+        AND expires_at > $3::timestamptz
       RETURNING ${COLUMNS}`,
     [reservationId, authorizationId, at],
   );

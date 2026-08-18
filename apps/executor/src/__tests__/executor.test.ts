@@ -92,7 +92,7 @@ const AUDIT: AuditLogRecord = {
   settlement: null,
 };
 
-async function signed(key = AUTH_KEY) {
+async function signed(key = AUTH_KEY, ttlSeconds = 60) {
   return issueExecutionAuthorization({
     action: ACTION,
     mandateId: AUDIT.mandate_id,
@@ -103,6 +103,7 @@ async function signed(key = AUTH_KEY) {
     nowMs: NOW,
     authorizationId: AUTHORIZATION_ID,
     nonce: `0x${"33".repeat(32)}`,
+    ttlSeconds,
   });
 }
 
@@ -196,10 +197,22 @@ function harness(
   store = reservationStore(context.reservation === undefined ? RESERVATION : context.reservation),
   payerImpl?: X402Payer["pay"],
   challenges: X402Challenge[] = [LIVE_CHALLENGE],
+  runtime: {
+    nowMs?: () => number;
+    resolve?: (call: number) => Promise<{
+      audit: AuditLogRecord;
+      action: ProposedAction;
+      reservation: PaymentReservation | null;
+      currentMandate: { mandate_id: string; version: number } | null;
+      approval: HumanApprovalBinding | null;
+    }>;
+    challengeFetcher?: () => Promise<X402Challenge>;
+  } = {},
 ) {
   let constructed = 0;
   let paid = 0;
   let challenged = 0;
+  let resolved = 0;
   const payer: X402Payer = {
     address: "0x4444444444444444444444444444444444444444",
     async pay(request) {
@@ -216,6 +229,8 @@ function harness(
   const executor = createIsolatedExecutor({
     context: {
       async resolve() {
+        resolved += 1;
+        if (runtime.resolve) return runtime.resolve(resolved);
         return {
           audit: context.audit,
           action: context.action,
@@ -230,6 +245,10 @@ function harness(
     expectedAuthorizer: privateKeyToAccount(AUTH_KEY).address,
     target: TARGET_CONFIG,
     async challengeFetcher() {
+      if (runtime.challengeFetcher) {
+        challenged += 1;
+        return runtime.challengeFetcher();
+      }
       const challenge = challenges[Math.min(challenged, challenges.length - 1)];
       challenged += 1;
       if (!challenge) throw new Error("missing challenge fixture");
@@ -239,7 +258,7 @@ function harness(
       constructed += 1;
       return payer;
     },
-    nowMs: () => NOW,
+    nowMs: runtime.nowMs ?? (() => NOW),
   });
   return {
     executor,
@@ -247,6 +266,7 @@ function harness(
     challenged: () => challenged,
     constructed: () => constructed,
     paid: () => paid,
+    resolved: () => resolved,
   };
 }
 
@@ -349,6 +369,92 @@ describe("isolated executor", () => {
     );
     strictEqual(h.constructed(), 0);
     strictEqual(h.store.status(), "AUTHORIZED", "the reservation is left untouched");
+  });
+
+  it("refuses when the merchant delays until the authorization expires", async () => {
+    let now = NOW;
+    const h = harness(undefined, undefined, undefined, undefined, {
+      nowMs: () => now,
+      async challengeFetcher() {
+        now = NOW + 60_000;
+        return LIVE_CHALLENGE;
+      },
+    });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof AuthorizationError && error.code === "AUTHORIZATION_EXPIRED",
+    );
+    strictEqual(h.resolved(), 2, "trusted state is read again after the merchant response");
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("refuses when the mandate is revoked during the unsigned challenge fetch", async () => {
+    const h = harness(undefined, undefined, undefined, undefined, {
+      async resolve(call) {
+        return {
+          audit: AUDIT,
+          action: ACTION,
+          reservation: RESERVATION,
+          currentMandate: call === 1 ? CURRENT_MANDATE : null,
+          approval: null,
+        };
+      },
+    });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "STALE_MANDATE",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("refuses when human approval expires during the unsigned challenge fetch", async () => {
+    const escalated: AuditLogRecord = {
+      ...AUDIT,
+      disposition: "ESCALATE",
+      reason: "counterparty_not_on_allowlist",
+      rule_triggered: "counterparty_policy",
+      human_review: {
+        reviewer_id: APPROVAL.reviewer_id,
+        decision: "approved",
+        decided_at: APPROVAL.decided_at,
+        note: "Verified out of band",
+      },
+    };
+    let now = NOW;
+    const shortApproval = { ...APPROVAL, expires_at: new Date(NOW + 1_000).toISOString() };
+    const h = harness({ audit: escalated, action: ACTION, approval: shortApproval }, undefined, undefined, undefined, {
+      nowMs: () => now,
+      async challengeFetcher() {
+        now = NOW + 2_000;
+        return LIVE_CHALLENGE;
+      },
+    });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed(AUTH_KEY, 300) }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "STALE_APPROVAL",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("refuses a challenge timeout without consuming authority or reaching the key", async () => {
+    const h = harness(undefined, undefined, undefined, undefined, {
+      async challengeFetcher() {
+        throw new X402ChallengeError("CHALLENGE_TIMEOUT");
+      },
+    });
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof X402ChallengeError && error.code === "CHALLENGE_TIMEOUT",
+    );
+    strictEqual(h.resolved(), 1, "timeout occurs before the final trusted-state read");
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
   });
 });
 

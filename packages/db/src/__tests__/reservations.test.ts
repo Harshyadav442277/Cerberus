@@ -247,6 +247,25 @@ describe("atomic budget reservations", () => {
     strictEqual((await reserveBudget(reserveInput(retry, 100))).outcome, "created");
   });
 
+  it("refuses the final submission transition after reservation expiry", async () => {
+    await seedAgent("agent_a");
+    await insertMandate(mandateFixture({ mandateId: "m_expired", agentId: "agent_a", maxTotal: 100 }));
+    const p = await seedProposal({ id: "reservation_expired", agentId: "agent_a", mandateId: "m_expired", amount: 5 });
+    const reserved = await reserveBudget(reserveInput(p, 100));
+    ok(reserved.outcome === "created");
+    await bindAuthorization(reserved.reservation.reservation_id, "auth_expired", AT);
+    strictEqual(
+      await beginSubmission(
+        reserved.reservation.reservation_id,
+        "auth_expired",
+        reserved.reservation.expires_at,
+      ),
+      null,
+      "the database rejects the exact reservation expiry boundary",
+    );
+    strictEqual((await getReservation(reserved.reservation.reservation_id))!.status, "AUTHORIZED");
+  });
+
   it("never releases capacity for an ambiguous outcome, even past its TTL", async () => {
     await seedAgent("agent_a");
     await insertMandate(mandateFixture({ mandateId: "m_unknown", agentId: "agent_a", maxTotal: 100 }));

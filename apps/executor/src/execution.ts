@@ -179,9 +179,62 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
         eip712: { name: "USDC", version: "2", assetTransferMethod: "eip3009" },
       });
 
+      // The unsigned merchant request is an untrusted network operation. Authority
+      // that was fresh before it began may have expired or been revoked while the
+      // merchant was responding, so resolve every trusted fact again with a fresh
+      // clock immediately before the durable capability is consumed.
+      const freshNowMs = options.nowMs?.() ?? Date.now();
+      const fresh = await options.context.resolve(input.audit_id);
+      const freshExecutable =
+        fresh.audit.disposition === "ALLOW" ||
+        fresh.audit.disposition === "OBSERVE" ||
+        (fresh.audit.disposition === "ESCALATE" &&
+          fresh.audit.human_review?.decision === "approved");
+      if (
+        !freshExecutable ||
+        fresh.audit.settlement !== null ||
+        fresh.audit.action_id !== fresh.action.action_id
+      ) {
+        throw new ExecutionRefusedError("AUDIT_NOT_EXECUTABLE");
+      }
+      if (
+        !fresh.reservation ||
+        fresh.reservation.audit_id !== fresh.audit.audit_id ||
+        fresh.reservation.reservation_id !== reservation.reservation_id ||
+        fresh.reservation.authorization_id !== authorization.authorizationId
+      ) {
+        throw new ExecutionRefusedError("RESERVATION_NOT_EXECUTABLE");
+      }
+      if (
+        !fresh.currentMandate ||
+        fresh.currentMandate.mandate_id !== fresh.reservation.mandate_id ||
+        fresh.currentMandate.version !== fresh.reservation.mandate_version
+      ) {
+        throw new ExecutionRefusedError("STALE_MANDATE");
+      }
+      if (fresh.audit.disposition === "ESCALATE") {
+        const freshness = evaluateApprovalFreshness(fresh.approval, {
+          proposalHash: hashProposal(fresh.action),
+          currentMandateId: fresh.currentMandate.mandate_id,
+          currentMandateVersion: fresh.currentMandate.version,
+          nowMs: freshNowMs,
+        });
+        if (!freshness.usable) throw new ExecutionRefusedError("STALE_APPROVAL");
+      }
+      const freshAuthorization = await verifyExecutionAuthorization({
+        envelope: input.envelope,
+        action: fresh.action,
+        target: buildExecutionTarget(fresh.action, options.target),
+        expectedAuthorizer: options.expectedAuthorizer,
+        expectedMandateId: fresh.audit.mandate_id,
+        expectedMandateVersion: fresh.audit.mandate_version,
+        expectedReservationId: fresh.reservation.reservation_id,
+        nowMs: freshNowMs,
+      });
+
       // A challenge mismatch returns above while the durable capability and
       // reservation are untouched. Consume only after the exact live 402 is pinned.
-      await consumeExecutionAuthorization(authorization, useStore);
+      await consumeExecutionAuthorization(freshAuthorization, useStore);
 
       // The durable one-shot boundary: AUTHORIZED -> SUBMITTING, compare-and-set on
       // the reservation AND the exact authorization bound to it. Two authorizations
@@ -189,7 +242,7 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       // process all lose here — before the payment key exists.
       const submitting = await options.reservations.beginSubmission(
         reservation.reservation_id,
-        authorization.authorizationId,
+        freshAuthorization.authorizationId,
       );
       if (!submitting) throw new ExecutionRefusedError("RESERVATION_NOT_EXECUTABLE");
 

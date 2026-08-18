@@ -126,6 +126,17 @@ describe("durable authorization consumption", () => {
   it("refuses an authorization the control plane never issued", async () => {
     strictEqual(await consumeAuthorization("auth_forged", `0x${"55".repeat(32)}`, AT), false);
   });
+
+  it("refuses consumption at the database after authorization expiry", async () => {
+    const nonce = `0x${"66".repeat(32)}`;
+    const { authorizationId } = await issued("dur_expired", nonce);
+    strictEqual(
+      await consumeAuthorization(authorizationId, nonce, "2026-08-18T12:01:00.000Z"),
+      false,
+      "the final database CAS enforces the exact expiry boundary",
+    );
+    strictEqual((await getIssuedAuthorization(authorizationId))!.status, "ISSUED");
+  });
 });
 
 describe("human approval binding", () => {
