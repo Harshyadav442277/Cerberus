@@ -362,3 +362,27 @@ export async function bindAuthorization(
   );
   return rows[0] ? toReservation(rows[0]) : null;
 }
+
+/**
+ * The durable one-shot boundary, crossed immediately before the payment key is used.
+ *
+ * AUTHORIZED -> SUBMITTING, compare-and-set on BOTH the reservation and the exact
+ * authorization bound to it. Survives executor restarts and holds across multiple
+ * executor processes, which process-local state cannot.
+ */
+export async function beginSubmission(
+  reservationId: string,
+  authorizationId: string,
+  at = new Date().toISOString(),
+): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'SUBMITTING', updated_at = $3::timestamptz
+      WHERE reservation_id = $1
+        AND authorization_id = $2
+        AND status = 'AUTHORIZED'
+      RETURNING ${COLUMNS}`,
+    [reservationId, authorizationId, at],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
