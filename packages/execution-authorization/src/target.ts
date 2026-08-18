@@ -25,6 +25,29 @@ export function phase1ReservationId(auditId: string): string {
   return `phase1_unreserved:${auditId}`;
 }
 
+/**
+ * Exact decimal text for a policy-layer amount.
+ *
+ * Money crosses the process boundary as a string, never as a float. Exponential
+ * notation is refused rather than normalised: "1e-7" reaching a NUMERIC column as
+ * text would be a silent corruption, and guessing is worse than failing.
+ */
+export function exactDecimalString(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) throw new Error("amount must be positive");
+  const text = value.toString();
+  if (/e/i.test(text)) throw new Error("exponential amounts are not supported");
+  return text;
+}
+
+/** Inverse of decimalToAtomicUnits. Keeps the reserved amount and the paid amount identical. */
+export function atomicUnitsToDecimal(atomic: string, decimals = USDC_DECIMALS): string {
+  if (!/^\d+$/.test(atomic)) throw new Error("atomic amount must be a non-negative integer");
+  const padded = atomic.padStart(decimals + 1, "0");
+  const whole = padded.slice(0, padded.length - decimals);
+  const fraction = padded.slice(padded.length - decimals);
+  return decimals === 0 ? whole : `${whole}.${fraction}`;
+}
+
 export function decimalToAtomicUnits(value: number, decimals = USDC_DECIMALS): string {
   if (!Number.isFinite(value) || value <= 0) throw new Error("payment amount must be positive");
   const text = value.toString();
