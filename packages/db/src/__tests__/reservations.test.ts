@@ -167,4 +167,60 @@ describe("atomic budget reservations", () => {
       await clearReservations();
     }
   });
+
+  // ── 4 ─────────────────────────────────────────────────────────────────────────
+  it("creates one financial effect when an identical proposal is submitted concurrently", async () => {
+    await seedAgent("agent_a");
+    await insertMandate(mandateFixture({ mandateId: "m_4", agentId: "agent_a", maxTotal: 100 }));
+    const p = await seedProposal({ id: `${RUN_LABEL}_dup`, agentId: "agent_a", mandateId: "m_4", amount: 10 });
+
+    const results = await race(8, () => reserveBudget(reserveInput(p, 100)));
+
+    strictEqual(created(results).length, 1);
+    const ids = new Set(
+      results.flatMap((r) => (r.outcome === "insufficient_budget" ? [] : [r.reservation.reservation_id])),
+    );
+    strictEqual(ids.size, 1, "every caller must see the same single reservation");
+    strictEqual(await activeAmounts("m_4"), 10, "capacity is consumed once, not eight times");
+
+    const { rows } = await getPool().query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM payment_reservation WHERE action_id = $1`,
+      [p.actionId],
+    );
+    strictEqual(rows[0]!.n, "1", "one proposal, one reservation row");
+  });
+
+  // ── 5 ─────────────────────────────────────────────────────────────────────────
+  it("gives one audit exactly one executable authorization, however many are requested", async () => {
+    await seedAgent("agent_a");
+    await insertMandate(mandateFixture({ mandateId: "m_5", agentId: "agent_a", maxTotal: 100 }));
+    const p = await seedProposal({ id: `${RUN_LABEL}_auth`, agentId: "agent_a", mandateId: "m_5", amount: 10 });
+
+    const first = await reserveBudget(reserveInput(p, 100));
+    ok(first.outcome === "created");
+    const reservationId = first.reservation.reservation_id;
+
+    // The attack: the same audit asks for AUTH A and AUTH B, concurrently.
+    const binds = await race(2, (i) =>
+      bindAuthorization(reservationId, i === 0 ? "auth_A" : "auth_B", AT),
+    );
+    strictEqual(binds.filter(Boolean).length, 1, "only one authorization may ever bind");
+    const winner = binds.find((b) => b !== null)!;
+
+    // And the loser cannot execute: the durable CAS is keyed on the bound id.
+    const loserId = winner.authorization_id === "auth_A" ? "auth_B" : "auth_A";
+    strictEqual(await beginSubmission(reservationId, loserId, AT), null);
+
+    const submitting = await beginSubmission(reservationId, winner.authorization_id!, AT);
+    ok(submitting, "the bound authorization executes");
+    strictEqual(submitting.status, "SUBMITTING");
+
+    // A replay of the winner, after a restart or from a second executor process.
+    strictEqual(
+      await beginSubmission(reservationId, winner.authorization_id!, AT),
+      null,
+      "durable one-shot: a second submission is refused",
+    );
+    strictEqual(await activeAmounts("m_5"), 10, "one financial effect, not two");
+  });
 });
