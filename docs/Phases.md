@@ -18,10 +18,12 @@ until the current phase passes its Definition of Done.
    key nor payer import. A trusted control plane re-evaluates stored context and signs
    a short-lived capability. Only an isolated executor may load the payment key,
    verify every bound field, consume the capability, and construct the payer.
-2. **Atomic budget reservations — not started.** Reserve spend transactionally before
+2. **Atomic budget reservations — complete.** Spend is reserved transactionally before
    authorization; no database transaction remains open during settlement.
-3. **Durable replay and freshness — not started.** Persist one-shot state and reject
-   stale mandate versions, stale human approvals, and duplicate proposals.
+3. **Durable replay and freshness — complete and verified.** One-shot authorization
+   state and bound human approvals are persisted; the authorizer and executor reject
+   stale mandate/approval context before key use. Migration 004 applies and rolls back
+   cleanly, and the full real-PostgreSQL suite passes 176/176 tests across 36 suites.
 4. **Exact x402 binding — not started.** Bind authorization to the exact live payment
    challenge/resource rather than only the intended request target.
 5. **Ambiguous settlement reconciliation — not started.** Introduce

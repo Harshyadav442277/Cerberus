@@ -96,7 +96,8 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 
 ## Current phase boundary
 
-Phases 1 and 2 are complete.
+Phases 1, 2, and 3 are complete. Phase 3 passed the full 176-test suite against real
+PostgreSQL, including restart persistence and concurrent authorization consumption.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -117,11 +118,13 @@ What may now be claimed:
 - A reservation survives a process crash between reservation and authorization, and a
   retry resumes the existing hold rather than taking a second one.
 
+Phase 3 now adds a durable `execution_authorization` compare-and-set, a proposal- and
+mandate-bound `human_approval` record with an expiry, stale-page refusal in the review
+route, current-authority re-evaluation in the authorizer, and independent mandate plus
+approval freshness checks in the executor before payer construction.
+
 What may **not** yet be claimed:
 
-- **Phase 3.** The executor still keeps a process-local one-shot store alongside the
-  durable reservation CAS, and neither the authorizer nor the executor re-checks that
-  the mandate version and human approval are still current at execution time.
 - **Phase 4.** The resource hash still covers the intended request URL, not the live
   402 `PaymentRequirements`.
 - **Phase 5.** `OUTCOME_UNKNOWN` is recorded and holds its capacity, but nothing
