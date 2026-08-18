@@ -293,6 +293,41 @@ describe("atomic budget reservations", () => {
     strictEqual((await reserveBudget(reserveInput(after, 100, { at: later }))).outcome, "created");
   });
 
+  // ── 7 ─────────────────────────────────────────────────────────────────────────
+  it("keeps the reservation durable when the process dies before authorization", async () => {
+    await seedAgent("agent_a");
+    await insertMandate(mandateFixture({ mandateId: "m_7", agentId: "agent_a", maxTotal: 100 }));
+    const p = await seedProposal({ id: `${RUN_LABEL}_crash`, agentId: "agent_a", mandateId: "m_7", amount: 40 });
+
+    const tsx = fileURLToPath(new URL("../../../../node_modules/tsx/dist/cli.mjs", import.meta.url));
+    const script = fileURLToPath(new URL("./crash-after-reserve.ts", import.meta.url));
+    const child = spawn(process.execPath, [tsx, script, JSON.stringify(reserveInput(p, 100))], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    const exitCode: number = await new Promise((resolve) => child.on("close", resolve));
+
+    strictEqual(exitCode, 9, "the child really did exit abruptly");
+    const childResult = JSON.parse(stdout.trim());
+    strictEqual(childResult.outcome, "created");
+
+    // Everything below runs in THIS process, against state the dead one committed.
+    const survivor = await getLiveReservationForAudit(p.auditId);
+    ok(survivor, "the reservation survived the crash");
+    strictEqual(survivor.status, "RESERVED", "still pre-authorization, and still holding");
+    strictEqual(survivor.reservation_id, childResult.reservation.reservation_id);
+    strictEqual(await activeAmounts("m_7"), 40, "the crashed request's capacity is still committed");
+
+    // Recoverable: retrying the same proposal resumes the existing hold rather than
+    // taking a second one, so a crash cannot become a double reservation.
+    const resumed = await reserveBudget(reserveInput(p, 100));
+    strictEqual(resumed.outcome, "existing");
+    ok(resumed.outcome === "existing");
+    strictEqual(resumed.reservation.reservation_id, survivor.reservation_id);
+    strictEqual(await activeAmounts("m_7"), 40);
+  });
+
   it("counts settled spend and active reservations against one shared ceiling", async () => {
     await seedAgent("agent_a");
     await insertMandate(mandateFixture({ mandateId: "m_mix", agentId: "agent_a", maxTotal: 100 }));
