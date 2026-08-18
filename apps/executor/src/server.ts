@@ -5,7 +5,7 @@ import {
   SignedExecutionAuthorizationSchema,
 } from "@safr/execution-authorization";
 import { createX402Payer } from "@safr/x402-client";
-import { dbExecutionContext } from "./db-context.js";
+import { dbExecutionContext, dbReservations } from "./db-context.js";
 import { executorEnv } from "./env.js";
 import { createIsolatedExecutor, ExecutionRefusedError } from "./execution.js";
 
@@ -18,6 +18,7 @@ const requestSchema = z
 
 const executor = createIsolatedExecutor({
   context: dbExecutionContext,
+  reservations: dbReservations,
   expectedAuthorizer: executorEnv.expectedAuthorizer,
   target: executorEnv.target,
   payerFactory: () => createX402Payer(executorEnv.x402),
@@ -37,7 +38,10 @@ app.post("/execute", async (req, res, next) => {
     res.json({ settlement });
   } catch (error) {
     if (error instanceof AuthorizationError || error instanceof ExecutionRefusedError) {
-      const status = error instanceof AuthorizationError && error.code === "AUTHORIZATION_REPLAY" ? 409 : 403;
+      const replay =
+        (error instanceof AuthorizationError && error.code === "AUTHORIZATION_REPLAY") ||
+        (error instanceof ExecutionRefusedError && error.code === "RESERVATION_NOT_EXECUTABLE");
+      const status = replay ? 409 : 403;
       res.status(status).json({ error: error.code, signing_key_used: false });
       return;
     }

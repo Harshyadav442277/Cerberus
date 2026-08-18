@@ -1,17 +1,19 @@
-import { rejects, strictEqual } from "node:assert/strict";
+import { deepStrictEqual, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuditLogRecord, ProposedAction } from "@safr/core";
+import type { PaymentReservation } from "@safr/db";
 import {
   AuthorizationError,
   buildExecutionTarget,
   issueExecutionAuthorization,
-  phase1ReservationId,
 } from "@safr/execution-authorization";
 import type { X402Payer } from "@safr/x402-client";
 import { privateKeyToAccount } from "viem/accounts";
 import { createIsolatedExecutor, ExecutionRefusedError } from "../execution.js";
 
 const AUTH_KEY = `0x${"11".repeat(32)}` as const;
+const RESERVATION_ID = "res_phase2_fixture";
+const AUTHORIZATION_ID = "auth_1";
 const BAD_KEY = `0x${"22".repeat(32)}` as const;
 const NOW = 1_800_000_000_000;
 const TARGET_CONFIG = {
@@ -54,22 +56,92 @@ async function signed(key = AUTH_KEY) {
     action: ACTION,
     mandateId: AUDIT.mandate_id,
     mandateVersion: AUDIT.mandate_version,
-    reservationId: phase1ReservationId(AUDIT.audit_id),
+    reservationId: RESERVATION_ID,
     target: buildExecutionTarget(ACTION, TARGET_CONFIG),
     authorizerPrivateKey: key,
     nowMs: NOW,
-    authorizationId: "auth_1",
+    authorizationId: AUTHORIZATION_ID,
     nonce: `0x${"33".repeat(32)}`,
   });
 }
 
-function harness(context = { audit: AUDIT, action: ACTION }) {
+const RESERVATION: PaymentReservation = {
+  reservation_id: RESERVATION_ID,
+  audit_id: AUDIT.audit_id,
+  action_id: ACTION.action_id,
+  agent_id: ACTION.agent_id,
+  mandate_id: AUDIT.mandate_id,
+  mandate_version: AUDIT.mandate_version,
+  budget_key: `mandate:${AUDIT.mandate_id}`,
+  currency: "USDC",
+  amount_decimal: "0.500000",
+  amount_atomic: "500000",
+  chain_id: 84532,
+  token: TARGET_CONFIG.token,
+  status: "AUTHORIZED",
+  authorization_id: AUTHORIZATION_ID,
+  settlement_tx: null,
+  counts_at: "2026-08-18T10:00:00.100Z",
+  expires_at: "2026-08-18T10:02:00.100Z",
+  created_at: "2026-08-18T10:00:00.100Z",
+  updated_at: "2026-08-18T10:00:00.100Z",
+};
+
+/**
+ * Stands in for the reservation table. `beginSubmission` keeps the real
+ * compare-and-set semantics — AUTHORIZED once, then never again — so the durable
+ * one-shot boundary is exercised here and not merely assumed.
+ */
+function reservationStore(initial: PaymentReservation | null = RESERVATION) {
+  let current = initial ? { ...initial } : null;
+  const calls: string[] = [];
+  return {
+    calls,
+    port: {
+      async beginSubmission(reservationId: string, authorizationId: string) {
+        if (
+          !current ||
+          current.reservation_id !== reservationId ||
+          current.authorization_id !== authorizationId ||
+          current.status !== "AUTHORIZED"
+        ) {
+          return null;
+        }
+        current = { ...current, status: "SUBMITTING" };
+        return current;
+      },
+      async markSettled(_id: string, tx: string | null) {
+        calls.push(`settled:${tx}`);
+        if (current) current = { ...current, status: "SETTLED" };
+      },
+      async markFailed() {
+        calls.push("failed");
+        if (current) current = { ...current, status: "FAILED" };
+      },
+      async markOutcomeUnknown() {
+        calls.push("outcome_unknown");
+        if (current) current = { ...current, status: "OUTCOME_UNKNOWN" };
+      },
+    },
+    status: () => current?.status ?? null,
+  };
+}
+
+function harness(
+  context: { audit: AuditLogRecord; action: ProposedAction; reservation?: PaymentReservation | null } = {
+    audit: AUDIT,
+    action: ACTION,
+  },
+  store = reservationStore(context.reservation === undefined ? RESERVATION : context.reservation),
+  payerImpl?: X402Payer["pay"],
+) {
   let constructed = 0;
   let paid = 0;
   const payer: X402Payer = {
     address: "0x4444444444444444444444444444444444444444",
-    async pay() {
+    async pay(request) {
       paid += 1;
+      if (payerImpl) return payerImpl(request);
       return {
         status: "settled",
         tx_hash: "0xdeadbeef",
@@ -79,7 +151,16 @@ function harness(context = { audit: AUDIT, action: ACTION }) {
     },
   };
   const executor = createIsolatedExecutor({
-    context: { async resolve() { return context; } },
+    context: {
+      async resolve() {
+        return {
+          audit: context.audit,
+          action: context.action,
+          reservation: context.reservation === undefined ? RESERVATION : context.reservation,
+        };
+      },
+    },
+    reservations: store.port,
     expectedAuthorizer: privateKeyToAccount(AUTH_KEY).address,
     target: TARGET_CONFIG,
     payerFactory() {
@@ -88,7 +169,7 @@ function harness(context = { audit: AUDIT, action: ACTION }) {
     },
     nowMs: () => NOW,
   });
-  return { executor, constructed: () => constructed, paid: () => paid };
+  return { executor, store, constructed: () => constructed, paid: () => paid };
 }
 
 describe("isolated executor", () => {
@@ -142,5 +223,83 @@ describe("isolated executor", () => {
     );
     strictEqual(h.constructed(), 0);
     strictEqual(h.paid(), 0);
+  });
+});
+
+describe("committed financial state gates execution", () => {
+  it("refuses an audit with no live reservation before the payer exists", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION, reservation: null });
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "RESERVATION_NOT_FOUND",
+    );
+    strictEqual(h.constructed(), 0);
+  });
+
+  it("refuses an authorization that is not the one bound to the reservation", async () => {
+    // AUTH B for a reservation whose committed state names AUTH A. Both are validly
+    // signed; only one was ever committed to execution.
+    const otherAuth = { ...RESERVATION, authorization_id: "auth_B" };
+    const h = harness({ audit: AUDIT, action: ACTION, reservation: otherAuth }, reservationStore(otherAuth));
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) =>
+        error instanceof ExecutionRefusedError && error.code === "RESERVATION_NOT_EXECUTABLE",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.paid(), 0);
+  });
+
+  it("refuses a replay from a SECOND executor process with its own clean memory", async () => {
+    // This is the case Phase 1's in-memory one-shot could not cover: the replay
+    // arrives at a different process, whose use-store has never seen the nonce.
+    const store = reservationStore();
+    const first = harness({ audit: AUDIT, action: ACTION }, store);
+    const second = harness({ audit: AUDIT, action: ACTION }, store);
+    const envelope = await signed();
+
+    strictEqual((await first.executor.execute({ audit_id: AUDIT.audit_id, envelope })).status, "settled");
+    await rejects(
+      () => second.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) =>
+        error instanceof ExecutionRefusedError && error.code === "RESERVATION_NOT_EXECUTABLE",
+    );
+    strictEqual(second.constructed(), 0, "the second process never reaches the payment key");
+    strictEqual(store.status(), "SETTLED");
+  });
+
+  it("settles the reservation on a known successful payment", async () => {
+    const h = harness();
+    await h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() });
+    deepStrictEqual(h.store.calls, ["settled:0xdeadbeef"]);
+    strictEqual(h.store.status(), "SETTLED");
+  });
+
+  it("releases the reservation only on a positively reported failure", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => ({
+      status: "failed" as const,
+      tx_hash: null,
+      rail: "x402" as const,
+      settled_at: null,
+      error: "insufficient_funds",
+    }));
+    const settlement = await h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() });
+    strictEqual(settlement.status, "failed");
+    deepStrictEqual(h.store.calls, ["failed"]);
+    strictEqual(h.store.status(), "FAILED");
+  });
+
+  it("holds capacity as OUTCOME_UNKNOWN when settlement throws", async () => {
+    // A thrown error is not evidence that the money stayed put. Releasing here is how
+    // a system double-pays, so the reservation keeps holding the budget.
+    const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => {
+      throw new Error("socket hang up after broadcast");
+    });
+    const envelope = await signed();
+    await rejects(() => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }));
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
   });
 });
