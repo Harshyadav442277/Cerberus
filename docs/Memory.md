@@ -37,29 +37,35 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   one-way lifecycle closure remains mutable. Phase 3.5D concurrent velocity
   enforcement is complete: a per-agent transactional lock counts committed/executing
   reservations, promotes a raced ALLOW to ESCALATE through the trusted control plane,
-  and requires a bound human approval before one retry. The full suite is now 202/202
-  across 41 suites. Phases 4–8 have not started. The fresh funded
+  and requires a bound human approval before one retry. Stage-2 Phase 4 exact live
+  x402 challenge binding is complete: the executor performs one unsigned request,
+  validates and pins the merchant's actual v2.21.0 PaymentRequirements, and only then
+  consumes authority or constructs a payer/signature. The full suite is now 225/225
+  across 45 suites. Phases 5–8 have not started. The fresh funded
   hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **202/202 across 41 suites**, Aug 19 after Stage-2 Phase 3.5D, against
+- **Test count:** **225/225 across 45 suites**, Aug 19 after Stage-2 Phase 4, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** begin Phase 4 exact live x402 challenge binding. The fresh
+- **Next concrete step:** begin Phase 5 `OUTCOME_UNKNOWN` reconciliation. The fresh
   funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
   hardened path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 3.5D implementation):** the
+**Current finalist claim limits (after Stage-2 Phase 4 implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
 by a durable database compare-and-set; human approvals bind proposal, mandate version,
 and expiry; and both the authorizer and executor fail closed on stale authority before
-key use. These guarantees passed the real-PostgreSQL restart/concurrency suite. The
-resource hash covers the intended request URL, not the live 402 challenge (Phase 4), and
-`OUTCOME_UNKNOWN` holds capacity but has no chain-state reconciler (Phase 5).
+key use. The executor now fetches the live HTTP 402 without a payment signature and
+requires an exact match on protocol version, scheme, network, token contract, atomic
+amount, payee, resource URL, EIP-712 token identity, and transfer method before
+consuming the authorization or constructing the payer. These guarantees passed the
+real-PostgreSQL restart/concurrency suite. `OUTCOME_UNKNOWN` holds capacity but has no
+chain-state reconciler (Phase 5).
 The legacy policy-layer rolling-spend counter still hardcodes a 24h window and measures
 settled-only spend; the reservation layer parses `rolling_window.window` and is the
 actual financial gate. The hourly velocity counter now reads committed/executing
@@ -195,6 +201,41 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 4: exact live x402 challenge binding
+
+**Vulnerability closed.** The isolated executor no longer hands an unverified merchant
+challenge to the x402 SDK. It first verifies the signed Execution Authorization, makes
+one unsigned resource request, parses the actual x402 v2.21.0 `PaymentRequired`
+response, and validates the selected requirement against the signed authority. The
+comparison covers protocol version 2, `exact` scheme, CAIP-2 network, exact token
+contract, atomic amount, payee, resource URL, USDC EIP-712 name/version, and `eip3009`
+transfer method.
+
+**Signer boundary.** Validation returns a branded, frozen challenge containing only
+the exact matching offer. Authorization consumption and the reservation's
+`SUBMITTING` transition occur only after that validation. Only then is the payer
+factory invoked. The paid request is constructed directly from the pinned requirement;
+it does not perform a second 402 fetch that could substitute a different offer.
+
+**Adversarial evidence.** Mutated amount (5 USDC to 50 USDC), payee, token, chain,
+resource, scheme, protocol version, EIP-712 domain, and transfer method all fail before
+payer construction. Each refusal leaves the authorization unconsumed and the
+reservation `AUTHORIZED`; a subsequent exact challenge can still execute once. A
+multi-offer test proves that a malicious first offer is ignored and only the exact
+matching offer is signed. The paid-retry test decodes the emitted payment header and
+confirms its amount and payee came from that pinned challenge.
+
+**Verification.** The full suite passed **225/225 tests across 45 suites** against real
+PostgreSQL on port 5544. Typecheck, the seven-route dashboard production build,
+263-byte contract compile, and `git diff --check` pass.
+
+**Remaining boundary.** `OUTCOME_UNKNOWN` retains capacity and prevents blind retry,
+but no durable reconciler yet determines whether an ambiguous broadcast settled
+(Phase 5). Host-level secret isolation remains a deployment responsibility. The fresh
+funded hardened-path evidence run remains pending for Phase 8.
+
+**Next:** Phase 5 `OUTCOME_UNKNOWN` reconciliation. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 3.5D: concurrent velocity enforcement
 
