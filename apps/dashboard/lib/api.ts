@@ -56,11 +56,16 @@ export async function submitDecision(
   actionId: string,
   decision: "approved" | "denied",
   note?: string,
+  /**
+   * The mandate version this page rendered. Sent so the API can refuse a click made
+   * on a page that was opened before an administrator changed the mandate.
+   */
+  mandateVersion?: number,
 ): Promise<void> {
   const res = await fetch(`${API_URL}/escalations/${actionId}/decision`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ decision, note }),
+    body: JSON.stringify({ decision, note, mandate_version: mandateVersion }),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
