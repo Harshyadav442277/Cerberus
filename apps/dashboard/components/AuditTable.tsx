@@ -136,11 +136,22 @@ export function AuditTable({ initial }: { initial: FeedItem[] }) {
           </thead>
           <tbody>
             {items.map((item) => {
-              const { record, action } = item;
+              const { record, action, execution } = item;
               const settlement =
                 record.disposition === "DENY"
                   ? null
-                  : record.settlement?.tx_hash;
+                  : record.settlement?.tx_hash ?? execution?.settlement_tx;
+              const executionLabel = record.settlement?.status === "failed"
+                ? "failed"
+                : execution?.status === "OUTCOME_UNKNOWN"
+                  ? "outcome unknown"
+                  : execution?.status === "RECONCILING"
+                    ? "reconciling"
+                    : execution?.status === "SUBMITTING"
+                      ? "submitting"
+                      : execution?.status === "FAILED"
+                        ? "failed / safe to retry"
+                        : "—";
               return (
                 <tr
                   key={record.audit_id}
@@ -186,16 +197,19 @@ export function AuditTable({ initial }: { initial: FeedItem[] }) {
                       </a>
                     ) : (
                       <span
-                        className="text-faint"
                         title={
                           record.disposition === "DENY"
                             ? "no payment request constructed"
-                            : record.settlement?.status === "failed"
-                              ? "settlement failed"
-                              : "—"
+                            : execution?.reconciliation_error ?? executionLabel
+                        }
+                        className={
+                          execution?.status === "OUTCOME_UNKNOWN" ||
+                          execution?.status === "RECONCILING"
+                            ? "text-escalate"
+                            : "text-faint"
                         }
                       >
-                        {record.settlement?.status === "failed" ? "failed" : "—"}
+                        {executionLabel}
                       </span>
                     )}
                   </td>

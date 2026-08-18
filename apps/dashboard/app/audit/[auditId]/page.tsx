@@ -31,7 +31,7 @@ export default async function AuditDrillDownPage({
     );
   }
 
-  const { record, action, anchor, mandate } = data;
+  const { record, action, anchor, mandate, execution } = data;
   const comparison = thresholdVsActual(
     record.rule_triggered,
     mandate as {
@@ -182,9 +182,36 @@ export default async function AuditDrillDownPage({
                 </span>
               </FieldRow>
             </>
+          ) : execution ? (
+            <>
+              <FieldRow name="status">
+                <span
+                  className={
+                    execution.status === "OUTCOME_UNKNOWN" || execution.status === "RECONCILING"
+                      ? "text-escalate"
+                      : "text-ink"
+                  }
+                >
+                  {execution.status}
+                </span>
+              </FieldRow>
+              <FieldRow name="reservation_id">
+                <span className="font-mono text-[12px]">{execution.reservation_id}</span>
+              </FieldRow>
+              <FieldRow name="reconciliation_attempts">
+                {execution.reconciliation_attempts}
+              </FieldRow>
+              <FieldRow name="reconciliation_error">
+                <span className="font-mono text-[12px]">
+                  {execution.reconciliation_error ?? "null"}
+                </span>
+              </FieldRow>
+            </>
           ) : (
             <FieldRow name="settlement">
-              null — no payment request constructed
+              {record.disposition === "DENY"
+                ? "null — no payment request constructed"
+                : "null — no terminal settlement recorded"}
             </FieldRow>
           )}
           <FieldRow name="anchor.record_hash">
@@ -215,7 +242,7 @@ export default async function AuditDrillDownPage({
             View raw JSON
           </summary>
           <pre className="mt-3 overflow-auto font-mono text-[11px] text-ink">
-            {JSON.stringify({ record, action, anchor, mandate }, null, 2)}
+            {JSON.stringify({ record, action, execution, anchor, mandate }, null, 2)}
           </pre>
         </details>
       </div>

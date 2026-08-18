@@ -16,7 +16,7 @@ export {
   promoteAuditToVelocityEscalation,
   updateAuditSettlement,
 } from "./repository.js";
-export type { AuditFeedItem } from "./repository.js";
+export type { AuditFeedItem, ExecutionSummary } from "./repository.js";
 export {
   LIVE_RESERVATION_STATUSES,
   beginSubmission,
@@ -28,6 +28,7 @@ export {
   deferReconciliation,
   expireStaleReservations,
   getLiveReservationForAudit,
+  getLatestReservationForAudit,
   getReservation,
   markFailed,
   markOutcomeUnknown,

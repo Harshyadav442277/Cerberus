@@ -63,6 +63,7 @@ export async function reconcileOne(options: {
     !reservation.payment_payer ||
     !reservation.payment_pay_to ||
     !reservation.payment_nonce ||
+    !reservation.payment_payload_hash ||
     !reservation.payment_valid_before ||
     !reservation.submission_block
   ) {

@@ -26,6 +26,7 @@ export interface OrchestratorDeps {
 export type OutcomeStatus =
   | "settled"
   | "settlement_failed"
+  | "settlement_unknown"
   | "authorization_failed"
   | "denied"
   | "escalation_denied"
@@ -179,19 +180,24 @@ export async function runAction(
   // The agent passes only a signed capability and audit identifier to the isolated
   // executor. It never receives, imports, or derives the payment private key.
   //
-  // pay() can soft-fail (returns status:"failed") or hard-throw (network/facilitator
-  // blip — the same class of risk as B1 mid-demo). Either way the record must reach a
-  // terminal state: settlement written and the anchor finalized. An uncaught throw
-  // used to leave the row in limbo with settlement null and no digest.
+  // A soft failure is positive rail evidence and is terminal. A throw is different:
+  // the executor request or chain response may have disappeared after money moved.
+  // Never synthesize `failed`, write a false audit settlement, or anchor a supposedly
+  // terminal record. Durable reservation state and the keyless reconciler own it.
   let settlement: Settlement;
   try {
     settlement = await deps.settlement().pay({ audit_id: audit.audit_id, envelope });
   } catch {
-    settlement = {
-      status: "failed",
-      tx_hash: null,
-      rail: "x402",
-      settled_at: null,
+    return {
+      ...base,
+      status: "settlement_unknown",
+      disposition: effectiveDisposition,
+      audit: effectiveAudit,
+      humanReview,
+      settlement: null,
+      authorizationId: envelope.authorization.authorizationId,
+      authorizationAttempted: true,
+      settlementAttempted: true,
     };
   }
 

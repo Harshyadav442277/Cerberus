@@ -504,8 +504,8 @@ export interface PaymentAttemptCorrelation {
 /**
  * Persists the chain-visible EIP-3009 identity before transport can submit it.
  *
- * A crash before this compare-and-set cannot have sent a payment: the x402 payer's
- * submit method accepts only the branded object returned after this write succeeds.
+ * A crash before this compare-and-set cannot have sent a payment: the prepared x402
+ * request invokes and awaits this persistence callback before starting transport.
  */
 export async function recordPaymentAttempt(
   reservationId: string,
@@ -769,6 +769,21 @@ export async function getLiveReservationForAudit(
       ORDER BY created_at ASC
       LIMIT 1`,
     [auditId, LIVE_RESERVATION_STATUSES],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
+/** Latest execution state for audit/dashboard projection, including terminal rows. */
+export async function getLatestReservationForAudit(
+  auditId: string,
+): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `SELECT ${COLUMNS}
+       FROM payment_reservation
+      WHERE audit_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [auditId],
   );
   return rows[0] ? toReservation(rows[0]) : null;
 }

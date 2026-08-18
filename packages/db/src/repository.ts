@@ -223,6 +223,39 @@ export async function updateAuditSettlement(
 export interface AuditFeedItem {
   record: AuditLogRecord;
   action: ProposedAction;
+  /** Execution state is projected beside, never inserted into, frozen §7.5 audit JSON. */
+  execution: ExecutionSummary | null;
+}
+
+export interface ExecutionSummary {
+  reservation_id: string;
+  status:
+    | "RESERVED"
+    | "AUTHORIZED"
+    | "SUBMITTING"
+    | "SETTLED"
+    | "FAILED"
+    | "OUTCOME_UNKNOWN"
+    | "RECONCILING"
+    | "EXPIRED";
+  settlement_tx: string | null;
+  reconciliation_attempts: number;
+  reconciliation_error: string | null;
+}
+
+function executionSummary(row: Record<string, unknown>): ExecutionSummary | null {
+  if (typeof row["execution_reservation_id"] !== "string") return null;
+  return {
+    reservation_id: row["execution_reservation_id"],
+    status: row["execution_status"] as ExecutionSummary["status"],
+    settlement_tx: typeof row["execution_settlement_tx"] === "string"
+      ? row["execution_settlement_tx"]
+      : null,
+    reconciliation_attempts: Number(row["execution_reconciliation_attempts"] ?? 0),
+    reconciliation_error: typeof row["execution_reconciliation_error"] === "string"
+      ? row["execution_reconciliation_error"]
+      : null,
+  };
 }
 
 /**
@@ -248,9 +281,22 @@ export async function listAuditFeed(options: {
        a.audit_id, a.action_id, a.agent_id, a.mandate_id, a.mandate_version,
        a.disposition, a.reason, a.rule_triggered, a.evaluated_at,
        a.human_review, a.settlement,
-       p.action_type, p.proposed_at, p.payload
+       p.action_type, p.proposed_at, p.payload,
+       r.reservation_id AS execution_reservation_id,
+       r.status AS execution_status,
+       r.settlement_tx AS execution_settlement_tx,
+       r.reconciliation_attempts AS execution_reconciliation_attempts,
+       r.reconciliation_error AS execution_reconciliation_error
      FROM audit_log a
      JOIN proposed_action p ON p.action_id = a.action_id
+     LEFT JOIN LATERAL (
+       SELECT reservation_id, status, settlement_tx,
+              reconciliation_attempts, reconciliation_error
+         FROM payment_reservation
+        WHERE audit_id = a.audit_id
+        ORDER BY created_at DESC
+        LIMIT 1
+     ) r ON TRUE
      WHERE TRUE ${sinceClause}
      ORDER BY a.evaluated_at DESC
      LIMIT $1`,
@@ -266,6 +312,7 @@ export async function listAuditFeed(options: {
       proposed_at: row.proposed_at,
       payload: row.payload,
     }),
+    execution: executionSummary(row),
   }));
 }
 
@@ -301,6 +348,7 @@ export async function listPendingEscalations(): Promise<AuditFeedItem[]> {
       proposed_at: row.proposed_at,
       payload: row.payload,
     }),
+    execution: null,
   }));
 }
 

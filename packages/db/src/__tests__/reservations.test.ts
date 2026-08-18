@@ -528,6 +528,12 @@ describe("durable outcome reconciliation state", () => {
     const terminal = (await getReservation(id))!;
     strictEqual(terminal.status, "SETTLED");
     strictEqual(terminal.settlement_tx, "0xsettled");
+    const settledAudit = await getPool().query<{ settlement: { status: string; tx_hash: string } }>(
+      `SELECT settlement FROM audit_log WHERE audit_id = $1`,
+      [terminal.audit_id],
+    );
+    strictEqual(settledAudit.rows[0]!.settlement.status, "settled");
+    strictEqual(settledAudit.rows[0]!.settlement.tx_hash, "0xsettled");
   });
 
   it("keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment", async () => {
@@ -553,7 +559,14 @@ describe("durable outcome reconciliation state", () => {
       ),
       true,
     );
-    strictEqual((await getReservation(id))!.status, "FAILED");
+    const terminal = (await getReservation(id))!;
+    strictEqual(terminal.status, "FAILED");
+    const failedAudit = await getPool().query<{ settlement: { status: string; tx_hash: null } }>(
+      `SELECT settlement FROM audit_log WHERE audit_id = $1`,
+      [terminal.audit_id],
+    );
+    strictEqual(failedAudit.rows[0]!.settlement.status, "failed");
+    strictEqual(failedAudit.rows[0]!.settlement.tx_hash, null);
   });
 
   it("can safely release a stale SUBMITTING row with no persisted attempt", async () => {

@@ -6,6 +6,7 @@ import {
   getActiveMandate,
   getAuditLogRecord,
   getMandate,
+  getLatestReservationForAudit,
   getProposedAction,
   listAuditFeed,
 } from "@safr/db";
@@ -86,13 +87,14 @@ auditRouter.get("/:auditId", async (req, res, next) => {
       return;
     }
 
-    const [action, anchor, mandate] = await Promise.all([
+    const [action, anchor, mandate, execution] = await Promise.all([
       getProposedAction(record.action_id),
       getAnchor(auditId),
       getMandate(record.mandate_id, record.mandate_version),
+      getLatestReservationForAudit(auditId),
     ]);
 
-    res.json({ record, action, anchor, mandate });
+    res.json({ record, action, anchor, mandate, execution });
   } catch (error) {
     next(error);
   }

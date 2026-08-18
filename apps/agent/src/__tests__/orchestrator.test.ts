@@ -268,7 +268,7 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(outcome.settlement?.tx_hash, null);
   });
 
-  it("on a thrown pay(), still writes a failed settlement and finalizes", async () => {
+  it("on a thrown pay(), reports UNKNOWN without writing a false failure or anchor", async () => {
     const audit = auditSpy();
     const { spy } = settlementSpy();
     const factory = () => {
@@ -289,13 +289,11 @@ describe("ALLOW — settlement proceeds", () => {
       settlement: factory,
     });
 
-    strictEqual(outcome.status, "settlement_failed");
+    strictEqual(outcome.status, "settlement_unknown");
     strictEqual(outcome.settlementAttempted, true);
-    strictEqual(outcome.settlement?.status, "failed");
-    strictEqual(outcome.settlement?.tx_hash, null);
-    strictEqual(audit.settlements.length, 1);
-    strictEqual(audit.settlements[0]?.settlement.status, "failed");
-    strictEqual(audit.finalized.length, 1, "terminal anchor must still run after a thrown pay()");
+    strictEqual(outcome.settlement, null);
+    strictEqual(audit.settlements.length, 0, "UNKNOWN is not a failed settlement");
+    strictEqual(audit.finalized.length, 0, "UNKNOWN is not terminal and must not be anchored");
   });
 });
 

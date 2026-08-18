@@ -28,6 +28,7 @@ export function fetchAudit(auditId: string) {
     record: FeedItem["record"];
     action: FeedItem["action"];
     anchor: FeedItem["anchor"];
+    execution: FeedItem["execution"];
     mandate: Record<string, unknown> | null;
   }>(`/audit/${auditId}`);
 }

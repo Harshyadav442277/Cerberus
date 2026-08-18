@@ -126,7 +126,11 @@ export function createEscalationsRouter(
         return;
       }
 
-      liveHub.publish({ record: { ...record, human_review: humanReview }, action });
+      liveHub.publish({
+        record: { ...record, human_review: humanReview },
+        action,
+        execution: null,
+      });
 
       const pending = await listPendingEscalations();
       res.json({

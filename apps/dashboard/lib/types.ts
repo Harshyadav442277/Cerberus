@@ -56,6 +56,23 @@ export interface FeedItem {
   record: AuditRecord;
   action: ProposedAction;
   anchor?: Anchor | null;
+  execution: ExecutionState | null;
+}
+
+export interface ExecutionState {
+  reservation_id: string;
+  status:
+    | "RESERVED"
+    | "AUTHORIZED"
+    | "SUBMITTING"
+    | "SETTLED"
+    | "FAILED"
+    | "OUTCOME_UNKNOWN"
+    | "RECONCILING"
+    | "EXPIRED";
+  settlement_tx: string | null;
+  reconciliation_attempts: number;
+  reconciliation_error: string | null;
 }
 
 export interface Health {
