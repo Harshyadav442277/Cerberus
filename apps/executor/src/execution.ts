@@ -1,9 +1,14 @@
 import type { AuditLogRecord, ProposedAction, Settlement } from "@safr/core";
-import type { PaymentReservation } from "@safr/db";
+import {
+  evaluateApprovalFreshness,
+  type HumanApprovalBinding,
+  type PaymentReservation,
+} from "@safr/db";
 import {
   AuthorizationError,
   InMemoryAuthorizationUseStore,
   buildExecutionTarget,
+  hashProposal,
   verifyAndConsumeExecutionAuthorization,
   type AuthorizationUseStore,
   type SignedExecutionAuthorization,
@@ -22,7 +27,11 @@ export class ExecutionRefusedError extends Error {
       | "RESERVATION_NOT_FOUND"
       /** The reservation is not in AUTHORIZED state, or is bound to a different
        *  authorization. This is the durable replay/duplicate-execution refusal. */
-      | "RESERVATION_NOT_EXECUTABLE",
+      | "RESERVATION_NOT_EXECUTABLE"
+      /** No mandate authorises this agent now, or not the one this was reserved under. */
+      | "STALE_MANDATE"
+      /** The approval is missing, expired, or no longer binds this proposal/authority. */
+      | "STALE_APPROVAL",
   ) {
     super(code);
     this.name = "ExecutionRefusedError";
@@ -34,6 +43,16 @@ export interface TrustedExecutionContext {
   action: ProposedAction;
   /** The committed financial state for this audit. Read from the database, not the caller. */
   reservation: PaymentReservation | null;
+  /**
+   * The mandate in force NOW, at execution time.
+   *
+   * Null means no authority currently covers this agent. The executor does not
+   * re-run policy — that engine stays out of the process holding the payment key —
+   * but it must not spend under a mandate that has since been superseded or revoked.
+   */
+  currentMandate: { mandate_id: string; version: number } | null;
+  /** The separately bound approval, read at execution time for escalated audits. */
+  approval: HumanApprovalBinding | null;
 }
 
 export interface ExecutionContextPort {
@@ -80,7 +99,10 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
 
   return {
     async execute(input): Promise<Settlement> {
-      const { audit, action, reservation } = await options.context.resolve(input.audit_id);
+      const { audit, action, reservation, currentMandate, approval } = await options.context.resolve(
+        input.audit_id,
+      );
+      const nowMs = options.nowMs?.() ?? Date.now();
       const executable =
         audit.disposition === "ALLOW" ||
         audit.disposition === "OBSERVE" ||
@@ -90,6 +112,30 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       }
       if (!reservation || reservation.audit_id !== audit.audit_id) {
         throw new ExecutionRefusedError("RESERVATION_NOT_FOUND");
+      }
+
+      // Authority freshness, checked independently of the control plane that issued
+      // the authorization. A mandate revoked or superseded between issuance and
+      // execution must stop the payment here, in the process that holds the key.
+      if (
+        !currentMandate ||
+        currentMandate.mandate_id !== reservation.mandate_id ||
+        currentMandate.version !== reservation.mandate_version
+      ) {
+        throw new ExecutionRefusedError("STALE_MANDATE");
+      }
+
+      // An approval can age out after the control plane signs but before the executor
+      // receives the capability. Re-check it here, in the process that holds the key,
+      // so a delayed request cannot spend on stale human authority.
+      if (audit.disposition === "ESCALATE") {
+        const freshness = evaluateApprovalFreshness(approval, {
+          proposalHash: hashProposal(action),
+          currentMandateId: currentMandate.mandate_id,
+          currentMandateVersion: currentMandate.version,
+          nowMs,
+        });
+        if (!freshness.usable) throw new ExecutionRefusedError("STALE_APPROVAL");
       }
 
       const target = buildExecutionTarget(action, options.target);
@@ -104,7 +150,7 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
         // authorization can only be spent against the capacity actually held for it.
         expectedReservationId: reservation.reservation_id,
         useStore,
-        nowMs: options.nowMs?.(),
+        nowMs,
       });
 
       // The durable one-shot boundary: AUTHORIZED -> SUBMITTING, compare-and-set on

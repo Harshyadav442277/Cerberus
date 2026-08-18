@@ -1,10 +1,11 @@
 import { deepStrictEqual, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuditLogRecord, ProposedAction } from "@safr/core";
-import type { PaymentReservation } from "@safr/db";
+import type { HumanApprovalBinding, PaymentReservation } from "@safr/db";
 import {
   AuthorizationError,
   buildExecutionTarget,
+  hashProposal,
   issueExecutionAuthorization,
 } from "@safr/execution-authorization";
 import type { X402Payer } from "@safr/x402-client";
@@ -127,8 +128,28 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
   };
 }
 
+const CURRENT_MANDATE = { mandate_id: AUDIT.mandate_id, version: AUDIT.mandate_version };
+const APPROVAL: HumanApprovalBinding = {
+  audit_id: AUDIT.audit_id,
+  action_id: ACTION.action_id,
+  agent_id: ACTION.agent_id,
+  proposal_hash: hashProposal(ACTION),
+  mandate_id: AUDIT.mandate_id,
+  mandate_version: AUDIT.mandate_version,
+  reviewer_id: "compliance_officer_01",
+  decision: "approved",
+  decided_at: new Date(NOW - 60_000).toISOString(),
+  expires_at: new Date(NOW + 60_000).toISOString(),
+};
+
 function harness(
-  context: { audit: AuditLogRecord; action: ProposedAction; reservation?: PaymentReservation | null } = {
+  context: {
+    audit: AuditLogRecord;
+    action: ProposedAction;
+    reservation?: PaymentReservation | null;
+    currentMandate?: { mandate_id: string; version: number } | null;
+    approval?: HumanApprovalBinding | null;
+  } = {
     audit: AUDIT,
     action: ACTION,
   },
@@ -157,6 +178,9 @@ function harness(
           audit: context.audit,
           action: context.action,
           reservation: context.reservation === undefined ? RESERVATION : context.reservation,
+          currentMandate:
+            context.currentMandate === undefined ? CURRENT_MANDATE : context.currentMandate,
+          approval: context.approval === undefined ? null : context.approval,
         };
       },
     },
@@ -224,6 +248,52 @@ describe("isolated executor", () => {
     strictEqual(h.constructed(), 0);
     strictEqual(h.paid(), 0);
   });
+
+  it("executes an approved escalation only while its bound approval is fresh", async () => {
+    const escalated: AuditLogRecord = {
+      ...AUDIT,
+      disposition: "ESCALATE",
+      reason: "counterparty_not_on_allowlist",
+      rule_triggered: "counterparty_policy",
+      human_review: {
+        reviewer_id: APPROVAL.reviewer_id,
+        decision: "approved",
+        decided_at: APPROVAL.decided_at,
+        note: "Verified out of band",
+      },
+    };
+    const h = harness({ audit: escalated, action: ACTION, approval: APPROVAL });
+
+    strictEqual(
+      (await h.executor.execute({ audit_id: escalated.audit_id, envelope: await signed() })).status,
+      "settled",
+    );
+    strictEqual(h.constructed(), 1);
+  });
+
+  it("refuses an approval that expired after signing before the payment key exists", async () => {
+    const escalated: AuditLogRecord = {
+      ...AUDIT,
+      disposition: "ESCALATE",
+      reason: "counterparty_not_on_allowlist",
+      rule_triggered: "counterparty_policy",
+      human_review: {
+        reviewer_id: APPROVAL.reviewer_id,
+        decision: "approved",
+        decided_at: APPROVAL.decided_at,
+        note: "Verified out of band",
+      },
+    };
+    const expired = { ...APPROVAL, expires_at: new Date(NOW).toISOString() };
+    const h = harness({ audit: escalated, action: ACTION, approval: expired });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: escalated.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "STALE_APPROVAL",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED", "the reservation is left untouched");
+  });
 });
 
 describe("committed financial state gates execution", () => {
@@ -289,6 +359,33 @@ describe("committed financial state gates execution", () => {
     strictEqual(settlement.status, "failed");
     deepStrictEqual(h.store.calls, ["failed"]);
     strictEqual(h.store.status(), "FAILED");
+  });
+
+  it("refuses to spend under a mandate that has been superseded", async () => {
+    // The control plane authorised this a moment ago; an administrator has published
+    // a new version since. The process holding the payment key checks for itself.
+    const h = harness({
+      audit: AUDIT,
+      action: ACTION,
+      currentMandate: { mandate_id: AUDIT.mandate_id, version: AUDIT.mandate_version + 1 },
+    });
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "STALE_MANDATE",
+    );
+    strictEqual(h.constructed(), 0, "the payment key is never reached");
+    strictEqual(h.store.status(), "AUTHORIZED", "the reservation is left untouched");
+  });
+
+  it("refuses to spend when no mandate authorises the agent any more", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION, currentMandate: null });
+    const envelope = await signed();
+    await rejects(
+      () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "STALE_MANDATE",
+    );
+    strictEqual(h.constructed(), 0);
   });
 
   it("holds capacity as OUTCOME_UNKNOWN when settlement throws", async () => {

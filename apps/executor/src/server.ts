@@ -5,7 +5,11 @@ import {
   SignedExecutionAuthorizationSchema,
 } from "@safr/execution-authorization";
 import { createX402Payer } from "@safr/x402-client";
-import { dbExecutionContext, dbReservations } from "./db-context.js";
+import {
+  dbAuthorizationUseStore,
+  dbExecutionContext,
+  dbReservations,
+} from "./db-context.js";
 import { executorEnv } from "./env.js";
 import { createIsolatedExecutor, ExecutionRefusedError } from "./execution.js";
 
@@ -19,6 +23,7 @@ const requestSchema = z
 const executor = createIsolatedExecutor({
   context: dbExecutionContext,
   reservations: dbReservations,
+  useStore: dbAuthorizationUseStore,
   expectedAuthorizer: executorEnv.expectedAuthorizer,
   target: executorEnv.target,
   payerFactory: () => createX402Payer(executorEnv.x402),
