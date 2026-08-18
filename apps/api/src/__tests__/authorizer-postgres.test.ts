@@ -5,6 +5,7 @@ import { loadEvaluationContext } from "@safr/controls-repository";
 import {
   bindAuthorization,
   closePool,
+  getHumanApproval,
   getAuditLogRecord,
   getLiveReservationForAudit,
   getPool,
@@ -13,6 +14,7 @@ import {
   insertAuditLogRecord,
   insertMandate,
   insertProposedAction,
+  recordIssuedAuthorization,
   reserveBudget,
 } from "@safr/db";
 import {
@@ -102,8 +104,13 @@ const authorizer = createExecutionAuthorizer({
     getAudit: getAuditLogRecord,
     getAction: getProposedAction,
     loadEvaluationContext,
+    getApproval: getHumanApproval,
   },
-  reservations: { reserve: reserveBudget, bindAuthorization },
+  reservations: {
+    reserve: reserveBudget,
+    bindAuthorization,
+    recordIssued: recordIssuedAuthorization,
+  },
   authorizerPrivateKey: KEY,
   target: {
     chainId: 84532,
@@ -123,8 +130,8 @@ after(async () => {
 
 beforeEach(async () => {
   await getPool().query(
-    `TRUNCATE TABLE payment_reservation, audit_anchor, audit_log, proposed_action,
-                    mandate, agent_identity
+    `TRUNCATE TABLE human_approval, execution_authorization, payment_reservation,
+                    audit_anchor, audit_log, proposed_action, mandate, agent_identity
      RESTART IDENTITY CASCADE`,
   );
   await insertAgentIdentity({

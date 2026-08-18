@@ -4,7 +4,9 @@ import { loadEvaluationContext } from "@safr/controls-repository";
 import {
   bindAuthorization,
   getAuditLogRecord,
+  getHumanApproval,
   getProposedAction,
+  recordIssuedAuthorization,
   reserveBudget,
 } from "@safr/db";
 import { apiEnv } from "../env.js";
@@ -26,9 +28,14 @@ const authorizer = createExecutionAuthorizer({
     getAudit: getAuditLogRecord,
     getAction: getProposedAction,
     loadEvaluationContext,
+    getApproval: getHumanApproval,
   },
   authorizerPrivateKey: apiEnv.executionAuthPrivateKey,
-  reservations: { reserve: reserveBudget, bindAuthorization },
+  reservations: {
+    reserve: reserveBudget,
+    bindAuthorization,
+    recordIssued: recordIssuedAuthorization,
+  },
   target: {
     chainId: chainId(apiEnv.network),
     payTo: apiEnv.payTo,
