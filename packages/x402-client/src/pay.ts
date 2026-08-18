@@ -12,6 +12,7 @@ import { wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 import type { X402Env } from "./env.js";
+import type { PaymentRequest } from "./challenge.js";
 
 /**
  * Mirrors the `settlement` object of the Audit Log record (Bible Section 7.5) so the
@@ -24,13 +25,6 @@ export interface SettlementResult {
   settled_at: string | null;
   /** Populated on failure only. Not part of the Section 7.5 schema. */
   error?: string;
-}
-
-export interface PaymentRequest {
-  counterparty: string;
-  /** Decimal amount, e.g. 0.5 for 0.50 USDC. */
-  amount: number;
-  reference?: string;
 }
 
 export interface X402Payer {

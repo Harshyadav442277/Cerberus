@@ -1,0 +1,131 @@
+import { rejects, strictEqual } from "node:assert/strict";
+import { describe, it } from "node:test";
+import { encodePaymentRequiredHeader } from "@x402/core/http";
+import type { PaymentRequired } from "@x402/core/types";
+import {
+  X402ChallengeError,
+  fetchX402Challenge,
+  paymentRequestUrl,
+  validateX402Challenge,
+  type ExpectedX402Challenge,
+  type X402Challenge,
+} from "../challenge.js";
+
+const PAY_TO = "0x1111111111111111111111111111111111111111";
+const TOKEN = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const REQUEST = { counterparty: "merchant_xyz", amount: 0.5, reference: "invoice_1" };
+const RESOURCE = paymentRequestUrl(REQUEST, "http://localhost:4021");
+
+const REQUIRED: PaymentRequired = {
+  x402Version: 2,
+  error: "Payment required",
+  resource: { url: RESOURCE, description: "fixture", mimeType: "application/json" },
+  accepts: [{
+    scheme: "exact",
+    network: "eip155:84532",
+    amount: "500000",
+    asset: TOKEN,
+    payTo: PAY_TO,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" },
+  }],
+};
+
+const EXPECTED: ExpectedX402Challenge = {
+  x402Version: 2,
+  scheme: "exact",
+  network: "eip155:84532",
+  amount: "500000",
+  asset: TOKEN,
+  payTo: PAY_TO,
+  resourceUrl: RESOURCE,
+  eip712: { name: "USDC", version: "2", assetTransferMethod: "eip3009" },
+};
+
+function challenge(paymentRequired: PaymentRequired = REQUIRED): X402Challenge {
+  return { method: "GET", requestUrl: RESOURCE, paymentRequired };
+}
+
+function changed(update: Partial<PaymentRequired["accepts"][number]>): PaymentRequired {
+  return {
+    ...REQUIRED,
+    accepts: [{ ...REQUIRED.accepts[0]!, ...update }],
+  };
+}
+
+async function rejectsWith(run: () => unknown, code: X402ChallengeError["code"]): Promise<void> {
+  await rejects(
+    async () => run(),
+    (error) => error instanceof X402ChallengeError && error.code === code,
+  );
+}
+
+describe("unsigned x402 v2.21.0 challenge parsing", () => {
+  it("performs one unsigned GET and parses the PAYMENT-REQUIRED header", async () => {
+    let requests = 0;
+    const parsed = await fetchX402Challenge(REQUEST, "http://localhost:4021", async (input) => {
+      requests += 1;
+      const request = input instanceof Request ? input : new Request(input);
+      strictEqual(request.url, RESOURCE);
+      strictEqual(request.method, "GET");
+      strictEqual(request.headers.has("PAYMENT-SIGNATURE"), false);
+      strictEqual(request.headers.has("X-PAYMENT"), false);
+      return new Response("{}", {
+        status: 402,
+        headers: { "PAYMENT-REQUIRED": encodePaymentRequiredHeader(REQUIRED) },
+      });
+    });
+
+    strictEqual(requests, 1);
+    strictEqual(parsed.paymentRequired.accepts[0]?.amount, "500000");
+    strictEqual(parsed.paymentRequired.resource.url, RESOURCE);
+  });
+
+  it("rejects a non-402 response", async () => {
+    await rejectsWith(
+      () => fetchX402Challenge(REQUEST, "http://localhost:4021", async () => new Response("ok")),
+      "CHALLENGE_NOT_402",
+    );
+  });
+});
+
+describe("exact live challenge binding", () => {
+  it("pins the one exact matching requirement even when a malicious offer is first", () => {
+    const malicious = { ...REQUIRED.accepts[0]!, amount: "50000000" };
+    const live = { ...REQUIRED, accepts: [malicious, REQUIRED.accepts[0]!] };
+    const validated = validateX402Challenge(challenge(live), EXPECTED);
+    strictEqual(validated.paymentRequired.accepts.length, 1);
+    strictEqual(validated.paymentRequired.accepts[0].amount, "500000");
+  });
+
+  it("rejects a mutated atomic amount", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ amount: "50000000" })), EXPECTED), "AMOUNT_MISMATCH"));
+
+  it("rejects a mutated payee", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ payTo: "0x2222222222222222222222222222222222222222" })), EXPECTED), "PAYEE_MISMATCH"));
+
+  it("rejects a mutated token", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ asset: "0x2222222222222222222222222222222222222222" })), EXPECTED), "TOKEN_MISMATCH"));
+
+  it("rejects a mutated chain", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ network: "eip155:8453" })), EXPECTED), "NETWORK_MISMATCH"));
+
+  it("rejects a mutated resource", () => {
+    const live = { ...REQUIRED, resource: { ...REQUIRED.resource, url: "http://localhost:4021/pay/attacker?amount=0.5" } };
+    return rejectsWith(() => validateX402Challenge(challenge(live), EXPECTED), "RESOURCE_MISMATCH");
+  });
+
+  it("rejects a different payment scheme", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ scheme: "upto" })), EXPECTED), "SCHEME_MISMATCH"));
+
+  it("rejects a different x402 protocol version", () => {
+    const live = { ...REQUIRED, x402Version: 1 } as unknown as PaymentRequired;
+    return rejectsWith(() => validateX402Challenge(challenge(live), EXPECTED), "VERSION_MISMATCH");
+  });
+
+  it("rejects a mutated EIP-712 token identity", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ extra: { name: "Fake USDC", version: "2" } })), EXPECTED), "EIP712_DOMAIN_MISMATCH"));
+
+  it("rejects a transfer-method switch", () =>
+    rejectsWith(() => validateX402Challenge(challenge(changed({ extra: { name: "USDC", version: "2", assetTransferMethod: "permit2" } })), EXPECTED), "TRANSFER_METHOD_MISMATCH"));
+});
