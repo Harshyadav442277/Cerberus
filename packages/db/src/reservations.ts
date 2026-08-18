@@ -437,3 +437,43 @@ export async function markOutcomeUnknown(
     [reservationId, at],
   );
 }
+
+export async function getReservation(reservationId: string): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `SELECT ${COLUMNS} FROM payment_reservation WHERE reservation_id = $1`,
+    [reservationId],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
+/** The live reservation backing an audit record, if one still holds capacity. */
+export async function getLiveReservationForAudit(
+  auditId: string,
+): Promise<PaymentReservation | null> {
+  const { rows } = await getPool().query(
+    `SELECT ${COLUMNS}
+       FROM payment_reservation
+      WHERE audit_id = $1 AND status = ANY($2)
+      ORDER BY created_at ASC
+      LIMIT 1`,
+    [auditId, LIVE_RESERVATION_STATUSES],
+  );
+  return rows[0] ? toReservation(rows[0]) : null;
+}
+
+/**
+ * Sweeps pre-broadcast reservations past their TTL.
+ *
+ * Reservation griefing (reserve the whole budget, never settle) is bounded by this.
+ * SUBMITTING and OUTCOME_UNKNOWN are deliberately out of scope: releasing those on a
+ * timer is exactly how a system double-pays.
+ */
+export async function expireStaleReservations(at = new Date().toISOString()): Promise<number> {
+  const { rowCount } = await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'EXPIRED', updated_at = $1::timestamptz
+      WHERE status = ANY($2) AND expires_at <= $1::timestamptz`,
+    [at, PRE_BROADCAST_STATUSES],
+  );
+  return rowCount ?? 0;
+}
