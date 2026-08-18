@@ -3,6 +3,40 @@
 **Derived from:** Bible Sections 6, 7, 8.
 **Authority:** `SAFR_RUNTIME_PROJECT_BIBLE.md` overrides this document on any conflict.
 
+## Stage 2 finalist hardening amendment
+
+The Bible's pre-execution constraint still governs, but the payment-key boundary is
+now stronger:
+
+```text
+AI intent
+  -> agent orchestrator
+  -> deterministic Disposition Engine
+  -> audit record
+  -> trusted API re-evaluation + signed Execution Authorization
+  -> isolated executor verifies every bound field and consumes the authorization
+  -> x402 payer constructed
+  -> Base Sepolia USDC settlement
+```
+
+`apps/agent` no longer imports `@safr/x402-client` and never loads the payment key.
+`apps/api` holds only the authorization-signing key and independently re-evaluates the
+stored proposal/audit context before signing. `apps/executor` is the only application
+that may load `EXECUTOR_EVM_PRIVATE_KEY` or construct the x402 payer.
+
+For this prototype, “isolated” means a separate application process with a separate
+environment file and no payment-key import path in the agent. Production resistance
+to arbitrary same-host filesystem compromise additionally requires a different
+OS/container principal or managed secret boundary; this repository does not falsely
+claim that deployment control.
+
+The Phase 1 authorization already binds proposal, mandate/version, reservation ID,
+chain, token, atomic amount, payee, resource hash, expiry, and nonce. The reservation
+ID is an explicit `phase1_unreserved:*` marker until Phase 2 creates real atomic
+reservation rows. Replay consumption is process-local until Phase 3 makes it durable.
+The resource hash covers the intended HTTP resource; exact live x402 challenge
+inspection is Phase 4. See `Critique.md` for the fixed hardening order and claim limits.
+
 ---
 
 ## 1. System architecture (Bible Section 6, reproduced)
@@ -74,11 +108,18 @@ if (disposition.disposition === "ESCALATE") {
 
 // Only reachable on ALLOW, or ESCALATE→approved.
 // This is the first line in the whole program that touches x402.
-const settlement = await x402Client.pay(action);
+const authorization = await trustedAuthorizer.issue(audit.audit_id);
+const settlement = await isolatedExecutor.execute({
+  audit_id: audit.audit_id,
+  envelope: authorization,
+});
 await audit.recordSettlement(action.action_id, settlement);
 ```
 
-**Enforcement:** the x402 client is only importable from `apps/agent/src/settlement/`. A test asserts that on a `DENY` path the x402 client's `pay` is never invoked. Phase 4's Definition-of-Done requires proving this, not just observing that the payment failed.
+**Enforcement:** the payer-side x402 client is importable only from `apps/executor`
+(plus standalone rail diagnostics inside its own package). Tests assert that a `DENY`
+constructs neither the authorization client nor executor client, and repository scans
+fail if any agent file imports x402 or references the payment-key variable.
 
 ---
 
@@ -100,7 +141,8 @@ Bible Section 8 permits "Node.js or Python (FastAPI)" for the middleware. **Reso
 - x402 TS SDK v2: `@x402/core`, `@x402/evm`, `@x402/fetch` (agent/payer side), `@x402/express` (merchant/payee side).
 - Network: **Base Sepolia**, CAIP-2 `eip155:84532`. Asset: testnet USDC.
 - Facilitator: `https://x402.org/facilitator` (testnet only — never reuse for mainnet).
-- Signing: `viem` `privateKeyToAccount` from `EVM_PRIVATE_KEY`.
+- Signing: `viem`; `EXECUTOR_EVM_PRIVATE_KEY` is loaded only by `apps/executor`.
+  `EXECUTION_AUTH_PRIVATE_KEY` is loaded only by the trusted API/control plane.
 - Postgres 16 via `docker-compose`.
 - Audit anchor contract: a minimal Solidity contract on Base Sepolia, deployed with a `viem` script.
 
@@ -158,20 +200,22 @@ web3-project/
 │   │       ├── cli/verify-anchors.ts # re-hash every record, compare to its anchor
 │   │       └── events.ts             # emits to the dashboard live feed  (Phase 6)
 │   │
-│   └── x402-client/                  # the ONLY module that talks to x402
-│       └── src/pay.ts                # @x402/fetch + @x402/evm wrapper
+│   ├── x402-client/                  # payer-side x402 implementation
+│   │   └── src/pay.ts                # @x402/fetch + @x402/evm wrapper
+│   └── execution-authorization/      # signed one-shot capability + exact field checks
 │
 ├── apps/
 │   ├── agent/                        # LLM-driven agent + orchestration (owns the gate)
 │   │   └── src/
 │   │       ├── intent-generator.ts   # LLM → Proposed Action (§7.3)
 │   │       ├── orchestrator.ts       # evaluate() BEFORE settlement — §2 above
-│   │       └── settlement/           # only place x402-client may be imported
+│   │       └── settlement/           # HTTP clients only; contains no key or x402 import
+│   ├── executor/                     # isolated payment-key process; only x402 importer
 │   │
 │   ├── merchant/                     # x402 resource server (the payee) — demo scaffolding
 │   │   └── src/server.ts             # @x402/express, one route per demo counterparty
 │   │
-│   ├── api/                          # Express: dashboard REST + WS, escalation decisions
+│   ├── api/                          # Express: dashboard REST + authorization control plane
 │   │   └── src/routes/{audit,escalations,mandates}.ts
 │   │
 │   └── dashboard/                    # Next.js compliance dashboard (see Design.md)
@@ -205,6 +249,8 @@ sequenceDiagram
     participant Controls as controls-repository
     participant Engine as disposition-engine
     participant Audit as audit-log
+    participant Auth as trusted API authorizer
+    participant Exec as isolated executor
     participant X402 as x402-client
     participant Merchant as apps/merchant
     participant Dash as dashboard
@@ -217,25 +263,31 @@ sequenceDiagram
     Engine-->>Agent: ALLOW, reason=within_mandate, rule=null
     Agent->>Audit: write record (7.5)
     Audit-->>Dash: live feed event (green)
-    Agent->>X402: pay(action)
+    Agent->>Auth: request authorization(audit_id)
+    Auth->>Auth: re-read + re-evaluate stored action
+    Auth-->>Agent: signed Execution Authorization
+    Agent->>Exec: audit_id + signed authorization
+    Exec->>Exec: verify all fields + consume once
+    Exec->>X402: pay(stored action)
     X402->>Merchant: GET /pay/merchant_xyz
     Merchant-->>X402: 402 + payment requirements
     X402->>Merchant: retry with signed PAYMENT header
     Merchant-->>X402: 200 + PAYMENT-RESPONSE (tx hash)
-    X402-->>Agent: settlement { tx_hash, rail: x402 }
+    X402-->>Exec: settlement { tx_hash, rail: x402 }
+    Exec-->>Agent: settlement
     Agent->>Audit: recordSettlement(tx_hash)
     Audit-->>Dash: live feed update (settlement hash)
 ```
 
 ### 5.2 Blocked path (Scenario 2 — DENY)
 
-Identical up to `evaluate()`. The engine returns `DENY`, `reason=per_transaction_cap_exceeded`, `rule=spend_caps.per_transaction_max`. The orchestrator writes the audit record and **returns**. `x402-client` is never called, so no request object is ever constructed. The dashboard shows red with the rule path displayed.
+Identical up to `evaluate()`. The engine returns `DENY`, `reason=per_transaction_cap_exceeded`, `rule=spend_caps.per_transaction_max`. The orchestrator writes the audit record and **returns**. Neither authorization nor executor client is constructed; the isolated executor and x402 are never reached. The dashboard shows red with the rule path displayed.
 
 ### 5.3 Escalation path (Scenario 3 — ESCALATE)
 
 `evaluate()` finds the counterparty is not on the allowlist and returns the disposition **configured in the mandate** (`counterparty_policy.unknown_counterparty_disposition`), with `reason=counterparty_not_on_allowlist`, `rule=counterparty_policy`. This is rule-driven, not a special case — that generality is a Technical Quality requirement (Bible §7.2 design note).
 
-The orchestrator writes the audit record (amber), then blocks awaiting a decision. The dashboard shows the pending escalation; the reviewer approves; `apps/api` records `human_review` (`reviewer_id`, `decision`, `decided_at`, `note`) onto the audit record and resolves the agent's wait. **Only then** does the orchestrator reach the settlement line and construct the x402 request.
+The orchestrator writes the audit record (amber), then blocks awaiting a decision. The dashboard shows the pending escalation; the reviewer approves; `apps/api` records `human_review` (`reviewer_id`, `decision`, `decided_at`, `note`) onto the audit record and resolves the agent's wait. **Only then** may the trusted API issue an Execution Authorization; the isolated executor independently verifies it before constructing the x402 payer.
 
 ---
 
@@ -293,14 +345,27 @@ Counters are injected rather than fetched so the engine stays a pure function �
 ## 8. Environment variables
 
 ```
-DATABASE_URL=postgres://safr:safr@localhost:5432/safr_runtime
-EVM_PRIVATE_KEY=0x...              # agent's Base Sepolia payer wallet
+DATABASE_URL=postgres://safr:safr@localhost:5544/safr_runtime
 EVM_ADDRESS=0x...                  # merchant's receiving address
+EXECUTOR_WALLET_ADDRESS=0x...      # public payer address only
+EXECUTION_AUTHORIZER_ADDRESS=0x... # public trusted-authorizer address
 EVM_RPC_URL=https://sepolia.base.org
 X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_NETWORK=eip155:84532
 AUDIT_ANCHOR_ADDRESS=0x...         # set after Phase 5 deploy
 ANTHROPIC_API_KEY=                 # or OPENAI_API_KEY — agent intent generation only
+
+# .env.executor (executor process only)
+EXECUTOR_EVM_PRIVATE_KEY=0x...
+
+# .env.authorizer (control-plane / anchor processes only)
+EXECUTION_AUTH_PRIVATE_KEY=0x...
+AUDIT_ANCHOR_PRIVATE_KEY=0x...
 ```
 
-**Prerequisites that block Phase 1 and must be obtained before starting:** a funded Base Sepolia wallet holding testnet USDC (plus a little ETH for gas on the anchor contract), and one LLM API key. Everything else is local.
+**Runtime secret split:** `.env` contains public/shared configuration only;
+`.env.agent` is read only by the agent and may contain its LLM and audit-anchor
+credentials; `.env.authorizer` contains the Execution Authorization and anchor
+signing keys; `.env.executor` contains the x402 payment key. The Stage-1 payment
+evidence is complete. A fresh funded run through the hardened executor is still
+required before claiming live Phase-1 finalist evidence.

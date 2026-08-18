@@ -22,7 +22,7 @@ export interface AnchorConfig {
 }
 
 export function readAnchorConfig(env: NodeJS.ProcessEnv = process.env): AnchorConfig | null {
-  const privateKey = env.EVM_PRIVATE_KEY;
+  const privateKey = env.AUDIT_ANCHOR_PRIVATE_KEY;
   const contractAddress = env.AUDIT_ANCHOR_ADDRESS;
   // Both are required. Without them anchoring is simply disabled, which is a
   // supported state — records are still written, just not yet anchored.

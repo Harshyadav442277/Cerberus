@@ -1,11 +1,19 @@
 import type { AuditLogRecord, Disposition, HumanReview, ProposedAction, Settlement } from "@safr/core";
 import { evaluate } from "@safr/disposition-engine";
-import type { AuditPort, ControlsPort, EscalationPort, SettlementPort } from "./ports.js";
+import type {
+  AuditPort,
+  AuthorizationPort,
+  ControlsPort,
+  EscalationPort,
+  SettlementPort,
+} from "./ports.js";
 
 export interface OrchestratorDeps {
   controls: ControlsPort;
   audit: AuditPort;
   escalations: EscalationPort;
+  /** Factory so DENY never even constructs the control-plane authorization client. */
+  authorization: () => AuthorizationPort;
   /**
    * Deliberately a factory, not an instance. On DENY it is never called, so on a
    * denied action the settlement module is not merely unused — it is never even
@@ -17,6 +25,7 @@ export interface OrchestratorDeps {
 export type OutcomeStatus =
   | "settled"
   | "settlement_failed"
+  | "authorization_failed"
   | "denied"
   | "escalation_denied"
   | "no_mandate";
@@ -28,6 +37,8 @@ export interface Outcome {
   audit: AuditLogRecord | null;
   humanReview: HumanReview | null;
   settlement: Settlement | null;
+  authorizationId: string | null;
+  authorizationAttempted: boolean;
   /** Whether the x402 client was reached at all. Asserted in the DoD tests. */
   settlementAttempted: boolean;
 }
@@ -60,6 +71,8 @@ export async function runAction(
     audit: null,
     humanReview: null,
     settlement: null,
+    authorizationId: null,
+    authorizationAttempted: false,
     settlementAttempted: false,
   } satisfies Omit<Outcome, "status">;
 
@@ -97,6 +110,23 @@ export async function runAction(
   }
 
   // Reachable only on ALLOW, or ESCALATE that a human approved.
+  let envelope: Awaited<ReturnType<AuthorizationPort["issue"]>>;
+  try {
+    envelope = await deps.authorization().issue(audit.audit_id);
+  } catch {
+    await deps.audit.finalize(audit.audit_id);
+    return {
+      ...base,
+      status: "authorization_failed",
+      disposition,
+      audit,
+      humanReview,
+      authorizationAttempted: true,
+    };
+  }
+
+  // The agent passes only a signed capability and audit identifier to the isolated
+  // executor. It never receives, imports, or derives the payment private key.
   //
   // pay() can soft-fail (returns status:"failed") or hard-throw (network/facilitator
   // blip — the same class of risk as B1 mid-demo). Either way the record must reach a
@@ -104,7 +134,7 @@ export async function runAction(
   // used to leave the row in limbo with settlement null and no digest.
   let settlement: Settlement;
   try {
-    settlement = await deps.settlement().pay(action);
+    settlement = await deps.settlement().pay({ audit_id: audit.audit_id, envelope });
   } catch {
     settlement = {
       status: "failed",
@@ -129,6 +159,8 @@ export async function runAction(
     audit,
     humanReview,
     settlement,
+    authorizationId: envelope.authorization.authorizationId,
+    authorizationAttempted: true,
     settlementAttempted: true,
   };
 }

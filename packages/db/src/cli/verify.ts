@@ -75,7 +75,7 @@ async function verifyRoundTrip(): Promise<void> {
   const agent = await getAgentIdentity(SEED_AGENT.agent_id);
   check("agent_identity round-trips with zero shape loss", () => {
     if (!agent) throw new Error(`${SEED_AGENT.agent_id} not found — run pnpm db:seed first`);
-    // wallet_address is intentionally overwritten by the seed CLI from EVM_PRIVATE_KEY.
+    // wallet_address is intentionally overwritten from public EXECUTOR_WALLET_ADDRESS.
     deepStrictEqual({ ...agent, wallet_address: "" }, { ...SEED_AGENT, wallet_address: "" });
   });
 

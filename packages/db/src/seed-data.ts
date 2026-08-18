@@ -20,7 +20,7 @@ export const SEED_AGENT: AgentIdentity = {
   display_name: "Treasury Payments Agent",
   owner_org: "acme_corp",
   created_at: "2026-08-06T09:00:00.000Z",
-  // Overwritten by the seed CLI with the payer address derived from EVM_PRIVATE_KEY
+  // Overwritten by the seed CLI from the public EXECUTOR_WALLET_ADDRESS setting.
   // when one is configured, so the dashboard shows the wallet actually paying.
   wallet_address: "0x0000000000000000000000000000000000000000",
   status: "active",

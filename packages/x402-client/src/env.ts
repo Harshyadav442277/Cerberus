@@ -1,15 +1,10 @@
-import { resolve } from "node:path";
-import { config as loadDotenv } from "dotenv";
-
-loadDotenv({ path: resolve(import.meta.dirname, "../../../.env"), quiet: true });
-
 function optional(name: string, fallback: string): string {
   const value = process.env[name];
   return value && value.trim() !== "" ? value.trim() : fallback;
 }
 
 export interface X402Env {
-  /** Payer (agent) private key. Must hold Base Sepolia USDC. */
+  /** Payment key. This process must be the isolated executor, never the agent. */
   privateKey: string;
   network: string;
   facilitatorUrl: string;
@@ -20,8 +15,8 @@ export interface X402Env {
 /** Returns null rather than throwing, so preflight can report what is missing. */
 export function readEnv(): { env: X402Env | null; missing: string[] } {
   const missing: string[] = [];
-  const privateKey = process.env["EVM_PRIVATE_KEY"]?.trim() ?? "";
-  if (privateKey === "") missing.push("EVM_PRIVATE_KEY");
+  const privateKey = process.env["EXECUTOR_EVM_PRIVATE_KEY"]?.trim() ?? "";
+  if (privateKey === "") missing.push("EXECUTOR_EVM_PRIVATE_KEY");
 
   const config: X402Env = {
     privateKey,
@@ -39,7 +34,7 @@ export function requireEnv(): X402Env {
   if (!env) {
     throw new Error(
       `Missing required environment variable(s): ${missing.join(", ")}. ` +
-        `Copy .env.example to .env at the repo root and fill it in.`,
+        `Load the executor-only environment before constructing the payer.`,
     );
   }
   return env;

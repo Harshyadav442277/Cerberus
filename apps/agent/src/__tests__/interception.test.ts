@@ -11,6 +11,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { loadAgentProcessEnv } from "../env.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
@@ -37,6 +38,13 @@ function stripComments(source: string): string {
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
+function stripSecretScrubs(source: string): string {
+  return source.replace(
+    /delete\s+process\.env\.(?:EVM_PRIVATE_KEY|EXECUTOR_EVM_PRIVATE_KEY|EXECUTION_AUTH_PRIVATE_KEY)\s*;/g,
+    "",
+  );
+}
+
 /** This scanner holds the forbidden patterns as literals, so it cannot scan itself. */
 const SELF = relative(REPO_ROOT, fileURLToPath(import.meta.url));
 
@@ -54,11 +62,31 @@ describe("repository scan preconditions", () => {
   });
 });
 
-describe("x402 is importable from exactly one place (Rules R6)", () => {
-  it("only apps/agent/src/settlement imports @safr/x402-client", () => {
+describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", () => {
+  it("scrubs accidentally inherited payment and authorization keys from the agent process", () => {
+    process.env.EVM_PRIVATE_KEY = `0x${"aa".repeat(32)}`;
+    process.env.EXECUTOR_EVM_PRIVATE_KEY = `0x${"bb".repeat(32)}`;
+    process.env.EXECUTION_AUTH_PRIVATE_KEY = `0x${"cc".repeat(32)}`;
+    loadAgentProcessEnv();
+    strictEqual(process.env.EVM_PRIVATE_KEY, undefined);
+    strictEqual(process.env.EXECUTOR_EVM_PRIVATE_KEY, undefined);
+    strictEqual(process.env.EXECUTION_AUTH_PRIVATE_KEY, undefined);
+  });
+
+  it("loads only the agent-specific environment file", () => {
+    const envModule = FILES.find(
+      (file) => file.path === join("apps", "agent", "src", "env.ts"),
+    );
+    strictEqual(envModule !== undefined, true);
+    strictEqual(envModule!.code.includes('"../../../.env.agent"'), true);
+    strictEqual(envModule!.code.includes('"../../../.env"'), false);
+    strictEqual(envModule!.code.includes('"../../../.env.authorizer"'), false);
+    strictEqual(envModule!.code.includes('"../../../.env.executor"'), false);
+  });
+  it("only the isolated executor and x402 diagnostics import @safr/x402-client", () => {
     // The x402 package's own source and scripts are naturally exempt.
     const allowed = [
-      join("apps", "agent", "src", "settlement") + sep,
+      join("apps", "executor") + sep,
       join("packages", "x402-client") + sep,
     ];
 
@@ -71,7 +99,7 @@ describe("x402 is importable from exactly one place (Rules R6)", () => {
     strictEqual(
       importers.length,
       0,
-      `@safr/x402-client may only be imported from apps/agent/src/settlement/. Found: ${importers.join(", ")}`,
+      `@safr/x402-client may only be imported by the isolated executor. Found: ${importers.join(", ")}`,
     );
   });
 
@@ -81,6 +109,32 @@ describe("x402 is importable from exactly one place (Rules R6)", () => {
     );
     strictEqual(orchestrator !== undefined, true);
     strictEqual(/@safr\/x402-client|@x402\//.test(orchestrator!.code), false);
+  });
+
+  it("the entire agent application contains no x402 or payment-key reference", () => {
+    const agentFiles = FILES.filter((file) => file.path.startsWith(join("apps", "agent") + sep));
+    const offenders = agentFiles
+      .filter((file) =>
+        /@safr\/x402-client|@x402\/|EXECUTOR_EVM_PRIVATE_KEY|\bEVM_PRIVATE_KEY\b/.test(
+          stripSecretScrubs(file.code),
+        ),
+      )
+      .map((file) => file.path);
+    strictEqual(
+      offenders.length,
+      0,
+      `compromised agent process must have neither payer imports nor key variables: ${offenders.join(", ")}`,
+    );
+  });
+
+  it("no non-executor application references the payment-key variable", () => {
+    const offenders = FILES.filter(
+      (file) =>
+        file.path.startsWith("apps" + sep) &&
+        !file.path.startsWith(join("apps", "executor") + sep) &&
+        /EXECUTOR_EVM_PRIVATE_KEY|\bEVM_PRIVATE_KEY\b/.test(stripSecretScrubs(file.code)),
+    ).map((file) => file.path);
+    strictEqual(offenders.length, 0, `payment key leaked outside executor: ${offenders.join(", ")}`);
   });
 
   it("no module outside packages/x402-client imports the raw @x402/* SDK", () => {

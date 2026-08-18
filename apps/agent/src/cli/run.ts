@@ -9,8 +9,6 @@
  *   npm run demo -- new_counterparty --live-escalation
  *       wait for Approve/Deny from the dashboard API (Phase 6)
  */
-import { resolve } from "node:path";
-import { config as loadEnv } from "dotenv";
 import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool } from "@safr/db";
@@ -18,9 +16,10 @@ import { createAuditLog } from "../audit.js";
 import { createAutoEscalationPort, createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator, type Scenario } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
-import { createSettlementPort } from "../settlement/index.js";
+import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
+import { loadAgentProcessEnv } from "../env.js";
 
-loadEnv({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
+loadAgentProcessEnv();
 
 const AGENT_ID = "agent_treasury_01";
 
@@ -75,6 +74,7 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
     escalations: liveEscalation
       ? createDbEscalationPort()
       : createAutoEscalationPort(denyEscalation ? "denied" : "approved"),
+    authorization: createAuthorizationPort,
     // A factory, so on DENY the settlement module is never even constructed.
     settlement: createSettlementPort,
   });

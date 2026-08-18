@@ -21,17 +21,37 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Phase 8:** narration recorded; final visual edit not completed to publication standard and intentionally omitted. Non-blocking: the architecture diagram and verified evidence satisfy the Stage 1 supporting-material requirement.
 - **Phase 9:** **complete.** The submission-ready architecture slide is tracked at `docs/assets/safr-architecture-slide.png` and embedded in the README.
 - **Phase 10:** repository-side technical copy and evidence are complete. Team identity and portal submission state are human-only and intentionally not inferred here.
+- **Stage-2 finalist hardening:** active under `Critique.md`. Phase 1 signer isolation
+  and Execution Authorization are code/test complete on local branch
+  `codex/finalist-hardening`; the fresh funded hardened-path run is pending because
+  this clean worktree has no ignored runtime environment files. Phases 2–8 have not
+  started.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **91/91**, re-verified Aug 14. Historical entries below quoting 84/87 were correct when written.
-- **Next concrete step:** finish the repository cleanup and verification pass; after that, only human-owned portal/team actions remain. No further product features are planned.
+- **Test count:** **119/119**, re-verified Aug 18. Historical entries below preserve
+  the counts that were correct when written.
+- **Next concrete step:** configure the four ignored environment files on the funded
+  demo machine and run one ALLOW plus one dashboard-approved ESCALATE through the new
+  executor. Do not begin Stage-2 Phase 2 until that run succeeds and produces fresh
+  explorer-verifiable hashes.
 
-**Known limitations (sequential §9 demo unaffected — say so in the submission):** concurrent evaluate→settle is not locked; `rolling_window.window` is hardcoded to 24h matching the seed; overnight time-window wrap is unsupported. No auth on the local escalation endpoint is intentional (Rules R2 closed stack).
+**Current finalist claim limits:** authorization consumption is process-local and a
+second authorization can still be issued for the same audit; the reservation ID is a
+Phase-1 marker, not financial state; the resource hash covers the intended request,
+not the live 402 challenge; and a lost response after broadcast still maps to failed
+rather than `OUTCOME_UNKNOWN`. These are Phases 2–5, not hidden defects in the Phase-1
+claim. The prototype isolates secrets by application process and configuration, not
+by a separate OS/container security principal; production must run the executor under
+a distinct identity or managed secret boundary before claiming resistance to
+arbitrary same-host filesystem compromise. The older sequential-demo limitations
+remain: `rolling_window.window` is hardcoded to 24h, overnight time-window wrap is
+unsupported, and no auth on the local escalation endpoint is intentional under Rules
+R2.
 
 **Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` / `demo:script` need `npm run merchant` running. `demo:script -- --thrice` is the Phase 7 DoD check. `demo -- --live-escalation` waits for a dashboard Approve.
 Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
@@ -65,6 +85,40 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 18 — Stage-2 Phase 1 signer isolation and Execution Authorization
+
+**Built:** added `packages/execution-authorization` with strict signed-capability
+schemas, deterministic proposal hashing, expiry and exact-field verification, and an
+atomic process-local one-shot store. Added `apps/executor`, the only application that
+loads `EXECUTOR_EVM_PRIVATE_KEY` or imports the payer. Added a trusted API authorizer
+that re-reads and deterministically re-evaluates stored action/mandate/counter state
+before signing. The agent now calls the authorizer and executor over bounded HTTP and
+has no payer import or payment key. Runtime secrets are split across `.env.agent`,
+`.env.authorizer`, and `.env.executor`; shared `.env` is public configuration only.
+
+**Verified:** typecheck clean; **119/119 tests in 26 suites**; dashboard production
+build clean with six routes; `AuditAnchor` compiles to 263-byte bytecode; `git diff
+--check` clean. Adversarial tests refuse forged, expired, replayed, proposal-mutated,
+mandate-mutated, reservation-mutated, chain-mutated, token-mutated, amount-mutated,
+payee-mutated, and resource-mutated authorizations before payer construction. A
+repository scan proves the agent reads only `.env.agent`, contains no payer/key
+reference, and `DENY` reaches neither authorization nor execution.
+
+**Not yet verified live:** this clean worktree has no `.env`, `.env.agent`,
+`.env.authorizer`, or `.env.executor`, so no fresh funded settlement was attempted.
+The Aug 14 hashes prove the older Stage-1 path, not the new signer boundary.
+
+**Decisions:** the Bible §7 schemas remain untouched; Execution Authorization is a
+separate security record. Phase 1 uses explicit `phase1_unreserved:<audit_id>` and
+process-local replay state so it cannot accidentally claim Phase-2/3 guarantees.
+Exact challenge binding and ambiguous settlement classification remain in their
+fixed later phases. The agent-specific environment file was chosen so even a legacy
+root `.env` payment key is never parsed into agent memory.
+
+**Next:** migrate secrets on the funded demo machine without committing them, run the
+four-service hardened path, and record fresh ALLOW/approved-ESCALATE hashes. Begin
+atomic reservations only after that Phase-1 DoD evidence is green.
 
 ### Aug 14 — README clone-to-reproduction walkthrough
 
@@ -281,7 +335,9 @@ This is the phase that makes the project what it claims to be. The interception 
 
 **Built**
 - `apps/agent/src/orchestrator.ts` — `runAction(action, deps)`. Resolves the mandate at `proposed_at` → `evaluate()` → writes the audit record → returns early on DENY and on an unapproved ESCALATE → only then reaches settlement. Reads top to bottom as the Architecture 2.2 sketch.
-- `apps/agent/src/settlement/` — the ONLY module outside `packages/x402-client` allowed to import the x402 client.
+- **Historical Stage-1 boundary, superseded Aug 18:** `apps/agent/src/settlement/`
+  was then the only module outside `packages/x402-client` allowed to import the x402
+  client. It now contains HTTP clients only; `apps/executor` is the sole payer importer.
 - `apps/agent/src/intent-generator.ts` — Anthropic Messages API over plain `fetch` when `ANTHROPIC_API_KEY` is set, fixtures otherwise. Both validated against the Section 7.3 schema, so nothing downstream can tell which produced an action.
 - `apps/agent/src/escalations.ts` — `createEscalationRegistry()` (a real hold, resolved by `submitDecision`; Phase 6's API replaces it without touching the orchestrator) and `createAutoEscalationPort()` for the scripted run.
 - `apps/agent/src/audit.ts` + new writes in `packages/db` — `insertProposedAction`, `insertAuditLogRecord`, `updateAuditSettlement`, `updateAuditHumanReview`.

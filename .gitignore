@@ -4,8 +4,11 @@ dist/
 .next/
 out/
 
-# Never commit credentials. .env holds EVM_PRIVATE_KEY.
+# Never commit credentials. Signer secrets belong only in process-specific files.
 .env
+.env.agent
+.env.executor
+.env.authorizer
 .env.local
 .env.*.local
 

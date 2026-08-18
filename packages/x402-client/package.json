@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The only module in SAFR Runtime that talks to x402. Imported solely from apps/agent/src/settlement/ (see Rules.md R6).",
+  "description": "The only payer module that talks to x402. Imported solely by the isolated executor and standalone rail diagnostics.",
   "exports": {
     ".": "./src/index.ts"
   },

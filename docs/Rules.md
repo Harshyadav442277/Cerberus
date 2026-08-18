@@ -4,6 +4,12 @@
 **Precedence:** `SAFR_RUNTIME_PROJECT_BIBLE.md` > `Rules.md` > `PRD.md` / `Architecture.md` / `Phases.md` / `Design.md` > my own judgment.
 **Default posture:** When in doubt, do less and ask. The deadline is close and scope creep is the top risk.
 
+**Stage 2 amendment (18 August 2026):** `Critique.md` is the approved finalist
+security-depth specification. It does not replace the Bible's product direction,
+terminology, schemas, or rule order; it does supersede prior decisions to defer signer
+isolation, concurrency, replay/staleness, exact x402 binding, and settlement
+reconciliation. Implement its phases in order without broadening the product.
+
 ---
 
 ## R0. The Bible is the source of truth
@@ -128,3 +134,16 @@ From the start of Phase 1, after every meaningful chunk of work, update `Memory.
 ## R11. Honesty about state
 
 Never report a phase as working without having run it. Never fill a demo gap with narration. Bible §12 asks whether the demo works "live, without narration filling gaps" — that standard applies to my status reports too. If something is mocked, stubbed, or passing only in tests, say so in those words.
+
+## R12. Finalist authority boundary
+
+- The agent/application process must never hold or load the x402 payment key.
+- Only `apps/executor` may import the payer-side `@safr/x402-client` package.
+- ALLOW and approved ESCALATE receive a signed Execution Authorization before the
+  isolated executor can construct the payer.
+- The executor fails closed on any signature, expiry, replay, proposal, mandate,
+  reservation, chain, token, amount, payee, or resource mismatch.
+- The Bible Section 7 schemas remain frozen. Execution Authorization and reservation
+  state are separate security records; do not add their fields to §7.1–§7.5 objects.
+- The eight-phase order in `Critique.md` is fixed. Do not implement later-phase claims
+  partially and describe them as complete.

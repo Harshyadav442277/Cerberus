@@ -35,9 +35,9 @@ importers:
       '@safr/disposition-engine':
         specifier: workspace:*
         version: link:../../packages/disposition-engine
-      '@safr/x402-client':
+      '@safr/execution-authorization':
         specifier: workspace:*
-        version: link:../../packages/x402-client
+        version: link:../../packages/execution-authorization
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
@@ -66,6 +66,12 @@ importers:
       '@safr/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@safr/disposition-engine':
+        specifier: workspace:*
+        version: link:../../packages/disposition-engine
+      '@safr/execution-authorization':
+        specifier: workspace:*
+        version: link:../../packages/execution-authorization
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -75,6 +81,9 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      viem:
+        specifier: ^2.55.11
+        version: 2.55.11(typescript@5.9.3)(zod@3.25.76)
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -125,6 +134,46 @@ importers:
       tailwindcss:
         specifier: ^3.4.16
         version: 3.4.19(tsx@4.23.8)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  apps/executor:
+    dependencies:
+      '@safr/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@safr/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@safr/execution-authorization':
+        specifier: workspace:*
+        version: link:../../packages/execution-authorization
+      '@safr/x402-client':
+        specifier: workspace:*
+        version: link:../../packages/x402-client
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
+      viem:
+        specifier: ^2.55.11
+        version: 2.55.11(typescript@5.9.3)(zod@3.25.76)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.6
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.8
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -278,6 +327,28 @@ importers:
       '@safr/core':
         specifier: workspace:*
         version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.8
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/execution-authorization:
+    dependencies:
+      '@safr/core':
+        specifier: workspace:*
+        version: link:../core
+      viem:
+        specifier: ^2.55.11
+        version: 2.55.11(typescript@5.9.3)(zod@3.25.76)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^22.10.2

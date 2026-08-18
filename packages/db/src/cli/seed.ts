@@ -3,19 +3,22 @@
  *
  * Run: pnpm db:seed
  */
-import { privateKeyToAccount } from "viem/accounts";
+import { resolve } from "node:path";
+import { config as loadDotenv } from "dotenv";
 import { insertAgentIdentity, insertMandate } from "../repository.js";
 import { SEED_AGENT, SEED_MANDATE } from "../seed-data.js";
 import { closePool } from "../pool.js";
 
+const fileEnv: Record<string, string> = {};
+loadDotenv({
+  path: resolve(import.meta.dirname, "../../../../.env"),
+  quiet: true,
+  processEnv: fileEnv,
+});
+
 function payerAddress(): string | null {
-  const key = process.env["EVM_PRIVATE_KEY"]?.trim();
-  if (!key) return null;
-  try {
-    return privateKeyToAccount(key as `0x${string}`).address;
-  } catch {
-    return null;
-  }
+  const address = process.env.EXECUTOR_WALLET_ADDRESS?.trim() || fileEnv["EXECUTOR_WALLET_ADDRESS"]?.trim();
+  return /^0x[0-9a-fA-F]{40}$/.test(address ?? "") ? address! : null;
 }
 
 async function main(): Promise<void> {
@@ -25,7 +28,7 @@ async function main(): Promise<void> {
   await insertAgentIdentity(agent);
   console.log(`\n  seeded agent    ${agent.agent_id} (${agent.wallet_address})`);
   if (!address) {
-    console.log("                  EVM_PRIVATE_KEY not set — wallet_address left as zero address");
+    console.log("                  EXECUTOR_WALLET_ADDRESS not set — wallet_address left as zero address");
   }
 
   await insertMandate(SEED_MANDATE);

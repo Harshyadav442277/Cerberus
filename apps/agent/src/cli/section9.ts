@@ -7,8 +7,6 @@
  *
  * Prefer: npm run demo:script
  */
-import { resolve } from "node:path";
-import { config as loadEnv } from "dotenv";
 import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool, getAuditLogRecord, resetDemoState } from "@safr/db";
@@ -16,9 +14,10 @@ import { createAuditLog } from "../audit.js";
 import { createAutoEscalationPort, createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator } from "../intent-generator.js";
 import { runAction, type Outcome } from "../orchestrator.js";
-import { createSettlementPort } from "../settlement/index.js";
+import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
+import { agentEnv, loadAgentProcessEnv } from "../env.js";
 
-loadEnv({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
+loadAgentProcessEnv();
 
 const AGENT_ID = "agent_treasury_01";
 const ORDER = ["clean", "cap_breach", "new_counterparty"] as const;
@@ -57,7 +56,7 @@ function fail(message: string): never {
 }
 
 async function checkPrereqs(): Promise<void> {
-  const merchant = process.env.MERCHANT_BASE_URL ?? "http://localhost:4021";
+  const merchant = agentEnv.merchantBaseUrl;
   try {
     const res = await fetch(`${merchant}/health`);
     if (!res.ok) fail(`merchant health ${res.status} at ${merchant}`);
@@ -126,6 +125,7 @@ async function runOnce(runLabel: string): Promise<void> {
       controls: { loadEvaluationContext },
       audit: auditLog,
       escalations,
+      authorization: createAuthorizationPort,
       settlement: createSettlementPort,
     });
 

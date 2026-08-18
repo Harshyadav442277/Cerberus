@@ -59,7 +59,7 @@ export interface AuditLogOptions {
 /**
  * Builds the audit log, wiring anchoring from the environment.
  *
- * If `AUDIT_ANCHOR_ADDRESS` and `EVM_PRIVATE_KEY` are absent the queue still computes
+ * If `AUDIT_ANCHOR_ADDRESS` and `AUDIT_ANCHOR_PRIVATE_KEY` are absent the queue still computes
  * and stores digests — it just skips the chain. Records are never lost because
  * anchoring is unavailable.
  */

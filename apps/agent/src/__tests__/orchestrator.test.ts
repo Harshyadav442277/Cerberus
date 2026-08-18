@@ -12,6 +12,7 @@ import { runAction } from "../orchestrator.js";
 import {
   auditSpy,
   action,
+  authorizationSpy,
   autoEscalation,
   controlsPort,
   settlementSpy,
@@ -20,10 +21,12 @@ import {
 describe("DENY — the payment is never constructed", () => {
   it("does not invoke pay(), and does not even construct the settlement port", async () => {
     const { factory, spy } = settlementSpy();
+    const auth = authorizationSpy();
     const outcome = await runAction(action({ counterparty: "merchant_abc", amount: 5.0 }), {
       controls: controlsPort(),
       audit: auditSpy(),
       escalations: autoEscalation("approved"),
+      authorization: auth.factory,
       settlement: factory,
     });
 
@@ -34,6 +37,7 @@ describe("DENY — the payment is never constructed", () => {
     // The Definition of Done, stated three ways.
     strictEqual(spy.callCount, 0, "pay() must never be invoked on a DENY");
     strictEqual(spy.constructedCount, 0, "the settlement port must never be constructed");
+    strictEqual(auth.constructedCount(), 0, "DENY must not construct an authorization client");
     strictEqual(outcome.settlementAttempted, false);
     strictEqual(outcome.settlement, null);
   });
@@ -45,6 +49,7 @@ describe("DENY — the payment is never constructed", () => {
       controls: controlsPort(),
       audit,
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -60,6 +65,7 @@ describe("DENY — the payment is never constructed", () => {
       controls: controlsPort({ rolling_total_24h: 0, hourly_tx_count: 0 }, null),
       audit: auditSpy(),
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -79,6 +85,7 @@ describe("ESCALATE — held until a human decides", () => {
       controls: controlsPort(),
       audit: auditSpy(),
       escalations: registry,
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -107,6 +114,7 @@ describe("ESCALATE — held until a human decides", () => {
       controls: controlsPort(),
       audit: auditSpy(),
       escalations: autoEscalation("denied"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -123,6 +131,7 @@ describe("ESCALATE — held until a human decides", () => {
       controls: controlsPort(),
       audit,
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -134,6 +143,25 @@ describe("ESCALATE — held until a human decides", () => {
 });
 
 describe("ALLOW — settlement proceeds", () => {
+  it("fails closed when the trusted authorizer refuses and never constructs settlement", async () => {
+    const audit = auditSpy();
+    const auth = authorizationSpy({ fail: true });
+    const { factory, spy } = settlementSpy();
+    const outcome = await runAction(action(), {
+      controls: controlsPort(),
+      audit,
+      escalations: autoEscalation("approved"),
+      authorization: auth.factory,
+      settlement: factory,
+    });
+
+    strictEqual(outcome.status, "authorization_failed");
+    strictEqual(outcome.authorizationAttempted, true);
+    strictEqual(outcome.settlementAttempted, false);
+    strictEqual(spy.constructedCount, 0);
+    strictEqual(audit.finalized.length, 1);
+  });
+
   it("invokes pay() exactly once and writes the settlement back", async () => {
     const audit = auditSpy();
     const { factory, spy } = settlementSpy();
@@ -141,13 +169,15 @@ describe("ALLOW — settlement proceeds", () => {
       controls: controlsPort(),
       audit,
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
     strictEqual(outcome.status, "settled");
     strictEqual(outcome.disposition?.rule, null);
     strictEqual(spy.callCount, 1);
-    strictEqual(spy.calls[0]?.payload.counterparty, "merchant_xyz");
+    strictEqual(spy.calls[0]?.audit_id, "audit_1");
+    strictEqual(spy.calls[0]?.envelope.authorization.authorizationId, "auth_test");
     strictEqual(audit.settlements.length, 1);
     strictEqual(audit.settlements[0]?.settlement.tx_hash, "0xdeadbeef");
     // No human is involved in a clean ALLOW.
@@ -161,6 +191,7 @@ describe("ALLOW — settlement proceeds", () => {
       controls: controlsPort(),
       audit: auditSpy(),
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -186,6 +217,7 @@ describe("ALLOW — settlement proceeds", () => {
       controls: controlsPort(),
       audit,
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -206,6 +238,7 @@ describe("the engine's verdict is what drives the branch", () => {
       controls: controlsPort({ rolling_total_24h: 2.8, hourly_tx_count: 0 }),
       audit: auditSpy(),
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
@@ -219,6 +252,7 @@ describe("the engine's verdict is what drives the branch", () => {
       controls: controlsPort({ rolling_total_24h: 0, hourly_tx_count: 10 }),
       audit: auditSpy(),
       escalations: autoEscalation("approved"),
+      authorization: authorizationSpy().factory,
       settlement: factory,
     });
 

@@ -13,6 +13,8 @@
  * Run: pnpm phase1
  */
 import { createX402Payer } from "../src/pay.js";
+import { requireEnv } from "../src/env.js";
+import "./load-executor-env.js";
 
 const AMOUNT_USDC = 0.01;
 const COUNTERPARTY = "merchant_xyz";
@@ -20,7 +22,7 @@ const COUNTERPARTY = "merchant_xyz";
 async function main(): Promise<void> {
   console.log("\nPhase 1 — bare x402 payment (no governance logic)\n");
 
-  const payer = createX402Payer();
+  const payer = createX402Payer(requireEnv());
   console.log(`  payer         ${payer.address}`);
   console.log(`  counterparty  ${COUNTERPARTY}`);
   console.log(`  amount        ${AMOUNT_USDC} USDC`);

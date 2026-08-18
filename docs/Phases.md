@@ -5,6 +5,41 @@
 
 **Final implementation status (Aug 14):** Phases 0–7 and 9 are complete and verified. Phase 8's narration was recorded, but the visual edit was not completed to publication standard and is intentionally omitted; the mandatory supporting-material requirement is satisfied by the architecture diagram and verified evidence captures. Phase 10's repository materials are complete; team identity and portal submission state remain external human-only facts.
 
+## Stage 2 finalist hardening — active from 18 August 2026
+
+The sections below preserve the completed Stage-1 build history. Stage 2 is governed
+by `Critique.md`, which strengthens the authority boundary without changing the
+Bible's product scope, schemas, terminology, deterministic rule order, or x402/Base
+Sepolia rail. Complete these phases strictly in order; do not begin the next phase
+until the current phase passes its Definition of Done.
+
+1. **Signer isolation and Execution Authorization — code and adversarial tests
+   complete; fresh hardened live run pending.** The agent contains neither payment
+   key nor payer import. A trusted control plane re-evaluates stored context and signs
+   a short-lived capability. Only an isolated executor may load the payment key,
+   verify every bound field, consume the capability, and construct the payer.
+2. **Atomic budget reservations — not started.** Reserve spend transactionally before
+   authorization; no database transaction remains open during settlement.
+3. **Durable replay and freshness — not started.** Persist one-shot state and reject
+   stale mandate versions, stale human approvals, and duplicate proposals.
+4. **Exact x402 binding — not started.** Bind authorization to the exact live payment
+   challenge/resource rather than only the intended request target.
+5. **Ambiguous settlement reconciliation — not started.** Introduce
+   `OUTCOME_UNKNOWN`; never blindly retry a payment that may have broadcast.
+6. **Complete adversarial suite — not started.** Consolidate the critique's hostile
+   cases as repeatable evidence.
+7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and
+   adversarial cases without broadening the product.
+8. **Demo hardening and freeze — not started.** Run the complete hardened path,
+   capture evidence, then freeze.
+
+**Stage-2 Phase 1 Definition of Done:** the agent cannot access the x402 payment key
+or import the payer; DENY reaches neither authorizer nor executor; forged, expired,
+replayed, and field-mutated authorizations fail before payer construction; all legacy
+tests, typecheck, contract compile, and dashboard production build pass; and one
+funded Base Sepolia run proves ALLOW and approved ESCALATE through the new executor.
+The last live-run item is deliberately not inferred from the older Stage-1 hashes.
+
 ---
 
 ## Timeline — recomputed against the real date
@@ -57,7 +92,9 @@ Stage 2 (on-site at NTU, Aug 21–23) requires a functional prototype and in-per
 
 **Work**
 - `apps/merchant`: `@x402/express` resource server, one route (`GET /pay/merchant_xyz`), priced in USDC on `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
-- `packages/x402-client`: `@x402/fetch` + `@x402/evm`, signer from `EVM_PRIVATE_KEY` via `viem`.
+- `packages/x402-client`: `@x402/fetch` + `@x402/evm`, signer from the
+  executor-only `EXECUTOR_EVM_PRIVATE_KEY` via `viem` (the original shared-key setup
+  was superseded by Stage-2 Phase 1).
 - A throwaway script that pays that route once and prints the decoded `PAYMENT-RESPONSE`.
 
 **Definition of Done**
@@ -115,7 +152,8 @@ Still no wiring to x402 at this point.
 
 **Definition of Done**
 - A test spies on `x402-client.pay` and asserts it is **never invoked** on a `DENY` path, and not invoked on `ESCALATE` until a decision resolves to approved. Observing that the payment "failed" does not satisfy this — the call must never happen.
-- `x402-client` is importable only from `apps/agent/src/settlement/`; nothing else in the repo imports it.
+- `x402-client` is importable only from `apps/executor` and its own standalone rail
+  diagnostics; `apps/agent/src/settlement/` contains HTTP clients only.
 - No proxy, no global `fetch` patching, no interception after the fact anywhere in the codebase (Bible §6, Rules R6).
 - All three dispositions reach their correct terminal state end-to-end from the command line, with settlement occurring only on ALLOW and ESCALATE→approved.
 

@@ -14,5 +14,11 @@ export {
 export type { IntentGenerator, Scenario } from "./intent-generator.js";
 export { runAction } from "./orchestrator.js";
 export type { Outcome, OutcomeStatus, OrchestratorDeps } from "./orchestrator.js";
-export type { AuditPort, ControlsPort, EscalationPort, SettlementPort } from "./ports.js";
-export { createSettlementPort } from "./settlement/index.js";
+export type {
+  AuditPort,
+  AuthorizationPort,
+  ControlsPort,
+  EscalationPort,
+  SettlementPort,
+} from "./ports.js";
+export { createAuthorizationPort, createSettlementPort } from "./settlement/index.js";

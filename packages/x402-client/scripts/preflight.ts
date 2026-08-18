@@ -10,6 +10,7 @@ import { baseSepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { erc20Abi } from "viem";
 import { readEnv } from "../src/env.js";
+import "./load-executor-env.js";
 
 /** Circle's canonical USDC on Base Sepolia. */
 const USDC_BASE_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as const;
@@ -33,8 +34,8 @@ async function main(): Promise<void> {
   if (!env) {
     fail("environment", `missing ${missing.join(", ")}`);
     console.log(
-      "\n  Create .env at the repo root from .env.example and set EVM_PRIVATE_KEY\n" +
-        "  (payer wallet) and EVM_ADDRESS (merchant payee).\n",
+      "\n  Create .env.executor from .env.executor.example and set\n" +
+        "  EXECUTOR_EVM_PRIVATE_KEY. Keep EVM_ADDRESS in the public .env file.\n",
     );
     process.exit(1);
   }
@@ -48,7 +49,10 @@ async function main(): Promise<void> {
     address = privateKeyToAccount(env.privateKey as `0x${string}`).address;
     pass("payer key", address);
   } catch (error) {
-    fail("payer key", `EVM_PRIVATE_KEY is not a valid hex private key (${(error as Error).message})`);
+    fail(
+      "payer key",
+      `EXECUTOR_EVM_PRIVATE_KEY is not a valid hex private key (${(error as Error).message})`,
+    );
     process.exit(1);
   }
 

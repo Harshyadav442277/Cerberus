@@ -1,4 +1,3 @@
-import { privateKeyToAccount } from "viem/accounts";
 import { getPool } from "./pool.js";
 import { insertAgentIdentity, insertMandate } from "./repository.js";
 import { SEED_AGENT, SEED_MANDATE } from "./seed-data.js";
@@ -12,17 +11,10 @@ export async function resetDemoState(): Promise<{ agentId: string; mandateId: st
     `TRUNCATE TABLE audit_anchor, audit_log, proposed_action RESTART IDENTITY CASCADE`,
   );
 
-  const key = process.env.EVM_PRIVATE_KEY?.trim();
+  const walletAddress = process.env.EXECUTOR_WALLET_ADDRESS?.trim();
   let agent = SEED_AGENT;
-  if (key) {
-    try {
-      agent = {
-        ...SEED_AGENT,
-        wallet_address: privateKeyToAccount(key as `0x${string}`).address,
-      };
-    } catch {
-      // keep seed wallet
-    }
+  if (/^0x[0-9a-fA-F]{40}$/.test(walletAddress ?? "")) {
+    agent = { ...SEED_AGENT, wallet_address: walletAddress! };
   }
 
   await insertAgentIdentity(agent);

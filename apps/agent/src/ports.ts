@@ -1,5 +1,6 @@
 import type { AuditLogRecord, Disposition, HumanReview, ProposedAction } from "@safr/core";
 import type { Counters } from "@safr/disposition-engine";
+import type { SignedExecutionAuthorization } from "@safr/execution-authorization";
 
 /**
  * The collaborators the orchestrator talks to.
@@ -23,7 +24,15 @@ export interface SettlementPort {
    * Executes the payment. The FIRST thing in the whole program that touches x402.
    * Reaching this method at all is what the DENY tests assert can never happen.
    */
-  pay(action: ProposedAction): Promise<import("@safr/core").Settlement>;
+  pay(request: {
+    audit_id: string;
+    envelope: SignedExecutionAuthorization;
+  }): Promise<import("@safr/core").Settlement>;
+}
+
+export interface AuthorizationPort {
+  /** Requests a signed capability from the trusted Cerberus control-plane process. */
+  issue(auditId: string): Promise<SignedExecutionAuthorization>;
 }
 
 export interface EscalationPort {

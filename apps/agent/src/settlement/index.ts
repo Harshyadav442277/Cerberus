@@ -1,64 +1,45 @@
-/**
- * The ONLY place in the repository, outside the x402 package itself, that is allowed
- * to import `@safr/x402-client` (Rules R6, Bible Section 6, Architecture 2.2).
- *
- * An enforcement test in ../__tests__/interception.test.ts scans the whole repo and
- * fails if any other module imports it. Keeping the import surface to this one file
- * is what makes "the payment rail is unreachable before a disposition" a structural
- * property rather than a convention.
- */
-import type { ProposedAction, Settlement } from "@safr/core";
-import { createX402Payer, type X402Payer } from "@safr/x402-client";
-import type { SettlementPort } from "../ports.js";
+/** Agent-side clients for trusted authorization and isolated execution. */
+import { SettlementSchema, type Settlement } from "@safr/core";
+import {
+  SignedExecutionAuthorizationSchema,
+  type SignedExecutionAuthorization,
+} from "@safr/execution-authorization";
+import type { AuthorizationPort, SettlementPort } from "../ports.js";
+import { agentEnv } from "../env.js";
 
-/**
- * Builds the real settlement port.
- *
- * Constructing the payer sets up a signer. It does NOT construct, and cannot
- * construct, an HTTP request — that happens only inside `pay`, which the orchestrator
- * reaches only on ALLOW or on an approved ESCALATE.
- */
-export function createSettlementPort(payer: X402Payer = createX402Payer()): SettlementPort {
+async function errorMessage(response: Response): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+  return typeof body?.error === "string" ? body.error : `HTTP ${response.status}`;
+}
+
+export function createAuthorizationPort(baseUrl = agentEnv.apiBaseUrl): AuthorizationPort {
   return {
-    async pay(action: ProposedAction): Promise<Settlement> {
-      const result = await payer.pay({
-        counterparty: action.payload.counterparty,
-        amount: action.payload.amount,
-        reference: action.payload.reference,
+    async issue(auditId: string): Promise<SignedExecutionAuthorization> {
+      const response = await fetch(`${baseUrl}/execution-authorizations`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ audit_id: auditId }),
+        signal: AbortSignal.timeout(10_000),
       });
-
-      // SettlementResult carries an extra `error` field for operator output; the
-      // Section 7.5 `settlement` object does not have one, so it is dropped here.
-      return {
-        status: result.status,
-        tx_hash: result.tx_hash,
-        rail: result.rail,
-        settled_at: result.settled_at,
-      };
+      if (!response.ok) throw new Error(`authorization refused: ${await errorMessage(response)}`);
+      return SignedExecutionAuthorizationSchema.parse(await response.json());
     },
   };
 }
 
-/** Surfaces the failure reason for CLI output without widening the Section 7.5 shape. */
-export async function payWithDiagnostics(
-  payer: X402Payer,
-  action: ProposedAction,
-): Promise<{ settlement: Settlement; error?: string }> {
-  const result = await payer.pay({
-    counterparty: action.payload.counterparty,
-    amount: action.payload.amount,
-    reference: action.payload.reference,
-  });
+export function createSettlementPort(baseUrl = agentEnv.executorBaseUrl): SettlementPort {
   return {
-    settlement: {
-      status: result.status,
-      tx_hash: result.tx_hash,
-      rail: result.rail,
-      settled_at: result.settled_at,
+    async pay(request): Promise<Settlement> {
+      const response = await fetch(`${baseUrl}/execute`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+        // x402 may include a challenge, signature and confirmation round trip.
+        signal: AbortSignal.timeout(90_000),
+      });
+      if (!response.ok) throw new Error(`executor refused: ${await errorMessage(response)}`);
+      const body = (await response.json()) as { settlement?: unknown };
+      return SettlementSchema.parse(body.settlement);
     },
-    ...(result.error === undefined ? {} : { error: result.error }),
   };
 }
-
-export { createX402Payer };
-export type { X402Payer };

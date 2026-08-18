@@ -8,7 +8,15 @@ import { config as loadEnv } from "dotenv";
 import { closePool, getPool } from "../pool.js";
 import { resetDemoState } from "../reset-demo.js";
 
-loadEnv({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
+const publicEnv: Record<string, string> = {};
+loadEnv({
+  path: resolve(import.meta.dirname, "../../../../.env"),
+  quiet: true,
+  processEnv: publicEnv,
+});
+if (publicEnv["EXECUTOR_WALLET_ADDRESS"]) {
+  process.env.EXECUTOR_WALLET_ADDRESS = publicEnv["EXECUTOR_WALLET_ADDRESS"];
+}
 
 async function main(): Promise<void> {
   const { agentId, mandateId } = await resetDemoState();

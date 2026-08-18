@@ -1,8 +1,8 @@
 /**
  * Deploys AuditAnchor to Base Sepolia.
  *
- * Requires the payer wallet to hold a little Sepolia ETH for gas — the same wallet
- * blocked by Memory.md B1. Once it succeeds, put the printed address in .env as
+ * Requires the dedicated audit-anchor signer to hold a little Base Sepolia ETH for
+ * gas. Once it succeeds, put the printed address in .env and .env.agent as
  * AUDIT_ANCHOR_ADDRESS.
  *
  * Run: npm run contracts:deploy
@@ -15,12 +15,19 @@ import { baseSepolia } from "viem/chains";
 import { compileAuditAnchor } from "./compile.js";
 
 loadEnv({ path: resolve(import.meta.dirname, "../../.env"), quiet: true });
+loadEnv({
+  path: resolve(import.meta.dirname, "../../.env.authorizer"),
+  quiet: true,
+  override: true,
+});
 
-const privateKey = process.env.EVM_PRIVATE_KEY;
+const privateKey = process.env.AUDIT_ANCHOR_PRIVATE_KEY;
 const rpcUrl = process.env.EVM_RPC_URL ?? "https://sepolia.base.org";
 
 async function main(): Promise<void> {
-  if (!privateKey) throw new Error("EVM_PRIVATE_KEY is not set — see .env.example");
+  if (!privateKey) {
+    throw new Error("AUDIT_ANCHOR_PRIVATE_KEY is not set — see .env.authorizer.example");
+  }
 
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   const transport = http(rpcUrl);
@@ -50,7 +57,9 @@ async function main(): Promise<void> {
   console.log(`\n  deployed   ${receipt.contractAddress}`);
   console.log(`  tx         ${hash}`);
   console.log(`  explorer   https://sepolia.basescan.org/address/${receipt.contractAddress}`);
-  console.log(`\n  Add this line to .env:\n    AUDIT_ANCHOR_ADDRESS=${receipt.contractAddress}\n`);
+  console.log(
+    `\n  Add this line to .env and .env.agent:\n    AUDIT_ANCHOR_ADDRESS=${receipt.contractAddress}\n`,
+  );
 }
 
 try {

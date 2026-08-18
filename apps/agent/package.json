@@ -17,7 +17,7 @@
     "@safr/core": "workspace:*",
     "@safr/db": "workspace:*",
     "@safr/disposition-engine": "workspace:*",
-    "@safr/x402-client": "workspace:*",
+    "@safr/execution-authorization": "workspace:*",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {

@@ -1,10 +1,19 @@
 import { resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 
-loadDotenv({ path: resolve(import.meta.dirname, "../../../.env"), quiet: true });
+const fileEnv: Record<string, string> = {};
+loadDotenv({
+  path: resolve(import.meta.dirname, "../../../.env"),
+  quiet: true,
+  processEnv: fileEnv,
+});
+
+// The merchant is untrusted demo scaffolding and must never inherit payer secrets.
+delete process.env.EVM_PRIVATE_KEY;
+delete process.env.EXECUTOR_EVM_PRIVATE_KEY;
 
 function required(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name] ?? fileEnv[name];
   if (!value || value.trim() === "") {
     throw new Error(
       `Missing required environment variable ${name}. Copy .env.example to .env at the repo root and fill it in.`,
@@ -14,7 +23,7 @@ function required(name: string): string {
 }
 
 function optional(name: string, fallback: string): string {
-  const value = process.env[name];
+  const value = process.env[name] ?? fileEnv[name];
   return value && value.trim() !== "" ? value.trim() : fallback;
 }
 

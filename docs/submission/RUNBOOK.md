@@ -3,6 +3,36 @@
 Everything needed to take this machine from powered-off to a running demo, and the
 recovery steps for the failures actually hit during setup.
 
+## Stage-2 signer-isolation addendum — read before running
+
+The public hashes and Windows evidence below remain valid proof of the Stage-1 rail
+and governance flow. They were produced before the finalist signer-isolation change
+and must not be presented as proof that the new authorization/executor boundary has
+settled live. Phase-1 code and adversarial tests are complete; capture a fresh funded
+run after applying this setup.
+
+Create four ignored environment files from their examples. `.env` is shared/public,
+`.env.agent` is the only file parsed by the agent, `.env.authorizer` holds the
+Execution Authorization signer and anchor-deployment key, and `.env.executor` alone
+holds the x402 payment key. If upgrading an old clone, remove `EVM_PRIVATE_KEY` from
+the old `.env`; rename it to `EXECUTOR_EVM_PRIVATE_KEY` in `.env.executor`. Generate
+separate identities with `npm run wallets:new` if the old key was ever exposed to the
+agent process.
+
+The hardened runtime has four long-running services, not three:
+
+```bash
+npm run merchant     # :4021
+npm run api          # :4050, trusted re-evaluation + authorization signer
+npm run executor     # :4060, isolated x402 payment key
+npm run dashboard    # :3000
+```
+
+Verify all four health endpoints before running the agent. Phase 1 currently provides
+process-local one-shot consumption only; durable replay state, atomic reservations,
+live challenge binding, and `OUTCOME_UNKNOWN` reconciliation are later phases in
+`Critique.md`. Do not claim them yet.
+
 ---
 
 ## 0. What is already done on the Windows evidence machine
@@ -15,8 +45,10 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
 - Schema migrated (`001_init`, `002_audit_anchor`) and seeded (`agent_treasury_01`, `mandate_001` v1)
 - `npm run db:verify` — 13/13
-- `npm test` — 91/91, `npm run typecheck` clean, dashboard production build clean
-- merchant (`:4021`), API (`:4050`), dashboard (`:3000`) all responding
+- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 119/119,
+  with typecheck and dashboard production build clean.
+- Stage-1 evidence used merchant (`:4021`), API (`:4050`), and dashboard (`:3000`).
+  Current runs also require the isolated executor (`:4060`).
 - `npm run demo:script -- --thrice` — three consecutive clean runs
 - bare x402 settlement confirmed on Base Sepolia
 - `AuditAnchor` deployed at `0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7`
@@ -100,7 +132,7 @@ npm run db:seed
 npm run db:verify        # expect 13/13
 ```
 
-Then three terminals:
+Then four terminals:
 
 ```bash
 npm run merchant         # terminal 1 — :4021, the x402 payee
@@ -111,16 +143,24 @@ npm run api              # terminal 2 — :4050, audit feed + escalation decisio
 ```
 
 ```bash
-npm run dashboard        # terminal 3 — :3000, compliance dashboard
+npm run executor         # terminal 3 — :4060, isolated x402 signer
+```
+
+```bash
+npm run dashboard        # terminal 4 — :3000, compliance dashboard
 ```
 
 Confirm all three:
 
 ```bash
-curl -s http://localhost:4021/health && curl -s http://localhost:4050/health && curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/
+curl -s http://localhost:4021/health
+curl -s http://localhost:4050/health
+curl -s http://localhost:4060/health
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/
 ```
 
-Expect merchant `status: ok`, API `ok: true` with `database: up`, dashboard `200`.
+Expect merchant `status: ok`, API `ok: true` with `database: up`, executor role
+`isolated-payment-executor`, and dashboard `200`.
 
 ---
 

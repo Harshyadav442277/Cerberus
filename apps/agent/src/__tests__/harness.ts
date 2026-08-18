@@ -7,7 +7,14 @@ import type {
   Settlement,
 } from "@safr/core";
 import type { Counters } from "@safr/disposition-engine";
-import type { AuditPort, ControlsPort, EscalationPort, SettlementPort } from "../ports.js";
+import type { SignedExecutionAuthorization } from "@safr/execution-authorization";
+import type {
+  AuditPort,
+  AuthorizationPort,
+  ControlsPort,
+  EscalationPort,
+  SettlementPort,
+} from "../ports.js";
 
 export const MANDATE: Mandate = {
   mandate_id: "mandate_001",
@@ -67,7 +74,7 @@ export interface SettlementSpy extends SettlementPort {
   callCount: number;
   /** How many times the settlement port was even constructed. */
   constructedCount: number;
-  calls: ProposedAction[];
+  calls: Parameters<SettlementPort["pay"]>[0][];
 }
 
 /**
@@ -85,9 +92,9 @@ export function settlementSpy(result?: Partial<Settlement>): {
     callCount: 0,
     constructedCount: 0,
     calls: [],
-    async pay(proposedAction: ProposedAction): Promise<Settlement> {
+    async pay(request): Promise<Settlement> {
       spy.callCount += 1;
-      spy.calls.push(proposedAction);
+      spy.calls.push(request);
       return {
         status: "settled",
         tx_hash: "0xdeadbeef",
@@ -103,6 +110,47 @@ export function settlementSpy(result?: Partial<Settlement>): {
     factory: () => {
       spy.constructedCount += 1;
       return spy;
+    },
+  };
+}
+
+export const TEST_AUTHORIZATION: SignedExecutionAuthorization = {
+  authorization: {
+    authorizationId: "auth_test",
+    proposalHash: `0x${"11".repeat(32)}`,
+    mandateId: "mandate_001",
+    mandateVersion: 1,
+    reservationId: "phase1_unreserved:audit_1",
+    chainId: 84532,
+    token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    amount: "500000",
+    payTo: "0x1111111111111111111111111111111111111111",
+    resourceHash: `0x${"22".repeat(32)}`,
+    expiresAt: 2_000_000_000,
+    nonce: `0x${"33".repeat(32)}`,
+  },
+  signature: `0x${"44".repeat(65)}`,
+};
+
+export function authorizationSpy(options: { fail?: boolean } = {}): {
+  factory: () => AuthorizationPort;
+  constructedCount: () => number;
+  callCount: () => number;
+} {
+  let constructed = 0;
+  let calls = 0;
+  return {
+    constructedCount: () => constructed,
+    callCount: () => calls,
+    factory: () => {
+      constructed += 1;
+      return {
+        async issue() {
+          calls += 1;
+          if (options.fail) throw new Error("authorization refused (simulated)");
+          return TEST_AUTHORIZATION;
+        },
+      };
     },
   };
 }

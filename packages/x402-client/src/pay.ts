@@ -11,7 +11,7 @@ import type { SettleResponse } from "@x402/core/types";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
-import { requireEnv, type X402Env } from "./env.js";
+import type { X402Env } from "./env.js";
 
 /**
  * Mirrors the `settlement` object of the Audit Log record (Bible Section 7.5) so the
@@ -47,9 +47,7 @@ function isSettleResponse(header: unknown): header is SettleResponse {
  * Builds a payer bound to a single signer. Constructed once and reused, so the
  * signer and scheme registration are not rebuilt per payment.
  */
-export function createX402Payer(overrides?: Partial<X402Env>): X402Payer {
-  const env = { ...requireEnv(), ...overrides };
-
+export function createX402Payer(env: X402Env): X402Payer {
   const signer = privateKeyToAccount(env.privateKey as `0x${string}`);
 
   const client = new x402Client();

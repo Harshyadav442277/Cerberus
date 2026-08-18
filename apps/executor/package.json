@@ -1,0 +1,27 @@
+{
+  "name": "@safr/executor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated Cerberus payment executor. The only application process allowed to hold the x402 payment key.",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "tsx --test src/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@safr/core": "workspace:*",
+    "@safr/db": "workspace:*",
+    "@safr/execution-authorization": "workspace:*",
+    "@safr/x402-client": "workspace:*",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "viem": "^2.55.11",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
