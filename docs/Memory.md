@@ -30,23 +30,25 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   complete: the API requires a trusted reviewer credential, browser approval crosses
   an independently authenticated server-only Next.js route, scripted approval runs in
   a separate trusted process, and the agent has no reviewer credential or decision
-  client. The full suite is now 183/183 across 38 suites. Phases 3.5B–3.5D and 4–8 have
-  not started. The fresh funded
+  client. Phase 3.5B database privilege separation is complete: distinct agent,
+  control-plane, and executor PostgreSQL roles enforce the authority boundary with
+  GRANT/REVOKE, and agent-credential attacks fail at the database. The full suite is
+  now 191/191 across 40 suites. Phases 3.5C–3.5D and 4–8 have not started. The fresh funded
   hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **183/183 across 38 suites**, Aug 19 after Stage-2 Phase 3.5A, against
+- **Test count:** **191/191 across 40 suites**, Aug 19 after Stage-2 Phase 3.5B, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** begin Phase 3.5B database privilege separation. The fresh
+- **Next concrete step:** begin Phase 3.5C mandate immutability/content freshness. The fresh
   funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
   hardened path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 3.5A implementation):** the
+**Current finalist claim limits (after Stage-2 Phase 3.5B implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
 by a durable database compare-and-set; human approvals bind proposal, mandate version,
 and expiry; and both the authorizer and executor fail closed on stale authority before
@@ -59,13 +61,14 @@ and still measure settled-only spend; the reservation layer parses
 by a separate OS/container security principal; production must run the executor under
 a distinct identity or managed secret boundary before claiming resistance to
 arbitrary same-host filesystem compromise. The older sequential-demo limitations
-remain: overnight time-window wrap is unsupported. Reviewer authentication is now
-enforced, but all processes still share one
-powerful PostgreSQL role until Phase 3.5B; mandate rows remain mutable in place until
-3.5C; transaction-count velocity is not yet concurrency-safe until 3.5D.
+remain: overnight time-window wrap is unsupported. Reviewer authentication and
+least-privilege PostgreSQL roles are now enforced. The schema-owner URL is loaded only
+by operator CLIs/tests, not the shared DB package or runtime applications. Mandate rows
+remain mutable in place until 3.5C; transaction-count velocity is not yet
+concurrency-safe until 3.5D.
 
-**Command reference** (run from repo root; scripts call `tsx` directly, no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+**Command reference** (run from repo root; no nested pnpm):
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` / `demo:script` need `npm run merchant` running and an authenticated
 dashboard click or separate `npm run reviewer:auto`. Use `reviewer:auto -- --count=3`
@@ -186,6 +189,38 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 3.5B: database privilege separation
+
+**Vulnerability closed.** Migration `005_database_privilege_separation` creates
+NOLOGIN agent, control-plane, and executor group roles, revokes PUBLIC access, and
+grants only the table/column operations each process needs. Provisioning creates three
+distinct LOGIN roles from `AGENT_DATABASE_URL`, `CONTROL_PLANE_DATABASE_URL`, and
+`EXECUTOR_DATABASE_URL`, rejects schema/database-owner reuse, strips stronger inherited
+URLs, and never prints passwords. The DB pool no longer parses the root `.env`, so an
+agent import cannot capture the schema-owner URL.
+
+**Authority split.** The agent writes immutable-on-conflict proposals, initial audit
+rows, settlement audit state, and anchors. It cannot write `human_review` or
+`human_approval`, mutate mandates, create/bind/transition reservations, issue
+authorizations, or consume them. The trusted control plane owns review/approval,
+reservation creation, and authorization issuance/binding. The executor owns one-shot
+consumption and execution-state transitions. Demo reset/seed moved out of the agent
+process into the trusted operator launcher.
+
+**Verification.** Migration 005 rolled down and back up cleanly. Real-login attacks
+for human approval, mandate mutation, authorization creation/binding, SUBMITTING, and
+authorization consumption all returned PostgreSQL SQLSTATE `42501`; the permitted
+agent → control-plane → executor path also completed. The full suite passed **191/191
+tests across 40 suites** against PostgreSQL 16.14 on port 5544. Typecheck, the
+seven-route dashboard production build, 263-byte contract compile, and
+`git diff --check` pass.
+
+**Remaining boundary.** The prototype still relies on process/config and filesystem
+deployment hygiene rather than separate OS/container identities. Published mandate
+contents remain mutable until Phase 3.5C; velocity concurrency remains Phase 3.5D.
+
+**Next:** Phase 3.5C mandate immutability/content freshness. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 3.5A: reviewer authentication
 

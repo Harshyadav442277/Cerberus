@@ -22,11 +22,7 @@ export async function insertPendingAnchor(
   await getPool().query(
     `INSERT INTO audit_anchor (audit_id, record_hash, status, created_at)
      VALUES ($1, $2, 'pending', $3)
-     ON CONFLICT (audit_id) DO UPDATE SET
-       record_hash = EXCLUDED.record_hash,
-       status      = 'pending',
-       created_at  = EXCLUDED.created_at,
-       error       = NULL`,
+     ON CONFLICT (audit_id) DO NOTHING`,
     [auditId, recordHash, createdAt],
   );
 }

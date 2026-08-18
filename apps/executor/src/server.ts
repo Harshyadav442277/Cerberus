@@ -10,8 +10,10 @@ import {
   dbExecutionContext,
   dbReservations,
 } from "./db-context.js";
-import { executorEnv } from "./env.js";
+import { configureExecutorDatabase, executorEnv } from "./env.js";
 import { createIsolatedExecutor, ExecutionRefusedError } from "./execution.js";
+
+configureExecutorDatabase();
 
 const requestSchema = z
   .object({

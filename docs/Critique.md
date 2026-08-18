@@ -100,9 +100,10 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 
 ## Current phase boundary
 
-Phases 1, 2, 3, and 3.5A are complete. Phase 3.5A passed the full 183-test suite
-against real PostgreSQL, including authenticated HTTP approval writes and refusal of
-agent-style requests before authority state changes.
+Phases 1, 2, 3, 3.5A, and 3.5B are complete. Phase 3.5B passed the full 191-test suite
+against real PostgreSQL. Agent-login attempts to create human approval, mutate a
+mandate, create/bind execution authority, mark a reservation SUBMITTING, or consume
+an authorization all fail at PostgreSQL with SQLSTATE 42501.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -133,13 +134,17 @@ derives reviewer identity from trusted server configuration. The browser submits
 an independently authenticated, server-only Next.js route; the API token is never
 placed in client JavaScript. The agent has neither dashboard credentials nor an API
 reviewer credential, trusted config path, or decision-posting client. Scripted approval
-moved to a separate trusted reviewer process. Database roles remain shared until Phase
-3.5B, so the current boundary is application-process/configuration isolation plus
-authenticated API authority, not yet database-enforced least privilege.
+moved to a separate trusted reviewer process.
+
+Phase 3.5B adds three NOLOGIN group roles plus distinct provisioned LOGIN roles. The
+agent can write proposals and initial/settlement audit state but cannot modify policy,
+review, approval, reservation authority, or authorization state. The control plane
+owns approval, reservation creation, and authorization issuance/binding. The executor
+can consume authorization and transition execution state. The shared DB package no
+longer reads the schema-owner root `.env`; only admin CLIs/tests opt into it.
 
 What may **not** yet be claimed:
 
-- **Phase 3.5B.** PostgreSQL privileges are not separated by process role.
 - **Phase 3.5C.** Published mandate policy contents are not yet database-immutable.
 - **Phase 3.5D.** Transaction-count velocity evaluation is not yet concurrency-safe.
 - **Phase 4.** The resource hash still covers the intended request URL, not the live

@@ -100,8 +100,9 @@ export async function runAction(
 
   let humanReview: HumanReview | null = null;
   if (disposition.disposition === "ESCALATE") {
+    // The trusted control plane atomically persists both human_review and its bound
+    // human_approval before the polling agent can observe this decision.
     humanReview = await deps.escalations.awaitDecision(action.action_id);
-    await deps.audit.recordHumanReview(audit.audit_id, humanReview);
 
     if (humanReview.decision !== "approved") {
       await deps.audit.finalize(audit.audit_id);

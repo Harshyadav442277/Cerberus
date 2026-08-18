@@ -138,6 +138,12 @@ human reviewer for it when `/escalations` opens. All runtime files are gitignore
 Never paste a private key or reviewer credential into an
 issue, screenshot, commit, shared shell profile, or demo.
 
+Replace each `CHANGE_ME_16_CHARS_MIN` database password with a different random value.
+The three runtime URLs must keep distinct usernames: the agent, control plane, and
+executor are intentionally separate PostgreSQL logins. The root `.env` `DATABASE_URL`
+is schema-owner authority for migrations, role provisioning, seed/reset, and tests
+only; no application process loads it.
+
 You may leave `ANTHROPIC_API_KEY`, `AUDIT_ANCHOR_ADDRESS`, and
 `AUDIT_ANCHOR_PRIVATE_KEY` empty in `.env.agent` for local governance verification.
 
@@ -146,9 +152,13 @@ You may leave `ANTHROPIC_API_KEY`, `AUDIT_ANCHOR_ADDRESS`, and
 ```bash
 npm run db:up
 npm run db:migrate
+npm run db:roles
 npm run db:seed
 npm run db:verify
 ```
+
+`db:roles` creates or rotates the three LOGIN roles from the process-specific files
+and grants each exactly one NOLOGIN group role. It never prints their passwords.
 
 Expected result: `db:verify` prints **13 `OK` checks** followed by `All checks
 passed`, including exact Bible Section 7 columns, lossless zod/Postgres round-trips,
@@ -170,10 +180,10 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **183 tests, 38 suites, 183 passed, 0 failed**.
+- The test runner reports **191 tests, 40 suites, 191 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
-  concurrency tests assert a database property (a transaction-scoped lock plus a
-  NUMERIC capacity check) and would prove nothing against a stub.
+  concurrency and database-privilege tests assert PostgreSQL properties and would
+  prove nothing against a stub. The agent-role attacks must return permission denied.
 - The Next.js production build completes and lists seven application routes, including
   the server-only reviewer proxy.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.

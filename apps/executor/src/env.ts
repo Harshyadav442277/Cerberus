@@ -16,6 +16,10 @@ function parse(path: string): Record<string, string> {
 const root = parse(resolve(import.meta.dirname, "../../../.env"));
 const secret = parse(resolve(import.meta.dirname, "../../../.env.executor"));
 
+// Never retain the schema-owner URL merely because public runtime settings still
+// live in the shared file.
+delete root["DATABASE_URL"];
+
 function value(name: string, fallback = ""): string {
   return process.env[name]?.trim() || secret[name]?.trim() || root[name]?.trim() || fallback;
 }
@@ -65,3 +69,15 @@ export const executorEnv = {
     merchantBaseUrl: value("MERCHANT_BASE_URL", "http://localhost:4021"),
   },
 };
+
+/** Installs only the executor login before @safr/db opens its lazy pool. */
+export function configureExecutorDatabase(): void {
+  const databaseUrl =
+    process.env.EXECUTOR_DATABASE_URL?.trim() || secret["EXECUTOR_DATABASE_URL"]?.trim();
+  if (!databaseUrl) {
+    throw new Error("EXECUTOR_DATABASE_URL is required by the isolated executor");
+  }
+  delete process.env.AGENT_DATABASE_URL;
+  delete process.env.CONTROL_PLANE_DATABASE_URL;
+  process.env.DATABASE_URL = databaseUrl;
+}

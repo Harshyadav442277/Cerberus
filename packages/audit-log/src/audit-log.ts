@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import type {
   AuditLogRecord,
   Disposition,
-  HumanReview,
   Mandate,
   ProposedAction,
   Settlement,
@@ -11,7 +10,6 @@ import {
   getAuditLogRecord,
   insertAuditLogRecord,
   insertProposedAction,
-  updateAuditHumanReview,
   updateAuditSettlement,
 } from "@safr/db";
 import { createAnchorClient, readAnchorConfig } from "./anchor.js";
@@ -30,7 +28,6 @@ export interface AuditLog {
     mandate: Mandate,
     disposition: Disposition,
   ): Promise<AuditLogRecord>;
-  recordHumanReview(auditId: string, review: HumanReview): Promise<void>;
   recordSettlement(auditId: string, settlement: Settlement): Promise<void>;
   /**
    * Anchors the record once it has reached its terminal state.
@@ -105,10 +102,6 @@ export function createAuditLog(options: AuditLogOptions = {}): AuditLog {
 
       await insertAuditLogRecord(record);
       return record;
-    },
-
-    async recordHumanReview(auditId, review): Promise<void> {
-      await updateAuditHumanReview(auditId, review);
     },
 
     async recordSettlement(auditId, settlement): Promise<void> {

@@ -29,8 +29,10 @@ until the current phase passes its Definition of Done.
    dashboard uses a server-only proxy, and the agent has no reviewer credential or
    decision client. The protected dashboard proxy also rejects agent-style calls. The
    full suite passes 183/183 tests across 38 suites.
-3.5B. **Database privilege separation — not started.** Enforce process roles with
-   PostgreSQL GRANT/REVOKE rather than TypeScript boundaries alone.
+3.5B. **Database privilege separation — complete and verified.** Separate agent,
+   control-plane, and executor PostgreSQL group/login roles enforce authority with
+   GRANT/REVOKE. Agent-credential attacks fail with SQLSTATE 42501; the full suite
+   passes 191/191 tests across 40 suites.
 3.5C. **Mandate immutability/content freshness — not started.** Published policy
    contents must not change in place under the same version.
 3.5D. **Concurrent velocity enforcement — not started.** Transaction-count races must

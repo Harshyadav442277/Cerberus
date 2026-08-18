@@ -47,7 +47,6 @@ export interface AuditPort {
     mandate: import("@safr/core").Mandate,
     disposition: Disposition,
   ): Promise<AuditLogRecord>;
-  recordHumanReview(auditId: string, review: HumanReview): Promise<void>;
   recordSettlement(auditId: string, settlement: import("@safr/core").Settlement): Promise<void>;
   /**
    * Anchors the record once it can no longer change. Called at every terminal point,

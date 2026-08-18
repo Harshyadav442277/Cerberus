@@ -6,11 +6,11 @@
  *   pnpm --filter @safr/db migrate:status    show applied vs pending
  */
 import { appliedMigrations, listMigrations, migrateDown, migrateUp } from "../migrator.js";
-import { closePool, DATABASE_URL } from "../pool.js";
+import { closePool, getDatabaseUrl } from "../pool.js";
 
 async function main(): Promise<void> {
   const command = process.argv[2] ?? "up";
-  console.log(`\n[db] ${DATABASE_URL.replace(/:\/\/[^@]*@/, "://***@")}\n`);
+  console.log(`\n[db] ${getDatabaseUrl().replace(/:\/\/[^@]*@/, "://***@")}\n`);
 
   switch (command) {
     case "up": {

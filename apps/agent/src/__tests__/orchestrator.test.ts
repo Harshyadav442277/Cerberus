@@ -140,10 +140,10 @@ describe("ESCALATE — held until a human decides", () => {
     strictEqual(outcome.humanReview?.decision, "denied");
   });
 
-  it("records the human decision against the audit record", async () => {
+  it("observes a trusted approval without writing reviewer authority itself", async () => {
     const audit = auditSpy();
     const { factory } = settlementSpy();
-    await runAction(action({ counterparty: "merchant_new", amount: 0.75 }), {
+    const outcome = await runAction(action({ counterparty: "merchant_new", amount: 0.75 }), {
       controls: controlsPort(),
       audit,
       escalations: autoEscalation("approved"),
@@ -152,9 +152,7 @@ describe("ESCALATE — held until a human decides", () => {
     });
 
     strictEqual(audit.records[0]?.disposition, "ESCALATE");
-    strictEqual(audit.humanReviews.length, 1);
-    strictEqual(audit.humanReviews[0]?.auditId, audit.records[0]?.audit_id);
-    strictEqual(audit.humanReviews[0]?.review.decision, "approved");
+    strictEqual(outcome.humanReview?.decision, "approved");
   });
 });
 
@@ -197,7 +195,6 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(audit.settlements.length, 1);
     strictEqual(audit.settlements[0]?.settlement.tx_hash, "0xdeadbeef");
     // No human is involved in a clean ALLOW.
-    strictEqual(audit.humanReviews.length, 0);
     strictEqual(outcome.humanReview, null);
   });
 

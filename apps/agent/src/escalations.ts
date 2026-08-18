@@ -55,8 +55,8 @@ export function createEscalationRegistry(): EscalationRegistry {
  *
  * The agent and the API are separate processes, so the in-memory registry cannot
  * carry the decision. The API writes `human_review` onto the audit row; this port
- * polls that row until it appears. The orchestrator still calls `recordHumanReview`
- * afterwards — an idempotent overwrite of the same JSON.
+ * polls that row until it appears. The agent only observes this control-plane write;
+ * it has no database authority to create or modify human approval state.
  */
 export function createDbEscalationPort(options: {
   pollMs?: number;

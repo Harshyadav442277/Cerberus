@@ -20,9 +20,10 @@ import { auditRouter } from "./routes/audit.js";
 import { escalationsRouter } from "./routes/escalations.js";
 import { healthRouter } from "./routes/health.js";
 import { executionAuthorizationsRouter } from "./routes/execution-authorizations.js";
-import { apiEnv } from "./env.js";
+import { apiEnv, configureControlPlaneDatabase } from "./env.js";
 
 const PORT = apiEnv.port;
+configureControlPlaneDatabase();
 
 const app = express();
 app.use(cors({ origin: true }));

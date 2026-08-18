@@ -40,7 +40,7 @@ function stripComments(source: string): string {
 
 function stripSecretScrubs(source: string): string {
   return source.replace(
-    /delete\s+process\.env\.(?:EVM_PRIVATE_KEY|EXECUTOR_EVM_PRIVATE_KEY|EXECUTION_AUTH_PRIVATE_KEY|REVIEWER_API_TOKEN|REVIEWER_ID|REVIEWER_DASHBOARD_USERNAME|REVIEWER_DASHBOARD_PASSWORD)\s*;/g,
+    /delete\s+process\.env\.(?:EVM_PRIVATE_KEY|EXECUTOR_EVM_PRIVATE_KEY|EXECUTION_AUTH_PRIVATE_KEY|REVIEWER_API_TOKEN|REVIEWER_ID|REVIEWER_DASHBOARD_USERNAME|REVIEWER_DASHBOARD_PASSWORD|DATABASE_URL|CONTROL_PLANE_DATABASE_URL|EXECUTOR_DATABASE_URL)\s*;/g,
     "",
   );
 }
@@ -71,6 +71,10 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
     process.env.REVIEWER_ID = "trusted_reviewer";
     process.env.REVIEWER_DASHBOARD_USERNAME = "reviewer";
     process.env.REVIEWER_DASHBOARD_PASSWORD = "human-reviewer-password";
+    process.env.DATABASE_URL = "postgres://schema-owner:secret@localhost/cerberus";
+    process.env.CONTROL_PLANE_DATABASE_URL = "postgres://control:secret@localhost/cerberus";
+    process.env.EXECUTOR_DATABASE_URL = "postgres://executor:secret@localhost/cerberus";
+    process.env.AGENT_DATABASE_URL = "postgres://agent:limited@localhost/cerberus";
     loadAgentProcessEnv();
     strictEqual(process.env.EVM_PRIVATE_KEY, undefined);
     strictEqual(process.env.EXECUTOR_EVM_PRIVATE_KEY, undefined);
@@ -79,6 +83,11 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
     strictEqual(process.env.REVIEWER_ID, undefined);
     strictEqual(process.env.REVIEWER_DASHBOARD_USERNAME, undefined);
     strictEqual(process.env.REVIEWER_DASHBOARD_PASSWORD, undefined);
+    strictEqual(process.env.DATABASE_URL, "postgres://agent:limited@localhost/cerberus");
+    strictEqual(process.env.CONTROL_PLANE_DATABASE_URL, undefined);
+    strictEqual(process.env.EXECUTOR_DATABASE_URL, undefined);
+    delete process.env.AGENT_DATABASE_URL;
+    delete process.env.DATABASE_URL;
   });
 
   it("loads only the agent-specific environment file", () => {
@@ -93,6 +102,15 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
     strictEqual(envModule!.code.includes('"../../../.env.reviewer"'), false);
   });
 
+  it("the shared database package never loads the schema-owner root environment", () => {
+    const poolModule = FILES.find(
+      (file) => file.path === join("packages", "db", "src", "pool.ts"),
+    );
+    strictEqual(poolModule !== undefined, true);
+    strictEqual(/dotenv|\.env["']/.test(poolModule!.code), false);
+    strictEqual(/postgres:\/\//.test(poolModule!.code), false);
+  });
+
   it("the agent has no reviewer credential, decision client, or trusted config path", () => {
     const agentFiles = FILES.filter((file) => file.path.startsWith(join("apps", "agent") + sep));
     const offenders = agentFiles
@@ -103,6 +121,18 @@ describe("x402 is isolated behind the executor (Rules R6 + finalist Phase 1)", (
       )
       .map((file) => file.path);
     strictEqual(offenders.length, 0, `reviewer authority leaked into agent: ${offenders.join(", ")}`);
+  });
+
+  it("the agent has no control-plane, executor, or schema-owner database config path", () => {
+    const agentFiles = FILES.filter((file) => file.path.startsWith(join("apps", "agent") + sep));
+    const offenders = agentFiles
+      .filter((file) =>
+        /CONTROL_PLANE_DATABASE_URL|EXECUTOR_DATABASE_URL|\.env\.authorizer|\.env\.executor|resetDemoState/.test(
+          stripSecretScrubs(file.code),
+        ),
+      )
+      .map((file) => file.path);
+    strictEqual(offenders.length, 0, `trusted database authority leaked into agent: ${offenders.join(", ")}`);
   });
   it("only the isolated executor and x402 diagnostics import @safr/x402-client", () => {
     // The x402 package's own source and scripts are naturally exempt.

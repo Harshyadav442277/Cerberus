@@ -9,7 +9,7 @@
  */
 import { getAnchor } from "@safr/audit-log";
 import { loadEvaluationContext } from "@safr/controls-repository";
-import { closePool, getAuditLogRecord, resetDemoState } from "@safr/db";
+import { closePool, getAuditLogRecord } from "@safr/db";
 import { createAuditLog } from "../audit.js";
 import { createDbEscalationPort } from "../escalations.js";
 import { SCENARIOS, createIntentGenerator } from "../intent-generator.js";
@@ -17,14 +17,14 @@ import { runAction, type Outcome } from "../orchestrator.js";
 import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
 import { agentEnv, loadAgentProcessEnv } from "../env.js";
 
-loadAgentProcessEnv();
+loadAgentProcessEnv({ requireDatabase: true });
 
 const AGENT_ID = "agent_treasury_01";
 const ORDER = ["clean", "cap_breach", "new_counterparty"] as const;
 
-const args = process.argv.slice(2);
-const thrice = args.includes("--thrice");
-const noReset = args.includes("--no-reset") && !thrice;
+const runLabel =
+  process.argv.find((arg) => arg.startsWith("--run-label="))?.slice("--run-label=".length) ??
+  "Demo run";
 
 interface Expectation {
   disposition: "ALLOW" | "DENY" | "ESCALATE";
@@ -92,10 +92,6 @@ function assertOutcome(key: (typeof ORDER)[number], outcome: Outcome): void {
 
 async function runOnce(runLabel: string): Promise<void> {
   console.log(`\n═══ ${runLabel} ═══`);
-  if (!noReset) {
-    const reset = await resetDemoState();
-    console.log(`  reset     ${reset.agentId} / ${reset.mandateId} (audit log empty)`);
-  }
   await checkPrereqs();
 
   const auditLog = createAuditLog();
@@ -185,16 +181,8 @@ export async function main(): Promise<void> {
   console.log("\nCERBERUS — SAFR Runtime demo (Bible Section 9)");
   console.log("Mode: authenticated reviewer approval required for scenario 3");
 
-  const runs = thrice ? 3 : 1;
-  for (let i = 1; i <= runs; i++) {
-    await runOnce(thrice ? `Run ${i} of 3` : "Demo run");
-  }
-
-  if (thrice) {
-    console.log("\n  Three consecutive clean runs succeeded.\n");
-  } else {
-    console.log("\n  Demo script OK. For DoD: npm run demo:script -- --thrice\n");
-  }
+  await runOnce(runLabel);
+  console.log("\n  Demo script OK. For DoD: npm run demo:script -- --thrice\n");
 }
 
 if (import.meta.filename === process.argv[1]) {

@@ -16,7 +16,7 @@ function optional(name: string, fallback = ""): string {
 }
 
 /** Copies only non-payment settings into the agent process. */
-export function loadAgentProcessEnv(): void {
+export function loadAgentProcessEnv(options: { requireDatabase?: boolean } = {}): void {
   // Fail closed even if an operator accidentally exports a legacy key before launch.
   delete process.env.EVM_PRIVATE_KEY;
   delete process.env.EXECUTOR_EVM_PRIVATE_KEY;
@@ -25,6 +25,16 @@ export function loadAgentProcessEnv(): void {
   delete process.env.REVIEWER_ID;
   delete process.env.REVIEWER_DASHBOARD_USERNAME;
   delete process.env.REVIEWER_DASHBOARD_PASSWORD;
+  delete process.env.DATABASE_URL;
+  delete process.env.CONTROL_PLANE_DATABASE_URL;
+  delete process.env.EXECUTOR_DATABASE_URL;
+
+  const databaseUrl =
+    process.env.AGENT_DATABASE_URL?.trim() || agent["AGENT_DATABASE_URL"]?.trim();
+  if (!databaseUrl && options.requireDatabase) {
+    throw new Error("AGENT_DATABASE_URL is required by the untrusted agent process");
+  }
+  if (databaseUrl) process.env.DATABASE_URL = databaseUrl;
   for (const name of [
     "ANTHROPIC_API_KEY",
     "AUDIT_ANCHOR_ADDRESS",

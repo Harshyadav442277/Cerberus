@@ -8,11 +8,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "migrate": "tsx src/cli/migrate.ts up",
-    "migrate:down": "tsx src/cli/migrate.ts down",
-    "migrate:status": "tsx src/cli/migrate.ts status",
-    "seed": "tsx src/cli/seed.ts",
-    "verify": "tsx src/cli/verify.ts"
+    "migrate": "node --env-file-if-exists=../../.env --import tsx src/cli/migrate.ts up",
+    "migrate:down": "node --env-file-if-exists=../../.env --import tsx src/cli/migrate.ts down",
+    "migrate:status": "node --env-file-if-exists=../../.env --import tsx src/cli/migrate.ts status",
+    "seed": "node --env-file-if-exists=../../.env --import tsx src/cli/seed.ts",
+    "verify": "node --env-file-if-exists=../../.env --import tsx src/cli/verify.ts"
   },
   "dependencies": {
     "@safr/core": "workspace:*",

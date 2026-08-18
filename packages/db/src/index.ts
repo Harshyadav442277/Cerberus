@@ -1,6 +1,5 @@
-export { closePool, DATABASE_URL, getPool } from "./pool.js";
+export { closePool, getDatabaseUrl, getPool } from "./pool.js";
 export {
-  claimAuditHumanReview,
   countByDisposition,
   getActiveMandate,
   getAgentIdentity,
@@ -14,7 +13,6 @@ export {
   insertProposedAction,
   listAuditFeed,
   listPendingEscalations,
-  updateAuditHumanReview,
   updateAuditSettlement,
 } from "./repository.js";
 export type { AuditFeedItem } from "./repository.js";

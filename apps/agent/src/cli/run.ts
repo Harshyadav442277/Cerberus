@@ -18,7 +18,7 @@ import { runAction, type Outcome } from "../orchestrator.js";
 import { createAuthorizationPort, createSettlementPort } from "../settlement/index.js";
 import { loadAgentProcessEnv } from "../env.js";
 
-loadAgentProcessEnv();
+loadAgentProcessEnv({ requireDatabase: true });
 
 const AGENT_ID = "agent_treasury_01";
 

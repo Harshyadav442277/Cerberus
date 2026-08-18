@@ -10,6 +10,10 @@ function parse(path: string): Record<string, string> {
 const root = parse(resolve(import.meta.dirname, "../../../.env"));
 const authorizer = parse(resolve(import.meta.dirname, "../../../.env.authorizer"));
 
+// The shared file contains the schema-owner URL used by migrations and tests. The
+// control plane must not retain that authority in its parsed configuration.
+delete root["DATABASE_URL"];
+
 // This control-plane process may issue authorizations, but it must never hold the
 // payment key itself—even if an operator accidentally exports a legacy variable.
 delete process.env.EVM_PRIVATE_KEY;
@@ -37,3 +41,16 @@ export const apiEnv = {
     authorizer["REVIEWER_ID"]?.trim() ||
     "compliance_officer_01",
 };
+
+/** Installs only the control-plane login before @safr/db opens its lazy pool. */
+export function configureControlPlaneDatabase(): void {
+  const databaseUrl =
+    process.env.CONTROL_PLANE_DATABASE_URL?.trim() ||
+    authorizer["CONTROL_PLANE_DATABASE_URL"]?.trim();
+  if (!databaseUrl) {
+    throw new Error("CONTROL_PLANE_DATABASE_URL is required by the API control plane");
+  }
+  delete process.env.AGENT_DATABASE_URL;
+  delete process.env.EXECUTOR_DATABASE_URL;
+  process.env.DATABASE_URL = databaseUrl;
+}

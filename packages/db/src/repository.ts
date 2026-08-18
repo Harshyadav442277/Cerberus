@@ -5,7 +5,6 @@ import {
   ProposedActionSchema,
   type AgentIdentity,
   type AuditLogRecord,
-  type HumanReview,
   type Mandate,
   type ProposedAction,
   type Settlement,
@@ -127,11 +126,7 @@ export async function insertProposedAction(action: ProposedAction): Promise<void
   await getPool().query(
     `INSERT INTO proposed_action (action_id, agent_id, action_type, proposed_at, payload)
      VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (action_id) DO UPDATE SET
-       agent_id    = EXCLUDED.agent_id,
-       action_type = EXCLUDED.action_type,
-       proposed_at = EXCLUDED.proposed_at,
-       payload     = EXCLUDED.payload`,
+     ON CONFLICT (action_id) DO NOTHING`,
     [
       parsed.action_id,
       parsed.agent_id,
@@ -153,9 +148,14 @@ const AUDIT_COLUMNS = `audit_id, action_id, agent_id, mandate_id, mandate_versio
  */
 export async function insertAuditLogRecord(record: AuditLogRecord): Promise<void> {
   const parsed = AuditLogRecordSchema.parse(record);
+  if (parsed.human_review !== null || parsed.settlement !== null) {
+    throw new Error("initial audit records cannot create review or settlement authority");
+  }
   await getPool().query(
-    `INSERT INTO audit_log (${AUDIT_COLUMNS})
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    `INSERT INTO audit_log (
+       audit_id, action_id, agent_id, mandate_id, mandate_version,
+       disposition, reason, rule_triggered, evaluated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       parsed.audit_id,
       parsed.action_id,
@@ -166,8 +166,6 @@ export async function insertAuditLogRecord(record: AuditLogRecord): Promise<void
       parsed.reason,
       parsed.rule_triggered,
       parsed.evaluated_at,
-      parsed.human_review === null ? null : JSON.stringify(parsed.human_review),
-      parsed.settlement === null ? null : JSON.stringify(parsed.settlement),
     ],
   );
 }
@@ -189,47 +187,6 @@ export async function updateAuditSettlement(
     auditId,
     JSON.stringify(settlement),
   ]);
-}
-
-/**
- * Records the compliance officer's decision on an escalated action.
- *
- * Unconditional writeback — used by the orchestrator after awaitDecision returns
- * (including when the dashboard already wrote the same review via claim).
- */
-export async function updateAuditHumanReview(
-  auditId: string,
-  humanReview: HumanReview,
-): Promise<void> {
-  await getPool().query(`UPDATE audit_log SET human_review = $2 WHERE audit_id = $1`, [
-    auditId,
-    JSON.stringify(humanReview),
-  ]);
-}
-
-/**
- * Atomically claims a pending escalation.
- *
- * Only succeeds when `human_review` is still null. A double-click Approve/Deny, or
- * two reviewers hitting the same action, loses the race with rowCount 0 instead of
- * silently overwriting the first decision — which is what a check-then-write race
- * would allow during the live demo.
- *
- * @returns true if this caller won the claim; false if already decided.
- */
-export async function claimAuditHumanReview(
-  auditId: string,
-  humanReview: HumanReview,
-): Promise<boolean> {
-  const parsed = humanReview;
-  const { rowCount } = await getPool().query(
-    `UPDATE audit_log
-        SET human_review = $2
-      WHERE audit_id = $1
-        AND human_review IS NULL`,
-    [auditId, JSON.stringify(parsed)],
-  );
-  return (rowCount ?? 0) > 0;
 }
 
 /** Feed row for the dashboard: §7.5 record + the proposal that produced it. */

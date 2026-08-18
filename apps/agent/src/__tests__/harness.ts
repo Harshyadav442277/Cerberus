@@ -157,7 +157,6 @@ export function authorizationSpy(options: { fail?: boolean } = {}): {
 
 export interface AuditSpy extends AuditPort {
   records: AuditLogRecord[];
-  humanReviews: Array<{ auditId: string; review: HumanReview }>;
   settlements: Array<{ auditId: string; settlement: Settlement }>;
   finalized: string[];
 }
@@ -165,7 +164,6 @@ export interface AuditSpy extends AuditPort {
 export function auditSpy(): AuditSpy {
   const spy: AuditSpy = {
     records: [],
-    humanReviews: [],
     settlements: [],
     finalized: [],
     async record(
@@ -188,9 +186,6 @@ export function auditSpy(): AuditSpy {
       };
       spy.records.push(record);
       return record;
-    },
-    async recordHumanReview(auditId: string, review: HumanReview): Promise<void> {
-      spy.humanReviews.push({ auditId, review });
     },
     async recordSettlement(auditId: string, settlement: Settlement): Promise<void> {
       spy.settlements.push({ auditId, settlement });
