@@ -187,7 +187,7 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **249 tests, 48 suites, 249 passed, 0 failed**.
+- The test runner reports **255 tests, 48 suites, 255 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.

@@ -48,7 +48,7 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
 - Schema migrated (`001_init`, `002_audit_anchor`) and seeded (`agent_treasury_01`, `mandate_001` v1)
 - `npm run db:verify` — 13/13
-- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 249/249
+- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 255/255
   across 48 suites, with typecheck and dashboard production build clean.
 - Stage-1 evidence used merchant (`:4021`), API (`:4050`), and dashboard (`:3000`).
   Current runs also require the isolated executor (`:4060`) and keyless reconciler.

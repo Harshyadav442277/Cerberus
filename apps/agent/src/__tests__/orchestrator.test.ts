@@ -253,19 +253,22 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(outcome.humanReview, null);
   });
 
-  it("reports a failed settlement without claiming success", async () => {
+  it("treats even a returned executor failure as UNKNOWN and does not finalize", async () => {
     const { factory } = settlementSpy({ status: "failed", tx_hash: null, settled_at: null });
+    const audit = auditSpy();
     const outcome = await runAction(action(), {
       controls: controlsPort(),
-      audit: auditSpy(),
+      audit,
       escalations: autoEscalation("approved"),
       authorization: authorizationSpy().factory,
       settlement: factory,
     });
 
-    strictEqual(outcome.status, "settlement_failed");
+    strictEqual(outcome.status, "settlement_unknown");
     strictEqual(outcome.settlementAttempted, true);
-    strictEqual(outcome.settlement?.tx_hash, null);
+    strictEqual(outcome.settlement, null);
+    strictEqual(audit.settlements.length, 0);
+    strictEqual(audit.finalized.length, 0);
   });
 
   it("on a thrown pay(), reports UNKNOWN without writing a false failure or anchor", async () => {

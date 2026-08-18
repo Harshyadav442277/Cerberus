@@ -43,8 +43,9 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   obtains a fresh clock/context read and rechecks authorization, mandate, approval,
   and reservation authority before consuming or signing. The unsigned request has a
   10-second timeout, and the final database CAS operations enforce expiry. The full
-  suite is now 249/249 across 48 suites. Phase 5 `OUTCOME_UNKNOWN` reconciliation is
-  complete: correlation is durable before transport, a keyless fenced worker resolves
+  suite is now 255/255 across 48 suites after Phase 5.1. Phase 5
+  `OUTCOME_UNKNOWN` reconciliation is complete: correlation is durable before
+  transport, a keyless fenced worker resolves
   exact settlement or expired-unused non-payment, and audit/dashboard state preserves
   UNKNOWN honestly. Phases 6–8 have not started. The fresh funded hardened-path run
   also remains pending.
@@ -52,7 +53,7 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **249/249 across 48 suites**, Aug 19 after Stage-2 Phase 5, against
+- **Test count:** **255/255 across 48 suites**, Aug 19 after Stage-2 Phase 5.1, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
@@ -166,10 +167,12 @@ the reserved decimal is derived from the atomic amount so the two cannot drift.
 Pre-Phase-2 settled audit rows with no reservation are counted once via a LEFT JOIN
 anti-match, so history is neither lost nor double counted.
 
-**Capacity release rules.** Settled → SETTLED. Rail reported failure → FAILED,
-released. Thrown settlement error → OUTCOME_UNKNOWN, capacity held and NOT sweepable
-by TTL. Pre-broadcast RESERVED/AUTHORIZED expire on TTL, which bounds reservation
-griefing; SUBMITTING and OUTCOME_UNKNOWN never do.
+**Capacity release rules at this historical Phase-2 checkpoint.** Settled → SETTLED.
+Rail reported failure → FAILED, released. Thrown settlement error → OUTCOME_UNKNOWN,
+capacity held and NOT sweepable by TTL. Phase 5.1 later superseded the reported-failure
+rule: after signed correlation exists, even a returned failure remains UNKNOWN until
+chain reconciliation. Pre-broadcast RESERVED/AUTHORIZED expire on TTL, which bounds
+reservation griefing; SUBMITTING and OUTCOME_UNKNOWN never do.
 
 **Verification.** 143/143 tests, typecheck clean, dashboard production build clean,
 three consecutive green suite runs. The concurrency tests were validated by mutation:
@@ -209,6 +212,35 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 5.1: post-signature failure safety
+
+**Regression closed.** A merchant response is not proof of non-payment after it has
+received `PAYMENT-SIGNATURE`; it still holds a live EIP-3009 authorization. The
+executor now maps valid settlement-failure responses, HTTP errors, malformed bodies,
+timeouts, and other post-persistence exceptions to `OUTCOME_UNKNOWN`. It returns a
+distinct 503 `OUTCOME_UNKNOWN` response to the agent, which independently refuses to
+write or anchor any returned non-settled result.
+
+**Database defense.** Migration 010 adds a trigger that rejects correlated
+reservations entering `FAILED` except from a fenced `RECONCILING` row. Ordinary
+`markFailed()` is additionally limited to SUBMITTING rows with no payment nonce, so
+only preparation/persistence failures positively known to be pre-transport release
+capacity. Correlated failure is terminal only after the chain reader proves the nonce
+unused at strict EIP-3009 expiry.
+
+**Adversarial evidence.** Tests cover a hostile valid failure after transmission,
+later exact settlement with no second payment, expired-unused release, ordinary and
+raw-SQL correlated failure attempts, malformed JSON, and HTTP 500. The full suite
+passes **255/255 tests across 48 suites** against real PostgreSQL. Migration 010 rolls
+down/up cleanly and typecheck passes.
+
+**Remaining boundary.** Reconciled records still need a durable anchor-finalization
+outbox before the final live demo, and the reconciler login still inherits the broader
+executor database role. Neither weakens payment safety; both remain explicit hardening
+items before final evidence/freeze. Phase 6 has not started.
+
+**Next:** Phase 6 complete adversarial suite. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 5: durable `OUTCOME_UNKNOWN` reconciliation
 

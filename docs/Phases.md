@@ -45,12 +45,16 @@ until the current phase passes its Definition of Done.
    followed by a fresh trusted-context/clock read; authorization, mandate, approval,
    and reservation expiry are rechecked immediately before the final database CAS.
    The full suite passes 232/232 tests across 45 suites.
-5. **Ambiguous settlement reconciliation — complete and verified.** Exact x402
+5. **Ambiguous settlement reconciliation, including Phase 5.1 — complete and
+   verified.** Exact x402
    EIP-3009 correlation is durably committed before transport. A keyless, leased,
    fencing-token worker resolves exact chain-proven settlement or expired-unused
    non-payment, while inconclusive evidence retains capacity. Terminal audit and
    reservation state commit together, and the dashboard displays UNKNOWN and
-   RECONCILING explicitly. The full suite passes 249/249 tests across 48 suites.
+   RECONCILING explicitly. After correlation, merchant-reported failure, HTTP error,
+   and malformed response all remain UNKNOWN; PostgreSQL rejects direct correlated
+   failure outside fenced reconciliation. The full suite passes 255/255 tests across
+   48 suites.
 6. **Complete adversarial suite — not started.** Consolidate the critique's hostile
    cases as repeatable evidence.
 7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and

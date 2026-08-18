@@ -95,7 +95,7 @@ describe("OUTCOME_UNKNOWN reconciliation worker", () => {
     strictEqual(envSource.includes('delete process.env[name]'), true, "inherited authority is scrubbed");
   });
 
-  it("recovers a settled payment after restart without constructing a second payment", async () => {
+  it("finds later settlement after a merchant-reported failure without a second payment", async () => {
     const h = harness(RESERVATION, { used: true, exact: true });
     deepStrictEqual(
       await reconcileOne({ store: h.store, chain: h.chain, nowMs: () => NOW }),
@@ -105,7 +105,7 @@ describe("OUTCOME_UNKNOWN reconciliation worker", () => {
     strictEqual(h.calls[0]?.startsWith("settle:recon_1:"), true);
   });
 
-  it("releases only an authorization proven unused after chain expiry", async () => {
+  it("releases a merchant-reported failure only after expiry proves the nonce unused", async () => {
     const h = harness(RESERVATION, { used: false, timestamp: 1_800_000_300n });
     strictEqual(
       (await reconcileOne({ store: h.store, chain: h.chain, nowMs: () => NOW })).outcome,

@@ -103,7 +103,7 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 ## Current phase boundary
 
 Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5 are complete. The Phase 5 release
-gate passed the full **249/249-test suite across 48 suites** against real PostgreSQL.
+gate passed the full **255/255-test suite across 48 suites** against real PostgreSQL.
 Phase 6 has not started.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
@@ -120,8 +120,9 @@ What may now be claimed:
   as well as by the lock.
 - One reservation backs at most one Execution Authorization, so the same audit cannot
   obtain two independently executable capabilities.
-- A positively reported settlement failure releases its capacity; a thrown settlement
-  error does not, and is recorded as `OUTCOME_UNKNOWN`.
+- Only a positively known pre-transport failure releases capacity directly. Once
+  correlation is persisted and signed authority may have reached the merchant, every
+  non-settled response or exception is `OUTCOME_UNKNOWN` until reconciliation.
 - A reservation survives a process crash between reservation and authorization, and a
   retry resumes the existing hold rather than taking a second one.
 
@@ -174,6 +175,13 @@ authorizations, cancellations, and mismatched transfer evidence remain UNKNOWN.
 concurrent workers and worker restarts. Terminal reservation and audit settlement are
 committed together, and the dashboard projects live execution state beside the frozen
 Section 7.5 audit JSON.
+
+Phase 5.1 closes the post-signature soft-failure race. A valid merchant-reported
+failure, HTTP error, malformed response, timeout, or process crash after correlation
+cannot release capacity. The executor and agent both classify every non-settled result
+as UNKNOWN. Migration 010 additionally rejects a correlated transition to `FAILED`
+unless it comes from a fenced `RECONCILING` row; only chain-proven expired-unused
+authorization reaches that transition.
 
 What may **not** yet be claimed:
 

@@ -180,14 +180,29 @@ export async function runAction(
   // The agent passes only a signed capability and audit identifier to the isolated
   // executor. It never receives, imports, or derives the payment private key.
   //
-  // A soft failure is positive rail evidence and is terminal. A throw is different:
-  // the executor request or chain response may have disappeared after money moved.
-  // Never synthesize `failed`, write a false audit settlement, or anchor a supposedly
-  // terminal record. Durable reservation state and the keyless reconciler own it.
+  // Neither a returned failure nor a throw proves non-payment once signed authority
+  // may have crossed the executor boundary. The hardened executor reports these as
+  // errors, but this second guard prevents a future/alternate executor from making the
+  // agent write a false terminal audit. Durable reservation state and reconciliation
+  // own every non-settled result.
   let settlement: Settlement;
   try {
     settlement = await deps.settlement().pay({ audit_id: audit.audit_id, envelope });
   } catch {
+    return {
+      ...base,
+      status: "settlement_unknown",
+      disposition: effectiveDisposition,
+      audit: effectiveAudit,
+      humanReview,
+      settlement: null,
+      authorizationId: envelope.authorization.authorizationId,
+      authorizationAttempted: true,
+      settlementAttempted: true,
+    };
+  }
+
+  if (settlement.status !== "settled") {
     return {
       ...base,
       status: "settlement_unknown",
