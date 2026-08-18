@@ -386,3 +386,54 @@ export async function beginSubmission(
   );
   return rows[0] ? toReservation(rows[0]) : null;
 }
+
+/** Known success. Capacity converts from reserved to settled; the total is unchanged. */
+export async function markSettled(
+  reservationId: string,
+  settlementTx: string | null,
+  at = new Date().toISOString(),
+): Promise<void> {
+  await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'SETTLED', settlement_tx = $2, updated_at = $3::timestamptz
+      WHERE reservation_id = $1 AND status = 'SUBMITTING'`,
+    [reservationId, settlementTx, at],
+  );
+}
+
+/**
+ * Positively known non-payment. This is the ONLY outcome-driven release.
+ *
+ * Reachable only from a settlement result that explicitly reported failure — never
+ * from a thrown exception, which carries no evidence either way.
+ */
+export async function markFailed(
+  reservationId: string,
+  at = new Date().toISOString(),
+): Promise<void> {
+  await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'FAILED', updated_at = $2::timestamptz
+      WHERE reservation_id = $1 AND status = 'SUBMITTING'`,
+    [reservationId, at],
+  );
+}
+
+/**
+ * Ambiguous outcome: the payment may have been broadcast and accepted.
+ *
+ * Capacity stays held and is NOT released by TTL. Phase 5 adds the reconciler that
+ * resolves these against chain state; until then the safe reading is that the money
+ * might be gone, so the budget stays spent.
+ */
+export async function markOutcomeUnknown(
+  reservationId: string,
+  at = new Date().toISOString(),
+): Promise<void> {
+  await getPool().query(
+    `UPDATE payment_reservation
+        SET status = 'OUTCOME_UNKNOWN', updated_at = $2::timestamptz
+      WHERE reservation_id = $1 AND status = 'SUBMITTING'`,
+    [reservationId, at],
+  );
+}
