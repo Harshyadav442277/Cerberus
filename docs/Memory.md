@@ -32,23 +32,25 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   a separate trusted process, and the agent has no reviewer credential or decision
   client. Phase 3.5B database privilege separation is complete: distinct agent,
   control-plane, and executor PostgreSQL roles enforce the authority boundary with
-  GRANT/REVOKE, and agent-credential attacks fail at the database. The full suite is
-  now 191/191 across 40 suites. Phases 3.5C–3.5D and 4–8 have not started. The fresh funded
+  GRANT/REVOKE, and agent-credential attacks fail at the database. Phase 3.5C mandate
+  immutability is complete: published policy fields cannot change in place, and only
+  one-way lifecycle closure remains mutable. The full suite is now 194/194 across 40
+  suites. Phases 3.5D and 4–8 have not started. The fresh funded
   hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **191/191 across 40 suites**, Aug 19 after Stage-2 Phase 3.5B, against
+- **Test count:** **194/194 across 40 suites**, Aug 19 after Stage-2 Phase 3.5C, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** begin Phase 3.5C mandate immutability/content freshness. The fresh
+- **Next concrete step:** begin Phase 3.5D concurrent velocity enforcement. The fresh
   funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
   hardened path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 3.5B implementation):** the
+**Current finalist claim limits (after Stage-2 Phase 3.5C implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
 by a durable database compare-and-set; human approvals bind proposal, mandate version,
 and expiry; and both the authorizer and executor fail closed on stale authority before
@@ -63,9 +65,9 @@ a distinct identity or managed secret boundary before claiming resistance to
 arbitrary same-host filesystem compromise. The older sequential-demo limitations
 remain: overnight time-window wrap is unsupported. Reviewer authentication and
 least-privilege PostgreSQL roles are now enforced. The schema-owner URL is loaded only
-by operator CLIs/tests, not the shared DB package or runtime applications. Mandate rows
-remain mutable in place until 3.5C; transaction-count velocity is not yet
-concurrency-safe until 3.5D.
+by operator CLIs/tests, not the shared DB package or runtime applications. Published
+mandate policy bodies are database-immutable by version. Transaction-count velocity
+is not yet concurrency-safe until 3.5D.
 
 **Command reference** (run from repo root; no nested pnpm):
 `npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
@@ -189,6 +191,34 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 3.5C: mandate immutability/content freshness
+
+**Vulnerability closed.** Migration `006_mandate_immutability` installs a PostgreSQL
+trigger on every published mandate row. `mandate_id`, version, agent binding,
+`effective_from`, scope, controls, default disposition, creator, and approver cannot
+change for the same version. Policy changes must publish a new row/version. Only
+one-way lifecycle closure is permitted: `active → superseded|revoked` and setting a
+previously-null `effective_to` once.
+
+**Adversarial evidence.** A real authorizer issues Execution Authorization under v17;
+an attempted in-place spend-cap mutation then fails with SQLSTATE `23514` and
+constraint `mandate_published_content_immutable` before the payment-key boundary. The
+stored controls remain unchanged and authorization remains unconsumed. Separate cases
+cover identity/version, agent binding, effective authority start, scope, default
+disposition, creator/approver, valid lifecycle closure, and rejected reopening.
+
+**Verification.** Migration 006 rolled down and back up cleanly. The full suite passed
+**194/194 tests across 40 suites** against real PostgreSQL on port 5544. Typecheck,
+the seven-route dashboard production build, 263-byte contract compile, schema/demo
+verification, and `git diff --check` pass.
+
+**Remaining boundary.** Lifecycle closure remains schema-owner/operator authority;
+runtime application roles cannot update mandates. Transaction-count velocity is not
+yet concurrency-safe (Phase 3.5D), the live 402 challenge is not yet bound (Phase 4),
+and `OUTCOME_UNKNOWN` has no reconciler (Phase 5).
+
+**Next:** Phase 3.5D concurrent velocity enforcement. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 3.5B: database privilege separation
 

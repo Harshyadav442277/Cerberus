@@ -33,8 +33,10 @@ until the current phase passes its Definition of Done.
    control-plane, and executor PostgreSQL group/login roles enforce authority with
    GRANT/REVOKE. Agent-credential attacks fail with SQLSTATE 42501; the full suite
    passes 191/191 tests across 40 suites.
-3.5C. **Mandate immutability/content freshness — not started.** Published policy
-   contents must not change in place under the same version.
+3.5C. **Mandate immutability/content freshness — complete and verified.** PostgreSQL
+   rejects every policy-bearing rewrite of a published version; policy changes require
+   a new version. Only one-way lifecycle closure remains mutable. The v17 post-auth
+   mutation attack fails before key use, and the full suite passes 194/194 tests.
 3.5D. **Concurrent velocity enforcement — not started.** Transaction-count races must
    preserve velocity breach → ESCALATE semantics.
 4. **Exact x402 binding — not started.** Bind authorization to the exact live payment

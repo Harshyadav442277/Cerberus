@@ -100,10 +100,11 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 
 ## Current phase boundary
 
-Phases 1, 2, 3, 3.5A, and 3.5B are complete. Phase 3.5B passed the full 191-test suite
-against real PostgreSQL. Agent-login attempts to create human approval, mutate a
-mandate, create/bind execution authority, mark a reservation SUBMITTING, or consume
-an authorization all fail at PostgreSQL with SQLSTATE 42501.
+Phases 1, 2, 3, 3.5A, 3.5B, and 3.5C are complete. Phase 3.5C passed the full 194-test
+suite against real PostgreSQL. An authorization issued under mandate v17 cannot be
+followed by an in-place controls rewrite: PostgreSQL rejects the mutation before the
+payment-key boundary. Agent-login authority attacks continue to fail with SQLSTATE
+42501.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -143,9 +144,14 @@ owns approval, reservation creation, and authorization issuance/binding. The exe
 can consume authorization and transition execution state. The shared DB package no
 longer reads the schema-owner root `.env`; only admin CLIs/tests opt into it.
 
+Phase 3.5C makes every published `(mandate_id, version)` policy body immutable with a
+database trigger. Mandate identity/version, agent binding, `effective_from`, scope,
+controls, default disposition, creator, and approver cannot change in place. Policy
+change means publishing the next version. The only permitted updates are one-way
+lifecycle closure: `active → superseded|revoked` and `effective_to: NULL → timestamp`.
+
 What may **not** yet be claimed:
 
-- **Phase 3.5C.** Published mandate policy contents are not yet database-immutable.
 - **Phase 3.5D.** Transaction-count velocity evaluation is not yet concurrency-safe.
 - **Phase 4.** The resource hash still covers the intended request URL, not the live
   402 `PaymentRequirements`.

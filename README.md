@@ -160,6 +160,11 @@ npm run db:verify
 `db:roles` creates or rotates the three LOGIN roles from the process-specific files
 and grants each exactly one NOLOGIN group role. It never prints their passwords.
 
+Published mandate policy is version-immutable. Change policy by inserting a new
+version (`v17 → v18`), never by rewriting `v17`. Existing versions permit only
+one-way lifecycle closure: `active → superseded|revoked` and setting `effective_to`
+once.
+
 Expected result: `db:verify` prints **13 `OK` checks** followed by `All checks
 passed`, including exact Bible Section 7 columns, lossless zod/Postgres round-trips,
 mandate-version boundaries, and the three expected demo dispositions.
@@ -180,7 +185,7 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **191 tests, 40 suites, 191 passed, 0 failed**.
+- The test runner reports **194 tests, 40 suites, 194 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
