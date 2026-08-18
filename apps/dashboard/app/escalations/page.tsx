@@ -24,11 +24,15 @@ export default function EscalationsPage() {
     return () => clearInterval(id);
   }, [refresh]);
 
-  async function decide(actionId: string, decision: "approved" | "denied") {
+  async function decide(
+    actionId: string,
+    decision: "approved" | "denied",
+    mandateVersion: number,
+  ) {
     setBusy(actionId);
     setError(null);
     try {
-      await submitDecision(actionId, decision, note);
+      await submitDecision(actionId, decision, note, mandateVersion);
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -91,7 +95,9 @@ export default function EscalationsPage() {
                   <button
                     type="button"
                     disabled={busy === item.action.action_id}
-                    onClick={() => void decide(item.action.action_id, "approved")}
+                    onClick={() =>
+                      void decide(item.action.action_id, "approved", item.record.mandate_version)
+                    }
                     className="rounded-[3px] bg-accent px-3 py-1.5 text-[13px] font-medium text-white hover:bg-accent/90 disabled:opacity-50"
                   >
                     Approve
@@ -99,7 +105,9 @@ export default function EscalationsPage() {
                   <button
                     type="button"
                     disabled={busy === item.action.action_id}
-                    onClick={() => void decide(item.action.action_id, "denied")}
+                    onClick={() =>
+                      void decide(item.action.action_id, "denied", item.record.mandate_version)
+                    }
                     className="rounded-[3px] border border-deny px-3 py-1.5 text-[13px] font-medium text-deny hover:bg-deny-soft disabled:opacity-50"
                   >
                     Deny
