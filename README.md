@@ -111,6 +111,7 @@ cp .env.agent.example .env.agent
 cp .env.executor.example .env.executor
 cp .env.authorizer.example .env.authorizer
 cp .env.reviewer.example .env.reviewer
+cp .env.reconciler.example .env.reconciler
 cp apps/dashboard/.env.local.example apps/dashboard/.env.local
 npm run wallets:new
 ```
@@ -123,6 +124,7 @@ Copy-Item .env.agent.example .env.agent
 Copy-Item .env.executor.example .env.executor
 Copy-Item .env.authorizer.example .env.authorizer
 Copy-Item .env.reviewer.example .env.reviewer
+Copy-Item .env.reconciler.example .env.reconciler
 Copy-Item apps/dashboard/.env.local.example apps/dashboard/.env.local
 npm run wallets:new
 ```
@@ -139,10 +141,10 @@ Never paste a private key or reviewer credential into an
 issue, screenshot, commit, shared shell profile, or demo.
 
 Replace each `CHANGE_ME_16_CHARS_MIN` database password with a different random value.
-The three runtime URLs must keep distinct usernames: the agent, control plane, and
-executor are intentionally separate PostgreSQL logins. The root `.env` `DATABASE_URL`
-is schema-owner authority for migrations, role provisioning, seed/reset, and tests
-only; no application process loads it.
+The four runtime URLs must keep distinct usernames: the agent, control plane,
+executor, and keyless reconciler are intentionally separate PostgreSQL logins. The
+root `.env` `DATABASE_URL` is schema-owner authority for migrations, role
+provisioning, seed/reset, and tests only; no application process loads it.
 
 You may leave `ANTHROPIC_API_KEY`, `AUDIT_ANCHOR_ADDRESS`, and
 `AUDIT_ANCHOR_PRIVATE_KEY` empty in `.env.agent` for local governance verification.
@@ -157,7 +159,7 @@ npm run db:seed
 npm run db:verify
 ```
 
-`db:roles` creates or rotates the three LOGIN roles from the process-specific files
+`db:roles` creates or rotates the four LOGIN roles from the process-specific files
 and grants each exactly one NOLOGIN group role. It never prints their passwords.
 
 Published mandate policy is version-immutable. Change policy by inserting a new
@@ -185,7 +187,7 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **194 tests, 40 suites, 194 passed, 0 failed**.
+- The test runner reports **248 tests, 48 suites, 248 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
@@ -195,12 +197,13 @@ Expected result:
 
 The tests include the structural guarantee that `DENY` reaches neither authorization
 nor execution, signer isolation, forged/mutated/expired/replayed authorization
-refusal before key use, the deterministic rule order, atomic escalation review,
-audit hashing, contract compilation, and all three scripted scenarios.
+refusal before key use, exact live x402 binding, durable EIP-3009 reconciliation and
+worker-race fencing, the deterministic rule order, atomic escalation review, audit
+hashing, contract compilation, and all three scripted scenarios.
 
 ### 5. Start Cerberus
 
-Keep these four terminals running:
+Keep these five terminals running:
 
 Terminal 1 — x402 merchant:
 
@@ -225,6 +228,17 @@ Terminal 4 — compliance dashboard:
 ```bash
 npm run dashboard
 ```
+
+Terminal 5 — keyless ambiguous-outcome reconciler:
+
+```bash
+npm run reconciler
+```
+
+The reconciler has its own least-privilege database login and a public RPC URL. It
+does not load the operator `.env`, executor payment key, authorization key, reviewer
+credential, or audit-anchor key. `npm run reconciler -- --once` claims at most one
+due item and exits, which is useful for recovery checks.
 
 Open <http://localhost:3000>. The sidebar should show `CERBERUS / SAFR Runtime`, the
 Audit Log status should become `Live`, and the footer indicators should show Base
@@ -370,7 +384,10 @@ npm run merchant
 npm run api
 npm run executor
 
-# Terminal 4 — agent proposes, engine decides, settlement only if permitted.
+# Terminal 4 — keyless reconciliation worker.
+npm run reconciler
+
+# Terminal 5 — agent proposes, engine decides, settlement only if permitted.
 npm run demo
 npm run demo -- cap_breach                        # one scenario
 
@@ -450,8 +467,9 @@ process and a clean reset between attempts:
 npm run merchant          # terminal 1
 npm run api               # terminal 2
 npm run executor          # terminal 3
-npm run reviewer:auto     # terminal 4, trusted control plane
-npm run demo:script       # terminal 5, agent process (resets first)
+npm run reconciler        # terminal 4, keyless chain reconciliation
+npm run reviewer:auto     # terminal 5, trusted control plane
+npm run demo:script       # terminal 6, agent process (resets first)
 npm run reviewer:auto -- --count=3  # use with demo:script -- --thrice
 ```
 

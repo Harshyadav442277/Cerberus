@@ -35,9 +35,10 @@ token, atomic amount, payee, resource hash, expiry, and nonce. Phase 3 records e
 issued capability in `execution_authorization` and consumes it with a database
 compare-and-set shared by every executor process. Human decisions are separately
 bound to the proposal, mandate version, and expiry; both the authorizer and executor
-re-check current authority before key use. The resource hash still covers the
-intended HTTP resource; exact live x402 challenge inspection is Phase 4. See
-`Critique.md` for the fixed hardening order and claim limits.
+re-check current authority before key use. The executor also fetches, validates, and
+pins the merchant's exact live x402 challenge before the payment key is reached. A
+separate keyless worker reconciles ambiguous EIP-3009 outcomes from durable nonce and
+transfer evidence. See `Critique.md` for the fixed hardening order and claim limits.
 
 ---
 
@@ -363,11 +364,16 @@ EXECUTOR_EVM_PRIVATE_KEY=0x...
 # .env.authorizer (control-plane / anchor processes only)
 EXECUTION_AUTH_PRIVATE_KEY=0x...
 AUDIT_ANCHOR_PRIVATE_KEY=0x...
+
+# .env.reconciler (keyless reconciliation process only)
+RECONCILER_DATABASE_URL=postgres://cerberus_reconciler_app:...@localhost:5544/safr_runtime
+EVM_RPC_URL=https://sepolia.base.org
 ```
 
 **Runtime secret split:** `.env` contains public/shared configuration only;
 `.env.agent` is read only by the agent and may contain its LLM and audit-anchor
 credentials; `.env.authorizer` contains the Execution Authorization and anchor
-signing keys; `.env.executor` contains the x402 payment key. The Stage-1 payment
+signing keys; `.env.executor` contains the x402 payment key; and `.env.reconciler`
+contains only its separate database login and public RPC URL. The Stage-1 payment
 evidence is complete. A fresh funded run through the hardened executor is still
 required before claiming live Phase-1 finalist evidence.

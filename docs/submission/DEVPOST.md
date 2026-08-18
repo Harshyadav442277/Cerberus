@@ -302,7 +302,7 @@ easy, avoidable errors:
   implementation; lead with the pre-execution gate and the enforcement test, and let
   the name be a label.
 - **Do not claim production-readiness.** Known limitations, stated plainly if asked:
-  reviewer requests are authenticated but database roles are not yet separated;
-  transaction-count velocity is not yet reserved atomically; exact live x402 challenge
-  binding and `OUTCOME_UNKNOWN` reconciliation remain pending; overnight time-window
-  wrap is unsupported.
+  host-level isolation still depends on distinct deployment principals; a used
+  EIP-3009 nonce without exact transfer evidence stays UNKNOWN for manual review; the
+  fresh hardened-path testnet evidence run remains pending; overnight time-window wrap
+  is unsupported.

@@ -43,23 +43,25 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   obtains a fresh clock/context read and rechecks authorization, mandate, approval,
   and reservation authority before consuming or signing. The unsigned request has a
   10-second timeout, and the final database CAS operations enforce expiry. The full
-  suite is now 232/232
-  across 45 suites. Phase 5 is active; Phases 6–8 have not started. The fresh funded
-  hardened-path run also remains pending.
+  suite is now 248/248 across 48 suites. Phase 5 `OUTCOME_UNKNOWN` reconciliation is
+  complete: correlation is durable before transport, a keyless fenced worker resolves
+  exact settlement or expired-unused non-payment, and audit/dashboard state preserves
+  UNKNOWN honestly. Phases 6–8 have not started. The fresh funded hardened-path run
+  also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **232/232 across 45 suites**, Aug 19 after Stage-2 Phase 4.1, against
+- **Test count:** **248/248 across 48 suites**, Aug 19 after Stage-2 Phase 5, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** begin Phase 5 `OUTCOME_UNKNOWN` reconciliation. The fresh
-  funded ALLOW plus dashboard-approved ESCALATE run also remains required before the
-  hardened path is presented as live evidence.
+- **Next concrete step:** Phase 6 consolidated adversarial suite. The fresh funded
+  ALLOW plus dashboard-approved ESCALATE run also remains required before the hardened
+  path is presented as live evidence.
 
-**Current finalist claim limits (after Stage-2 Phase 4 implementation):** the
+**Current finalist claim limits (after Stage-2 Phase 5 implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
 by a durable database compare-and-set; human approvals bind proposal, mandate version,
 and expiry; and both the authorizer and executor fail closed on stale authority before
@@ -69,8 +71,9 @@ amount, payee, resource URL, EIP-712 token identity, and transfer method before
 performing a fresh authority read and constructing the payer. The post-fetch check
 uses a new timestamp, and both final database transitions independently require
 unexpired authority/reservation state. These guarantees passed the
-real-PostgreSQL restart/concurrency suite. `OUTCOME_UNKNOWN` holds capacity but has no
-chain-state reconciler (Phase 5).
+real-PostgreSQL restart/concurrency suite. `OUTCOME_UNKNOWN` now persists its exact
+EIP-3009 correlation before transport and is resolved by a keyless, leased chain-state
+worker without constructing a second payment.
 The legacy policy-layer rolling-spend counter still hardcodes a 24h window and measures
 settled-only spend; the reservation layer parses `rolling_window.window` and is the
 actual financial gate. The hourly velocity counter now reads committed/executing
@@ -85,7 +88,7 @@ mandate policy bodies are database-immutable by version. Transaction-count veloc
 is concurrency-safe at reservation time and preserves ESCALATE semantics.
 
 **Command reference** (run from repo root; no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reconciler` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` / `demo:script` need `npm run merchant` running and an authenticated
 dashboard click or separate `npm run reviewer:auto`. Use `reviewer:auto -- --count=3`
@@ -206,6 +209,54 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 5: durable `OUTCOME_UNKNOWN` reconciliation
+
+**Protocol correlation.** Inspection of installed x402 v2.21.0 confirmed that the
+Base Sepolia USDC exact scheme signs EIP-3009
+`transferWithAuthorization(from,to,value,validAfter,validBefore,nonce)`. Before the
+paid request may start transport, the executor commits payer, recipient, nonce,
+payload hash, `validBefore`, and submission block. A failure to persist is positively
+pre-transport and releases capacity; any throw after persistence becomes
+`OUTCOME_UNKNOWN` and is never retried by the executor.
+
+**Reconciliation.** Migration 008 adds durable correlation, `RECONCILING`, due time,
+attempt count, lease token, and error state; migration 009 adds the exact recipient
+and atomic terminal audit update. The keyless worker reads Circle USDC
+`authorizationState`. Used is accepted as settlement only with the matching
+`AuthorizationUsed` transaction, successful receipt, and exact token/from/to/value
+transfer. Unused is safe failure only once the latest chain timestamp reaches the
+strict `validBefore` boundary. Live authorization, cancellation/mismatched evidence,
+or RPC failure stays UNKNOWN and retains capacity.
+
+**Crash and concurrency safety.** Claims use `FOR UPDATE SKIP LOCKED`; rotating fencing
+tokens prevent an expired worker from finalizing after a restart. Stale SUBMITTING
+without correlation is safely unpaid because the prepared x402 request cannot touch
+transport until its persistence callback returns true. UNKNOWN and RECONCILING remain
+in both budget and velocity counts and are excluded from TTL expiry. Terminal
+reservation plus Section 7.5 settlement commit in one transaction; terminal settlement
+is first-writer-wins so a late HTTP failure cannot overwrite stronger chain evidence.
+
+**Process and UI boundary.** `.env.reconciler` contains a distinct database login and
+public RPC only. The worker does not parse root/operator or executor config and scrubs
+inherited payment, authorization, reviewer, and anchor credentials. Agent-side
+transport throws now report `settlement_unknown` without writing a false failed audit
+or anchoring a non-terminal record. API/dashboard projections show SUBMITTING,
+OUTCOME_UNKNOWN, RECONCILING, and reconciled terminal state beside—not inside—the
+frozen audit JSON.
+
+**Verification.** Migrations 008 and 009 each rolled down/up cleanly during
+implementation and both are applied. The full real-PostgreSQL suite passes **248/248
+tests across 48 suites**. Typecheck, seven-route dashboard production build,
+263-byte contract compile, `db:verify`, migration status, and `git diff --check` pass.
+
+**Remaining boundary.** A used nonce without the exact transfer proof intentionally
+remains UNKNOWN for manual investigation. RPC downtime defers rather than guessing.
+The reconciler atomically updates terminal audit settlement but does not itself submit
+an on-chain audit anchor; fresh fully hardened settlement/anchor evidence remains
+Phase 8. Host-level process isolation remains a deployment responsibility.
+
+**Next:** Phase 6 complete adversarial suite. Stop before implementing it.
 
 ### Aug 19 — Stage-2 Phase 4: exact live x402 challenge binding
 

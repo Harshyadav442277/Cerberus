@@ -79,7 +79,9 @@ the payer/signer is constructed.
 ## Financial state
 
 ```text
-RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
+RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
+                                  |---> FAILED
+                                  `---> OUTCOME_UNKNOWN -> RECONCILING -> SETTLED | FAILED
 ```
 
 - `FAILED` means execution is positively known not to have happened; release safely.
@@ -100,9 +102,9 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED | FAILED | OUTCOME_UNKNOWN
 
 ## Current phase boundary
 
-Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, and 4 are complete. The post-challenge
-freshness hardening passed the full **232/232-test suite across 45 suites** against
-real PostgreSQL. Phase 5 reconciliation is active.
+Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5 are complete. The Phase 5 release
+gate passed the full **248/248-test suite across 48 suites** against real PostgreSQL.
+Phase 6 has not started.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -160,11 +162,26 @@ rechecks authorization expiry, current mandate, approval, and reservation immedi
 before consumption. The authorization and reservation database compare-and-sets also
 enforce expiry independently.
 
+Phase 5 persists the exact x402 EIP-3009 payer, recipient, nonce, signed-payload hash,
+`validBefore`, and pre-submission block before the paid request can leave the executor.
+Ambiguous outcomes retain budget and velocity capacity, transition through a leased
+`RECONCILING` state, and are resolved by a keyless worker using Circle USDC
+`authorizationState`, matching `AuthorizationUsed`, a successful receipt, and the
+exact token/from/to/value `Transfer`. An unused authorization is releasable only when
+the latest chain timestamp has reached its strict expiry. RPC errors, live
+authorizations, cancellations, and mismatched transfer evidence remain UNKNOWN.
+`FOR UPDATE SKIP LOCKED` plus rotating fencing tokens gives one terminal writer across
+concurrent workers and worker restarts. Terminal reservation and audit settlement are
+committed together, and the dashboard projects live execution state beside the frozen
+Section 7.5 audit JSON.
+
 What may **not** yet be claimed:
 
-- **Phase 5.** `OUTCOME_UNKNOWN` is recorded and holds its capacity, but no durable
-  worker yet correlates its EIP-3009 authorization with chain state and resolves it.
+- **Phase 6.** The consolidated judge-facing adversarial suite has not been assembled
+  as a single evidence command, even though its component security tests are green.
 - The fresh funded hardened-path evidence run remains pending for Phase 8.
+- A nonce used without exact transfer evidence is intentionally retained for manual
+  investigation; Cerberus does not guess that a cancellation was a payment.
 
 ## Phase 2 verification notes
 
