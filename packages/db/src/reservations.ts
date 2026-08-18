@@ -131,3 +131,67 @@ export type ReserveBudgetResult =
   /** An earlier identical proposal already holds the capacity. Not a second effect. */
   | { outcome: "existing"; reservation: PaymentReservation }
   | { outcome: "insufficient_budget"; committed: string; requested: string; limit: string };
+
+/**
+ * Committed spend for a budget authority, as one NUMERIC expression.
+ *
+ * Two sources are summed and neither is double counted:
+ *
+ *  - reservations, which are the Phase 2 source of truth; and
+ *  - settled audit rows that have NO reservation, which are pre-Phase-2 history.
+ *
+ * A reservation holds capacity when it is SETTLED (money moved), SUBMITTING or
+ * OUTCOME_UNKNOWN (money may have moved — never free these on a timer), or while it
+ * is still inside its pre-broadcast TTL.
+ */
+const COMMITTED_SPEND_SQL = `
+  WITH reserved AS (
+    SELECT COALESCE(SUM(amount_decimal), 0) AS total
+      FROM payment_reservation
+     WHERE budget_key = $1
+       AND currency   = $2
+       AND counts_at  >  ($3::timestamptz - make_interval(hours => $4::int))
+       AND counts_at  <= $3::timestamptz
+       AND (
+             status IN ('SETTLED', 'SUBMITTING', 'OUTCOME_UNKNOWN')
+             OR (status IN ('RESERVED', 'AUTHORIZED') AND expires_at > $3::timestamptz)
+           )
+  ),
+  legacy AS (
+    SELECT COALESCE(SUM((pa.payload ->> 'amount')::numeric), 0) AS total
+      FROM audit_log al
+      JOIN proposed_action pa ON pa.action_id = al.action_id
+      LEFT JOIN payment_reservation r ON r.audit_id = al.audit_id
+     WHERE $1 = 'mandate:' || al.mandate_id
+       AND pa.payload ->> 'currency' = $2
+       AND al.settlement ->> 'status' = 'settled'
+       AND r.reservation_id IS NULL
+       AND al.evaluated_at >  ($3::timestamptz - make_interval(hours => $4::int))
+       AND al.evaluated_at <= $3::timestamptz
+  )
+  SELECT (SELECT total FROM reserved) + (SELECT total FROM legacy) AS committed
+`;
+
+/**
+ * Committed spend against a budget authority: the left-hand side of the invariant.
+ *
+ * Exposed so the concurrency tests can assert the invariant directly against the
+ * database rather than against the application's own bookkeeping.
+ */
+export async function committedSpend(options: {
+  mandateId: string;
+  currency: string;
+  rollingWindow: string;
+  at?: string;
+}): Promise<string> {
+  const { rows } = await getPool().query<{ committed: string }>(
+    `SELECT c.committed::text AS committed FROM (${COMMITTED_SPEND_SQL}) c`,
+    [
+      budgetKeyForMandate(options.mandateId),
+      options.currency,
+      options.at ?? new Date().toISOString(),
+      windowHours(options.rollingWindow),
+    ],
+  );
+  return rows[0]!.committed;
+}
