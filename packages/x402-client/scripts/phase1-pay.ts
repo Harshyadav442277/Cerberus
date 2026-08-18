@@ -57,7 +57,10 @@ async function main(): Promise<void> {
   console.log("\n  firing payment...\n");
 
   const started = Date.now();
-  const settlement = await payer.pay(challenge);
+  const prepared = await payer.prepare(challenge);
+  // Bare Phase-1 rail diagnostic has no Cerberus reservation by design. Production
+  // executor submission supplies a real durable persistence callback here.
+  const settlement = await prepared.submit(async () => true);
   const elapsed = Date.now() - started;
 
   if (settlement.status === "settled" && settlement.tx_hash) {

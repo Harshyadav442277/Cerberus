@@ -466,16 +466,26 @@ export async function beginSubmission(
   reservationId: string,
   authorizationId: string,
   at = new Date().toISOString(),
+  reconcileGraceSeconds = 120,
 ): Promise<PaymentReservation | null> {
+  if (
+    !Number.isInteger(reconcileGraceSeconds) ||
+    reconcileGraceSeconds <= 0 ||
+    reconcileGraceSeconds > 600
+  ) {
+    throw new Error("submission reconciliation grace must be between 1 and 600 seconds");
+  }
   const { rows } = await getPool().query(
     `UPDATE payment_reservation
-        SET status = 'SUBMITTING', updated_at = $3::timestamptz
+        SET status = 'SUBMITTING',
+            reconcile_after = $3::timestamptz + make_interval(secs => $4::int),
+            updated_at = $3::timestamptz
       WHERE reservation_id = $1
         AND authorization_id = $2
         AND status = 'AUTHORIZED'
         AND expires_at > $3::timestamptz
       RETURNING ${COLUMNS}`,
-    [reservationId, authorizationId, at],
+    [reservationId, authorizationId, at, reconcileGraceSeconds],
   );
   return rows[0] ? toReservation(rows[0]) : null;
 }

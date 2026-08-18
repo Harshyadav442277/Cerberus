@@ -9,6 +9,7 @@ import {
   markFailed,
   markOutcomeUnknown,
   markSettled,
+  recordPaymentAttempt,
 } from "@safr/db";
 import type { AuthorizationUseStore } from "@safr/execution-authorization";
 import {
@@ -39,6 +40,7 @@ export const dbExecutionContext: ExecutionContextPort = {
 
 export const dbReservations: ExecutionReservationPort = {
   beginSubmission,
+  recordPaymentAttempt,
   markSettled,
   markFailed,
   markOutcomeUnknown,

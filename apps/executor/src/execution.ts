@@ -16,9 +16,11 @@ import {
   type TargetConfig,
 } from "@safr/execution-authorization";
 import {
+  PaymentAttemptPersistenceError,
   paymentRequestUrl,
   validateX402Challenge,
   type PaymentRequest,
+  type PaymentAttemptCorrelation,
   type X402Challenge,
   type X402Payer,
 } from "@safr/x402-client";
@@ -78,6 +80,11 @@ export interface ExecutionReservationPort {
   beginSubmission(
     reservationId: string,
     authorizationId: string,
+  ): Promise<PaymentReservation | null>;
+  recordPaymentAttempt(
+    reservationId: string,
+    correlation: PaymentAttemptCorrelation,
+    reconcileAfter: string,
   ): Promise<PaymentReservation | null>;
   markSettled(reservationId: string, settlementTx: string | null): Promise<void>;
   markFailed(reservationId: string): Promise<void>;
@@ -249,10 +256,34 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       // The payment key is first reachable here, after every authorization check and
       // after capacity is committed to this execution. Refusal paths never construct it.
       const payer = options.payerFactory();
-      let result: Awaited<ReturnType<X402Payer["pay"]>>;
+      let prepared: Awaited<ReturnType<X402Payer["prepare"]>>;
       try {
-        result = await payer.pay(challenge);
+        prepared = await payer.prepare(challenge);
       } catch (error) {
+        // Preparation may use the key, but it cannot touch transport. With no paid
+        // request sent, this is positively known non-payment and capacity is safe to
+        // release. A process crash at this point is recovered from the stale
+        // SUBMITTING row after its grace period.
+        await options.reservations.markFailed(reservation.reservation_id);
+        throw error;
+      }
+
+      let result: Awaited<ReturnType<typeof prepared.submit>>;
+      try {
+        result = await prepared.submit(async (correlation) => {
+          const reconcileAfter = new Date((options.nowMs?.() ?? Date.now()) + 120_000).toISOString();
+          return Boolean(await options.reservations.recordPaymentAttempt(
+            reservation.reservation_id,
+            correlation,
+            reconcileAfter,
+          ));
+        });
+      } catch (error) {
+        if (error instanceof PaymentAttemptPersistenceError) {
+          // submit() guarantees transport was not reached when persistence refused.
+          await options.reservations.markFailed(reservation.reservation_id);
+          throw error;
+        }
         // A thrown settlement error is NOT evidence that no money moved — the payment
         // may already have been broadcast and accepted with only the response lost.
         // Releasing the capacity here is precisely how a system double-pays, so the

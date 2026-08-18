@@ -11,6 +11,7 @@ import {
 import {
   X402ChallengeError,
   paymentRequestUrl,
+  type SettlementResult,
   type X402Challenge,
   type X402Payer,
 } from "@safr/x402-client";
@@ -158,7 +159,36 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
         ) {
           return null;
         }
-        current = { ...current, status: "SUBMITTING" };
+        current = {
+          ...current,
+          status: "SUBMITTING",
+          reconcile_after: new Date(NOW + 120_000).toISOString(),
+        };
+        return current;
+      },
+      async recordPaymentAttempt(
+        reservationId: string,
+        correlation: {
+          payer: string;
+          nonce: string;
+          payloadHash: string;
+          validBefore: string;
+          submissionBlock: string;
+        },
+        reconcileAfter: string,
+      ) {
+        if (!current || current.reservation_id !== reservationId || current.status !== "SUBMITTING") {
+          return null;
+        }
+        current = {
+          ...current,
+          payment_payer: correlation.payer,
+          payment_nonce: correlation.nonce,
+          payment_payload_hash: correlation.payloadHash,
+          payment_valid_before: correlation.validBefore,
+          submission_block: correlation.submissionBlock,
+          reconcile_after: reconcileAfter,
+        };
         return current;
       },
       async markSettled(_id: string, tx: string | null) {
@@ -204,7 +234,7 @@ function harness(
     action: ACTION,
   },
   store = reservationStore(context.reservation === undefined ? RESERVATION : context.reservation),
-  payerImpl?: X402Payer["pay"],
+  payerImpl?: () => Promise<SettlementResult>,
   challenges: X402Challenge[] = [LIVE_CHALLENGE],
   runtime: {
     nowMs?: () => number;
@@ -224,14 +254,27 @@ function harness(
   let resolved = 0;
   const payer: X402Payer = {
     address: "0x4444444444444444444444444444444444444444",
-    async pay(request) {
-      paid += 1;
-      if (payerImpl) return payerImpl(request);
+    async prepare() {
+      const correlation = {
+        payer: "0x4444444444444444444444444444444444444444",
+        nonce: `0x${"77".repeat(32)}`,
+        payloadHash: `0x${"88".repeat(32)}`,
+        validBefore: "1800000300",
+        submissionBlock: "12345678",
+      };
       return {
-        status: "settled",
-        tx_hash: "0xdeadbeef",
-        rail: "x402",
-        settled_at: "2026-08-18T10:00:01.000Z",
+        correlation,
+        async submit(persist) {
+          if (!(await persist(correlation))) throw new Error("attempt persistence refused");
+          paid += 1;
+          if (payerImpl) return payerImpl();
+          return {
+            status: "settled",
+            tx_hash: "0xdeadbeef",
+            rail: "x402",
+            settled_at: "2026-08-18T10:00:01.000Z",
+          };
+        },
       };
     },
   };

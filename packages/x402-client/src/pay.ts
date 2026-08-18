@@ -6,9 +6,11 @@
  * never receives the signer. Nothing here evaluates a mandate.
  */
 import { x402Client, x402HTTPClient } from "@x402/core/client";
-import type { SettleResponse } from "@x402/core/types";
+import type { PaymentPayload, SettleResponse } from "@x402/core/types";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
+import { createPublicClient, http, keccak256, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 import type { X402Env } from "./env.js";
 import {
   isValidatedX402Challenge,
@@ -34,8 +36,34 @@ export interface SettlementResult {
 export interface X402Payer {
   /** Address the payments are signed from. */
   address: string;
-  /** Signs and submits only the already-fetched, already-validated live challenge. */
-  pay(challenge: ValidatedX402Challenge): Promise<SettlementResult>;
+  /** Signs but does not transmit the already-validated challenge. */
+  prepare(challenge: ValidatedX402Challenge): Promise<PreparedX402Payment>;
+}
+
+export interface PaymentAttemptCorrelation {
+  payer: string;
+  nonce: string;
+  payloadHash: string;
+  validBefore: string;
+  submissionBlock: string;
+}
+
+export class PaymentAttemptPersistenceError extends Error {
+  constructor() {
+    super("payment attempt correlation was not durably persisted");
+    this.name = "PaymentAttemptPersistenceError";
+  }
+}
+
+/**
+ * A signed payment that still cannot touch transport by itself. `submit` first calls
+ * the supplied durable-persistence boundary and refuses to send unless it commits.
+ */
+export interface PreparedX402Payment {
+  readonly correlation: Readonly<PaymentAttemptCorrelation>;
+  submit(
+    persist: (correlation: Readonly<PaymentAttemptCorrelation>) => Promise<boolean>,
+  ): Promise<SettlementResult>;
 }
 
 function isSettleResponse(header: unknown): header is SettleResponse {
@@ -49,6 +77,8 @@ function isSettleResponse(header: unknown): header is SettleResponse {
 export function createX402Payer(
   env: X402Env,
   fetchImpl: Fetch = defaultFetch,
+  blockNumber: () => Promise<bigint> = () =>
+    createPublicClient({ chain: baseSepolia, transport: http(env.rpcUrl) }).getBlockNumber(),
 ): X402Payer {
   const signer = privateKeyToAccount(env.privateKey as `0x${string}`);
 
@@ -63,7 +93,7 @@ export function createX402Payer(
   return {
     address: signer.address,
 
-    async pay(challenge: ValidatedX402Challenge): Promise<SettlementResult> {
+    async prepare(challenge: ValidatedX402Challenge): Promise<PreparedX402Payment> {
       if (!isValidatedX402Challenge(challenge)) {
         throw new Error("x402 challenge was not validated by Cerberus");
       }
@@ -72,36 +102,78 @@ export function createX402Payer(
       // submit it directly. The convenience wrapper is deliberately not used because
       // it would fetch a second, potentially different 402 before signing.
       const paymentPayload = await client.createPaymentPayload(challenge.paymentRequired);
-      const headers = new Headers(httpClient.encodePaymentSignatureHeader(paymentPayload));
-      headers.set("Access-Control-Expose-Headers", "PAYMENT-RESPONSE,X-PAYMENT-RESPONSE");
-      const response = await fetchImpl(new Request(challenge.requestUrl, {
-        method: challenge.method,
-        headers,
-      }));
-      await httpClient.processPaymentResult(
-        paymentPayload,
-        (name) => response.headers.get(name),
-        response.status,
-      );
-      const result = await httpClient.processResponse(response);
-
-      if (result.paymentStatus === "settled" && isSettleResponse(result.header)) {
-        return {
-          status: "settled",
-          tx_hash: result.header.transaction,
-          rail: "x402",
-          settled_at: new Date().toISOString(),
-        };
-      }
+      const correlation = Object.freeze(paymentCorrelation(paymentPayload, await blockNumber()));
+      let claimed = false;
 
       return {
-        status: "failed",
-        tx_hash: null,
-        rail: "x402",
-        settled_at: null,
-        error: describeFailure(result.paymentStatus, result.header, result.status),
+        correlation,
+        async submit(persist): Promise<SettlementResult> {
+          if (claimed) throw new Error("prepared x402 payment is one-shot");
+          claimed = true;
+          if (!(await persist(correlation))) throw new PaymentAttemptPersistenceError();
+
+          const headers = new Headers(httpClient.encodePaymentSignatureHeader(paymentPayload));
+          headers.set("Access-Control-Expose-Headers", "PAYMENT-RESPONSE,X-PAYMENT-RESPONSE");
+          const response = await fetchImpl(new Request(challenge.requestUrl, {
+            method: challenge.method,
+            headers,
+          }));
+          await httpClient.processPaymentResult(
+            paymentPayload,
+            (name) => response.headers.get(name),
+            response.status,
+          );
+          const result = await httpClient.processResponse(response);
+
+          if (result.paymentStatus === "settled" && isSettleResponse(result.header)) {
+            return {
+              status: "settled",
+              tx_hash: result.header.transaction,
+              rail: "x402",
+              settled_at: new Date().toISOString(),
+            };
+          }
+
+          return {
+            status: "failed",
+            tx_hash: null,
+            rail: "x402",
+            settled_at: null,
+            error: describeFailure(result.paymentStatus, result.header, result.status),
+          };
+        },
       };
     },
+  };
+}
+
+function paymentCorrelation(
+  paymentPayload: PaymentPayload,
+  submissionBlock: bigint,
+): PaymentAttemptCorrelation {
+  const payload = paymentPayload.payload as {
+    authorization?: {
+      from?: unknown;
+      nonce?: unknown;
+      validBefore?: unknown;
+    };
+  };
+  const authorization = payload.authorization;
+  if (
+    typeof authorization?.from !== "string" ||
+    typeof authorization.nonce !== "string" ||
+    typeof authorization.validBefore !== "string" ||
+    !/^0x[0-9a-fA-F]{64}$/.test(authorization.nonce) ||
+    !/^\d+$/.test(authorization.validBefore)
+  ) {
+    throw new Error("x402 exact EIP-3009 payload has no durable correlation identity");
+  }
+  return {
+    payer: authorization.from,
+    nonce: authorization.nonce,
+    validBefore: authorization.validBefore,
+    payloadHash: keccak256(stringToHex(JSON.stringify(paymentPayload))),
+    submissionBlock: submissionBlock.toString(),
   };
 }
 

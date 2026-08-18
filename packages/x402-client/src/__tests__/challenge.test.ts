@@ -159,6 +159,7 @@ describe("paid retry uses only the pinned challenge", () => {
   it("constructs one signature and submits directly without fetching another 402", async () => {
     const validated = validateX402Challenge(challenge(), EXPECTED);
     let paidRequests = 0;
+    let persisted = false;
     const payer = createX402Payer(
       {
         privateKey: `0x${"44".repeat(32)}`,
@@ -168,6 +169,7 @@ describe("paid retry uses only the pinned challenge", () => {
         merchantBaseUrl: "http://localhost:4021",
       },
       async (input) => {
+        strictEqual(persisted, true, "correlation commits before transport is reached");
         paidRequests += 1;
         const request = input instanceof Request ? input : new Request(input);
         strictEqual(request.url, RESOURCE);
@@ -189,11 +191,40 @@ describe("paid retry uses only the pinned challenge", () => {
           },
         });
       },
+      async () => 12_345_678n,
     );
 
-    const settlement = await payer.pay(validated);
+    const prepared = await payer.prepare(validated);
+    strictEqual(prepared.correlation.submissionBlock, "12345678");
+    strictEqual(prepared.correlation.nonce.startsWith("0x"), true);
+    const settlement = await prepared.submit(async () => {
+      persisted = true;
+      return true;
+    });
     strictEqual(paidRequests, 1);
     strictEqual(settlement.status, "settled");
     strictEqual(settlement.tx_hash, "0xdeadbeef");
+  });
+
+  it("does not send when durable correlation persistence refuses", async () => {
+    const validated = validateX402Challenge(challenge(), EXPECTED);
+    let paidRequests = 0;
+    const payer = createX402Payer(
+      {
+        privateKey: `0x${"44".repeat(32)}`,
+        network: "eip155:84532",
+        facilitatorUrl: "https://x402.org/facilitator",
+        rpcUrl: "https://sepolia.base.org",
+        merchantBaseUrl: "http://localhost:4021",
+      },
+      async () => {
+        paidRequests += 1;
+        return new Response("unreachable");
+      },
+      async () => 12_345_678n,
+    );
+    const prepared = await payer.prepare(validated);
+    await rejects(() => prepared.submit(async () => false));
+    strictEqual(paidRequests, 0);
   });
 });
