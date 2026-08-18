@@ -145,6 +145,18 @@ describe("AGENT database authority is denied at PostgreSQL", () => {
     );
   });
 
+  it("cannot forge the control plane's transaction-time velocity verdict", async () => {
+    await expectPermissionDenied(() =>
+      agent.query(
+        `UPDATE audit_log
+            SET disposition = 'ESCALATE',
+                reason = 'velocity_threshold_exceeded',
+                rule_triggered = 'velocity.max_transactions_per_hour'
+          WHERE audit_id = 'audit_privilege_attack'`,
+      ),
+    );
+  });
+
   it("cannot bind or transition a payment reservation", async () => {
     await expectPermissionDenied(() =>
       agent.query(

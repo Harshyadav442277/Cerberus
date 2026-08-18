@@ -157,6 +157,61 @@ describe("ESCALATE — held until a human decides", () => {
 });
 
 describe("ALLOW — settlement proceeds", () => {
+  it("holds a transaction-time velocity escalation for real approval, then retries once", async () => {
+    const registry = createEscalationRegistry();
+    const auth = authorizationSpy({ velocityEscalationOnce: true });
+    const { factory, spy } = settlementSpy();
+    const proposed = action();
+    const running = runAction(proposed, {
+      controls: controlsPort({ rolling_total_24h: 0, hourly_tx_count: 0 }),
+      audit: auditSpy(),
+      escalations: registry,
+      authorization: auth.factory,
+      settlement: factory,
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+    strictEqual(auth.callCount(), 1, "the atomic gate discovered the race");
+    strictEqual(spy.constructedCount, 0, "no payment exists while review is pending");
+    deepStrictEqual(registry.pending(), [proposed.action_id]);
+
+    registry.submitDecision(proposed.action_id, {
+      reviewer_id: "compliance_officer_01",
+      decision: "approved",
+      decided_at: "2026-08-07T14:32:03.000Z",
+      note: "Burst reviewed and approved.",
+    });
+    const outcome = await running;
+
+    strictEqual(auth.constructedCount(), 1);
+    strictEqual(auth.callCount(), 2, "approval permits one bounded authorization retry");
+    strictEqual(spy.callCount, 1);
+    strictEqual(outcome.status, "settled");
+    strictEqual(outcome.disposition?.disposition, "ESCALATE");
+    strictEqual(outcome.disposition?.rule, "velocity.max_transactions_per_hour");
+    strictEqual(outcome.audit?.disposition, "ESCALATE");
+    strictEqual(outcome.humanReview?.decision, "approved");
+  });
+
+  it("never reaches payment when a transaction-time velocity escalation is denied", async () => {
+    const auth = authorizationSpy({ velocityEscalationOnce: true });
+    const { factory, spy } = settlementSpy();
+    const outcome = await runAction(action(), {
+      controls: controlsPort({ rolling_total_24h: 0, hourly_tx_count: 0 }),
+      audit: auditSpy(),
+      escalations: autoEscalation("denied"),
+      authorization: auth.factory,
+      settlement: factory,
+    });
+
+    strictEqual(outcome.status, "escalation_denied");
+    strictEqual(outcome.disposition?.disposition, "ESCALATE");
+    strictEqual(auth.callCount(), 1);
+    strictEqual(spy.callCount, 0);
+    strictEqual(spy.constructedCount, 0);
+    strictEqual(outcome.settlementAttempted, false);
+  });
+
   it("fails closed when the trusted authorizer refuses and never constructs settlement", async () => {
     const audit = auditSpy();
     const auth = authorizationSpy({ fail: true });

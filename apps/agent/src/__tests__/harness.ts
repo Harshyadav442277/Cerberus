@@ -15,6 +15,7 @@ import type {
   EscalationPort,
   SettlementPort,
 } from "../ports.js";
+import { AuthorizationRefusalError } from "../ports.js";
 
 export const MANDATE: Mandate = {
   mandate_id: "mandate_001",
@@ -132,7 +133,10 @@ export const TEST_AUTHORIZATION: SignedExecutionAuthorization = {
   signature: `0x${"44".repeat(65)}`,
 };
 
-export function authorizationSpy(options: { fail?: boolean } = {}): {
+export function authorizationSpy(options: {
+  fail?: boolean;
+  velocityEscalationOnce?: boolean;
+} = {}): {
   factory: () => AuthorizationPort;
   constructedCount: () => number;
   callCount: () => number;
@@ -147,6 +151,9 @@ export function authorizationSpy(options: { fail?: boolean } = {}): {
       return {
         async issue() {
           calls += 1;
+          if (options.velocityEscalationOnce && calls === 1) {
+            throw new AuthorizationRefusalError("VELOCITY_ESCALATION_REQUIRED");
+          }
           if (options.fail) throw new Error("authorization refused (simulated)");
           return TEST_AUTHORIZATION;
         },

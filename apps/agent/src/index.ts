@@ -20,4 +20,5 @@ export type {
   EscalationPort,
   SettlementPort,
 } from "./ports.js";
+export { AuthorizationRefusalError } from "./ports.js";
 export { createAuthorizationPort, createSettlementPort } from "./settlement/index.js";

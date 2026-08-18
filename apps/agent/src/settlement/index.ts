@@ -4,10 +4,14 @@ import {
   SignedExecutionAuthorizationSchema,
   type SignedExecutionAuthorization,
 } from "@safr/execution-authorization";
-import type { AuthorizationPort, SettlementPort } from "../ports.js";
+import {
+  AuthorizationRefusalError,
+  type AuthorizationPort,
+  type SettlementPort,
+} from "../ports.js";
 import { agentEnv } from "../env.js";
 
-async function errorMessage(response: Response): Promise<string> {
+async function errorCode(response: Response): Promise<string> {
   const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
   return typeof body?.error === "string" ? body.error : `HTTP ${response.status}`;
 }
@@ -21,7 +25,7 @@ export function createAuthorizationPort(baseUrl = agentEnv.apiBaseUrl): Authoriz
         body: JSON.stringify({ audit_id: auditId }),
         signal: AbortSignal.timeout(10_000),
       });
-      if (!response.ok) throw new Error(`authorization refused: ${await errorMessage(response)}`);
+      if (!response.ok) throw new AuthorizationRefusalError(await errorCode(response));
       return SignedExecutionAuthorizationSchema.parse(await response.json());
     },
   };
@@ -37,7 +41,7 @@ export function createSettlementPort(baseUrl = agentEnv.executorBaseUrl): Settle
         // x402 may include a challenge, signature and confirmation round trip.
         signal: AbortSignal.timeout(90_000),
       });
-      if (!response.ok) throw new Error(`executor refused: ${await errorMessage(response)}`);
+      if (!response.ok) throw new Error(`executor refused: ${await errorCode(response)}`);
       const body = (await response.json()) as { settlement?: unknown };
       return SettlementSchema.parse(body.settlement);
     },

@@ -4,6 +4,7 @@ import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import {
   bindAuthorization,
+  claimHumanDecision,
   closePool,
   getHumanApproval,
   getAuditLogRecord,
@@ -20,6 +21,7 @@ import {
   recordIssuedAuthorization,
   reserveBudget,
 } from "@safr/db";
+import { hashProposal } from "@safr/execution-authorization";
 import {
   AuthorizationIssuanceError,
   createExecutionAuthorizer,
@@ -245,6 +247,32 @@ describe("execution authorizer over PostgreSQL", () => {
     );
     strictEqual(rows[0]?.reservations, "1");
     strictEqual(rows[0]?.authorizations, "1");
+
+    const promotedAction = (await getProposedAction(promoted!.action_id))!;
+    const decidedAt = new Date(1_800_000_000_000).toISOString();
+    const decision = await claimHumanDecision({
+      auditId: promoted!.audit_id,
+      actionId: promotedAction.action_id,
+      agentId: promotedAction.agent_id,
+      proposalHash: hashProposal(promotedAction),
+      mandateId: promoted!.mandate_id,
+      mandateVersion: promoted!.mandate_version,
+      reviewerId: "trusted_velocity_reviewer",
+      decision: "approved",
+      decidedAt,
+      humanReview: {
+        reviewer_id: "trusted_velocity_reviewer",
+        decision: "approved",
+        decided_at: decidedAt,
+        note: "Concurrent burst reviewed and approved.",
+      },
+    });
+    strictEqual(decision.claimed, true);
+
+    const approved = await authorizer.issue(refusedAuditId);
+    strictEqual(approved.authorization.proposalHash, hashProposal(promotedAction));
+    const approvedReservation = await getLiveReservationForAudit(refusedAuditId);
+    strictEqual(approvedReservation?.status, "AUTHORIZED");
   });
 
   it("rejects an in-place v17 policy mutation after authorization before key use", async () => {

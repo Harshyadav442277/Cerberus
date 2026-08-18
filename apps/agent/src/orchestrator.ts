@@ -7,6 +7,7 @@ import type {
   EscalationPort,
   SettlementPort,
 } from "./ports.js";
+import { AuthorizationRefusalError } from "./ports.js";
 
 export interface OrchestratorDeps {
   controls: ControlsPort;
@@ -87,6 +88,8 @@ export async function runAction(
 
   const disposition = evaluate(action, mandate, counters);
   const audit = await deps.audit.record(action, mandate, disposition);
+  let effectiveDisposition = disposition;
+  let effectiveAudit = audit;
 
   if (disposition.disposition === "DENY") {
     await deps.audit.finalize(audit.audit_id);
@@ -112,18 +115,65 @@ export async function runAction(
 
   // Reachable only on ALLOW, or ESCALATE that a human approved.
   let envelope: Awaited<ReturnType<AuthorizationPort["issue"]>>;
+  const authorization = deps.authorization();
   try {
-    envelope = await deps.authorization().issue(audit.audit_id);
-  } catch {
-    await deps.audit.finalize(audit.audit_id);
-    return {
-      ...base,
-      status: "authorization_failed",
-      disposition,
-      audit,
-      humanReview,
-      authorizationAttempted: true,
-    };
+    envelope = await authorization.issue(audit.audit_id);
+  } catch (error) {
+    if (
+      error instanceof AuthorizationRefusalError &&
+      error.code === "VELOCITY_ESCALATION_REQUIRED"
+    ) {
+      // Two clean evaluations can race while both see count=0. The trusted control
+      // plane has now serialized them, promoted this audit to ESCALATE, and minted no
+      // capability. Observe a real reviewer decision before making one bounded retry.
+      effectiveDisposition = {
+        disposition: "ESCALATE",
+        reason: "velocity_threshold_exceeded",
+        rule: "velocity.max_transactions_per_hour",
+      };
+      effectiveAudit = {
+        ...audit,
+        disposition: "ESCALATE",
+        reason: effectiveDisposition.reason,
+        rule_triggered: effectiveDisposition.rule,
+      };
+      humanReview = await deps.escalations.awaitDecision(action.action_id);
+      if (humanReview.decision !== "approved") {
+        await deps.audit.finalize(audit.audit_id);
+        return {
+          ...base,
+          status: "escalation_denied",
+          disposition: effectiveDisposition,
+          audit: effectiveAudit,
+          humanReview,
+          authorizationAttempted: true,
+        };
+      }
+
+      try {
+        envelope = await authorization.issue(audit.audit_id);
+      } catch {
+        await deps.audit.finalize(audit.audit_id);
+        return {
+          ...base,
+          status: "authorization_failed",
+          disposition: effectiveDisposition,
+          audit: effectiveAudit,
+          humanReview,
+          authorizationAttempted: true,
+        };
+      }
+    } else {
+      await deps.audit.finalize(audit.audit_id);
+      return {
+        ...base,
+        status: "authorization_failed",
+        disposition: effectiveDisposition,
+        audit: effectiveAudit,
+        humanReview,
+        authorizationAttempted: true,
+      };
+    }
   }
 
   // The agent passes only a signed capability and audit identifier to the isolated
@@ -156,8 +206,8 @@ export async function runAction(
   return {
     ...base,
     status: settlement.status === "settled" ? "settled" : "settlement_failed",
-    disposition,
-    audit,
+    disposition: effectiveDisposition,
+    audit: effectiveAudit,
     humanReview,
     settlement,
     authorizationId: envelope.authorization.authorizationId,

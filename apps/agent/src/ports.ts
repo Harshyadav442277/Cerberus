@@ -35,6 +35,14 @@ export interface AuthorizationPort {
   issue(auditId: string): Promise<SignedExecutionAuthorization>;
 }
 
+/** A typed control-plane refusal so orchestration can distinguish a review hold. */
+export class AuthorizationRefusalError extends Error {
+  constructor(public readonly code: string) {
+    super(`authorization refused: ${code}`);
+    this.name = "AuthorizationRefusalError";
+  }
+}
+
 export interface EscalationPort {
   /** Blocks until a compliance officer decides. */
   awaitDecision(actionId: string): Promise<HumanReview>;
