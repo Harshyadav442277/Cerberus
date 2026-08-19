@@ -33,8 +33,15 @@ export function fetchAudit(auditId: string) {
   }>(`/audit/${auditId}`);
 }
 
-export function fetchEscalations() {
-  return getJson<{ items: FeedItem[] }>("/escalations");
+/**
+ * Pending escalations come through the dashboard's own server-side proxy, not
+ * straight from the control plane. That route holds the reviewer bearer token; this
+ * browser code never sees it (Remediation 6D).
+ */
+export async function fetchEscalations() {
+  const res = await fetch("/api/escalations", { cache: "no-store" });
+  if (!res.ok) throw new Error(`/api/escalations → ${res.status}`);
+  return res.json() as Promise<{ items: FeedItem[] }>;
 }
 
 export function fetchMandate(agentId = "agent_treasury_01") {
