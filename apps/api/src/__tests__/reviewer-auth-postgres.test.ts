@@ -174,3 +174,55 @@ describe("authenticated reviewer decision endpoint over PostgreSQL", () => {
     assert.equal(binding?.decision, "approved");
   });
 });
+
+/**
+ * Attack H — pending escalation information must not be readable without authority.
+ *
+ * A pending escalation names a counterparty, an amount and an agent that is waiting
+ * to spend right now. Until Remediation 6D this list was served to anyone who could
+ * reach the port. It is not a mutation, which is exactly why it was easy to miss: no
+ * money moves, but an unauthenticated reader learns which payments are sitting in
+ * front of a human and how much each one is for.
+ *
+ * The dashboard reaches this through its own server-side proxy, which holds the
+ * bearer token, so protecting the route does not push a credential into the browser.
+ */
+describe("pending escalation exposure", () => {
+  async function list(headers: Record<string, string> = {}) {
+    return fetch(`${baseUrl}/escalations`, { headers });
+  }
+
+  it("refuses an unauthenticated read of pending escalations", async () => {
+    const response = await list();
+    assert.equal(response.status, 401);
+    const body = (await response.json()) as { error?: string; items?: unknown };
+    assert.equal(body.error, "reviewer_auth_required");
+    assert.equal(body.items, undefined, "no escalation data leaks in the refusal");
+  });
+
+  it("refuses a forged bearer token", async () => {
+    const response = await list({ authorization: "Bearer not-the-reviewer-token-but-long-enough" });
+    assert.equal(response.status, 403);
+    const body = (await response.json()) as { error?: string; items?: unknown };
+    assert.equal(body.error, "reviewer_auth_invalid");
+    assert.equal(body.items, undefined);
+  });
+
+  it("refuses an agent-style request with no credential at all", async () => {
+    // The hostile agent's own view: it can reach the port, and learns nothing.
+    const response = await list({ "content-type": "application/json" });
+    assert.equal(response.status, 401);
+    assert.equal((await response.text()).includes("merchant_unknown"), false);
+  });
+
+  it("serves the list to the authenticated reviewer control plane", async () => {
+    // The refusals above must not have been bought by breaking the screen.
+    const response = await list({ authorization: `Bearer ${TOKEN}` });
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as { items: Array<{ record: { action_id: string } }> };
+    assert.ok(
+      body.items.some((item) => item.record.action_id === ACTION_ID),
+      "the pending escalation is visible to an authenticated reviewer",
+    );
+  });
+});
