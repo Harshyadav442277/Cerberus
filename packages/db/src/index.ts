@@ -65,6 +65,21 @@ export type {
   RecordApprovalInput,
   RecordAuthorizationInput,
 } from "./authorizations.js";
+export {
+  claimAuditFinalization,
+  deferFinalization,
+  enqueueAuditFinalization,
+  getAuditFinalization,
+  listAuditFinalizations,
+  markFinalizationDone,
+  terminalizeSettlement,
+} from "./finalization.js";
+export type {
+  AuditFinalizationRow,
+  TerminalOutcome,
+  TerminalSettlementInput,
+  TerminalSettlementResult,
+} from "./finalization.js";
 export { SEED_AGENT, SEED_MANDATE } from "./seed-data.js";
 export { resetDemoState } from "./reset-demo.js";
 export { appliedMigrations, listMigrations, migrateDown, migrateUp } from "./migrator.js";
