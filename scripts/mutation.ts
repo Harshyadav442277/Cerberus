@@ -244,6 +244,22 @@ function git(args: string[]): string {
   return spawnSync("git", args, { cwd: ROOT, encoding: "utf8" }).stdout.trim();
 }
 
+/**
+ * Uncommitted changes to SOURCE, ignoring the evidence directory.
+ *
+ * The dirty-tree guard exists so a mutation that failed to revert cannot be mistaken
+ * for a deliberate edit. That reasoning applies to source; it does not apply to
+ * artifacts/, which nothing here mutates and which the capture harness necessarily
+ * writes to while recording this very run. Scoping the check keeps the guard strict
+ * where it matters instead of making it refuse to run under `npm run capture`.
+ */
+function dirtySource(): string {
+  return git(["status", "--porcelain", "--untracked-files=no"])
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "" && !line.includes("artifacts/final-evidence/"))
+    .join("\n");
+}
+
 function runTests(guard: Guard): { failed: number; names: string[]; ok: boolean } {
   const child = spawnSync(
     process.execPath,
@@ -337,7 +353,7 @@ async function mutate(guard: Guard): Promise<Outcome> {
 async function main(): Promise<void> {
   console.log("\nCERBERUS SECURITY MUTATION MATRIX\n");
 
-  const dirty = git(["status", "--porcelain", "--untracked-files=no"]);
+  const dirty = dirtySource();
   if (dirty) {
     console.error(
       "Refusing to run with a dirty working tree.\n" +

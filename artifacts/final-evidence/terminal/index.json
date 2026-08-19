@@ -99,6 +99,72 @@
     "logBytes": 3796
   },
   {
+    "name": "gate-adversarial",
+    "command": "npm run adversarial",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 32081,
+    "startedAt": "2026-08-19T13:06:18.018Z",
+    "log": "terminal/gate-adversarial.log",
+    "logSha256": "6b6bde0d2fbde48338c4d7e1c8c6682041da3a4316174db1e6d86afe16bee5bf",
+    "logBytes": 2144
+  },
+  {
+    "name": "gate-mutation",
+    "command": "npm run mutation",
+    "exitCode": 1,
+    "signal": null,
+    "durationMs": 654,
+    "startedAt": "2026-08-19T13:08:26.265Z",
+    "log": "terminal/gate-mutation.log",
+    "logSha256": "f0e4b89e7511afa95ef683c89169e29cf6a9bb85637edae9338f9403caac69f2",
+    "logBytes": 869
+  },
+  {
+    "name": "gate-redteam",
+    "command": "npm run redteam",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 16621,
+    "startedAt": "2026-08-19T13:06:50.848Z",
+    "log": "terminal/gate-redteam.log",
+    "logSha256": "1da9cdf911adb83992abe13fccff1dcba04298f248652564878124cf14c913d5",
+    "logBytes": 2758
+  },
+  {
+    "name": "gate-sandbox-42",
+    "command": "npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 1896,
+    "startedAt": "2026-08-19T13:07:20.612Z",
+    "log": "terminal/gate-sandbox-42.log",
+    "logSha256": "588a875b39bc2b27c88a80c99b840ccaee21bcd97400003644a20da874e54055",
+    "logBytes": 2400
+  },
+  {
+    "name": "gate-tests",
+    "command": "npm test",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 32934,
+    "startedAt": "2026-08-19T13:05:32.472Z",
+    "log": "terminal/gate-tests.log",
+    "logSha256": "9f281b03680cf3b18de64e177961bc8e7d66db9707027f519c9e75fdd216df20",
+    "logBytes": 34685
+  },
+  {
+    "name": "gate-typecheck",
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 3294,
+    "startedAt": "2026-08-19T13:05:28.447Z",
+    "log": "terminal/gate-typecheck.log",
+    "logSha256": "dd9d3ec28d373abb0af7975078adb471bb6ca84ac13152c6d5bebfb000d252c0",
+    "logBytes": 594
+  },
+  {
     "name": "sandbox-seed-1337",
     "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
     "exitCode": 0,

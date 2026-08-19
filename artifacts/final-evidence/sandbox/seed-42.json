@@ -14,20 +14,20 @@
     "OBSERVE": 0
   },
   "policyLatencyMs": {
-    "p50": 4.282,
-    "p95": 7.922,
-    "p99": 17.657
+    "p50": 4.887,
+    "p95": 8.448,
+    "p99": 20.891
   },
   "reservationLatencyMs": {
-    "p50": 8.63,
-    "p95": 22.682,
-    "p99": 37.346
+    "p50": 9.793,
+    "p95": 26.119,
+    "p99": 37.776
   },
-  "durationSeconds": 0.952,
-  "throughputPerSecond": 1050.28,
+  "durationSeconds": 1.059,
+  "throughputPerSecond": 944.49,
   "hostileSubmitted": 139,
-  "reservationsCreated": 270,
-  "budgetRefusals": 319,
+  "reservationsCreated": 271,
+  "budgetRefusals": 318,
   "velocityEscalations": 263,
   "duplicatesSubmitted": 55,
   "duplicatesRefusedByPolicy": 3,
