@@ -51,6 +51,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # setup-node v5 reads `packageManager` from package.json and tries to
+          # prime a pnpm cache. That runs BEFORE `corepack enable` below, when
+          # pnpm is not yet on PATH, and fails the step. Install is about a
+          # minute; correctness is worth more than caching it.
+          package-manager-cache: false
 
       - name: Enable pnpm
         run: corepack enable
