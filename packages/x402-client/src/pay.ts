@@ -115,10 +115,30 @@ export function createX402Payer(
 
           const headers = new Headers(httpClient.encodePaymentSignatureHeader(paymentPayload));
           headers.set("Access-Control-Expose-Headers", "PAYMENT-RESPONSE,X-PAYMENT-RESPONSE");
+          // `redirect: "error"`, because these headers carry a live signed EIP-3009
+          // authorization. The fetch specification strips only Authorization, Cookie
+          // and Proxy-Authorization across a cross-origin redirect — a custom header
+          // like PAYMENT-SIGNATURE is forwarded intact. Following a redirect would
+          // therefore let the merchant hand Cerberus's signed payment authority to a
+          // host nobody approved.
+          //
+          // The authorization binds its recipient, so a thief cannot redirect the
+          // funds; but disclosing a live payload to an unapproved origin still
+          // violates the exact-resource threat model, and lets a third party settle
+          // on a timing of its choosing.
+          //
+          // This rejects AFTER the request reached the intended merchant, so the
+          // caller correctly treats it as OUTCOME_UNKNOWN rather than non-payment.
           const response = await fetchImpl(new Request(challenge.requestUrl, {
             method: challenge.method,
             headers,
+            redirect: "error",
           }));
+          if (response.redirected || (response.status >= 300 && response.status < 400)) {
+            throw new Error(
+              "merchant redirected the paid request; signed payment authority was not forwarded",
+            );
+          }
           await httpClient.processPaymentResult(
             paymentPayload,
             (name) => response.headers.get(name),

@@ -43,6 +43,8 @@ export class X402ChallengeError extends Error {
       | "CHALLENGE_NOT_402"
       | "CHALLENGE_INVALID"
       | "CHALLENGE_TIMEOUT"
+      /** The merchant tried to redirect the unsigned request to another resource. */
+      | "CHALLENGE_REDIRECTED"
       | "VERSION_MISMATCH"
       | "RESOURCE_MISMATCH"
       | "SCHEME_MISMATCH"
@@ -84,10 +86,24 @@ export async function fetchX402Challenge(
   const signal = AbortSignal.timeout(timeoutMs);
   let response: Response;
   try {
-    response = await fetchImpl(new Request(requestUrl, { method: "GET", signal }));
+    // `redirect: "error"` rather than the default "follow". The whole point of this
+    // request is to learn the price of ONE exact resource at ONE approved merchant;
+    // a redirect means the answer would come from somewhere else. Following it would
+    // also hand this merchant the ability to point Cerberus at an arbitrary host.
+    response = await fetchImpl(
+      new Request(requestUrl, { method: "GET", signal, redirect: "error" }),
+    );
   } catch (error) {
     if (signal.aborted) throw new X402ChallengeError("CHALLENGE_TIMEOUT");
+    // fetch rejects a redirect under redirect:"error" with a TypeError, which is
+    // indistinguishable from a transport failure by type alone. Both are refusals
+    // and neither has signed anything, so classify by the response we never got.
+    if (error instanceof TypeError) throw new X402ChallengeError("CHALLENGE_REDIRECTED");
     throw error;
+  }
+  // Belt and braces for a fetch implementation that reports rather than throws.
+  if (response.redirected || (response.status >= 300 && response.status < 400)) {
+    throw new X402ChallengeError("CHALLENGE_REDIRECTED");
   }
   if (response.status !== 402) throw new X402ChallengeError("CHALLENGE_NOT_402");
 

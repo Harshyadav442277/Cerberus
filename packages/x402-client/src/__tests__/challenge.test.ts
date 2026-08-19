@@ -1,4 +1,4 @@
-import { rejects, strictEqual } from "node:assert/strict";
+import { ok, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   decodePaymentSignatureHeader,
@@ -298,5 +298,103 @@ describe("paid retry uses only the pinned challenge", () => {
     const prepared = await payer.prepare(validateX402Challenge(challenge(), EXPECTED));
     await rejects(() => prepared.submit(async () => true));
     strictEqual(transmitted, true);
+  });
+});
+
+/**
+ * D7 — redirects must not move payment authority to an unapproved host.
+ *
+ * Both request paths previously used fetch's default `redirect: "follow"`. That is
+ * the kind of default that never looks wrong in review, because the vulnerability is
+ * in what the function does NOT say.
+ *
+ * The unsigned path exists to learn the price of one exact resource at one approved
+ * merchant. Following a redirect means the answer arrives from somewhere else, and
+ * hands that merchant the ability to point Cerberus at an arbitrary host.
+ *
+ * The signed path is the serious one. Its headers carry a live EIP-3009
+ * authorization, and the fetch specification strips only Authorization, Cookie and
+ * Proxy-Authorization across a cross-origin redirect — a custom header such as
+ * PAYMENT-SIGNATURE is forwarded intact. The authorization binds its recipient, so
+ * this is not fund theft; but a live signed payload reaching an unapproved origin
+ * still breaks the exact-resource threat model and lets a third party settle on a
+ * timing of its choosing.
+ */
+describe("redirects never carry payment authority", () => {
+  it("refuses a redirected unsigned challenge before anything is signed", async () => {
+    let requests = 0;
+    await rejectsWith(
+      () =>
+        fetchX402Challenge(REQUEST, "http://localhost:4021", async (input) => {
+          const request = input instanceof Request ? input : new Request(input);
+          requests += 1;
+          // The merchant answers, but points somewhere else.
+          strictEqual(request.redirect, "error", "the request forbids following redirects");
+          strictEqual(request.headers.has("PAYMENT-SIGNATURE"), false);
+          return new Response(null, {
+            status: 302,
+            headers: { location: "https://attacker.example/402" },
+          });
+        }),
+      "CHALLENGE_REDIRECTED",
+    );
+    strictEqual(requests, 1, "the redirect target was never contacted");
+  });
+
+  it("classifies a fetch-level redirect rejection as a redirect, not a transport fault", async () => {
+    // A real runtime rejects with TypeError under redirect:"error" rather than
+    // handing back a 3xx response, so that path must be classified too.
+    await rejectsWith(
+      () =>
+        fetchX402Challenge(REQUEST, "http://localhost:4021", async () => {
+          throw new TypeError("unexpected redirect");
+        }),
+      "CHALLENGE_REDIRECTED",
+    );
+  });
+
+  it("never forwards a signed payment authorization to a redirect target", async () => {
+    const validated = validateX402Challenge(challenge(), EXPECTED);
+    const contacted: string[] = [];
+    const payer = createX402Payer(
+      {
+        privateKey: `0x${"44".repeat(32)}`,
+        network: "eip155:84532",
+        facilitatorUrl: "https://x402.org/facilitator",
+        rpcUrl: "https://sepolia.base.org",
+        merchantBaseUrl: "http://localhost:4021",
+      },
+      async (input) => {
+        const request = input instanceof Request ? input : new Request(input);
+        contacted.push(request.url);
+        strictEqual(request.redirect, "error", "the paid request forbids following redirects");
+        // The approved merchant received the signed request, then tried to bounce it.
+        strictEqual(request.headers.has("PAYMENT-SIGNATURE"), true);
+        return new Response(null, {
+          status: 307,
+          headers: { location: "https://attacker.example/collect" },
+        });
+      },
+      async () => 12_345_678n,
+    );
+
+    const prepared = await payer.prepare(validated);
+    let persisted = false;
+    await rejects(
+      () =>
+        prepared.submit(async () => {
+          persisted = true;
+          return true;
+        }),
+      (error: unknown) => error instanceof Error && /redirect/i.test(error.message),
+    );
+
+    strictEqual(persisted, true, "correlation was durably committed before transport");
+    strictEqual(contacted.length, 1, "only the approved merchant was contacted");
+    strictEqual(contacted[0], RESOURCE, "and it was the exact approved resource");
+    ok(
+      !contacted.some((url) => url.includes("attacker.example")),
+      "the signed authorization never reached the redirect target",
+    );
   });
 });
