@@ -23,8 +23,20 @@ export function createEscalationsRouter(
 ): Router {
   const router = Router();
 
-  /** GET /escalations — pending ESCALATE rows for the Escalations screen. */
-  router.get("/", async (_req, res, next) => {
+  /**
+   * GET /escalations — pending ESCALATE rows for the Escalations screen.
+   *
+   * Reviewer-authenticated (Remediation 6D). A pending escalation names a
+   * counterparty, an amount and an agent that is currently waiting to spend; that is
+   * not public information, and an unauthenticated reader of this list learns exactly
+   * which payments are sitting in front of a human right now.
+   *
+   * The dashboard reaches this through its own server-side proxy, which holds the
+   * reviewer token, so the credential never enters browser JavaScript. The waiting
+   * agent is unaffected: it observes decisions by polling `audit_log` directly and
+   * has never used this route.
+   */
+  router.get("/", createReviewerAuth(reviewerAuth), async (_req, res, next) => {
     try {
       res.json({ items: await listPendingEscalations() });
     } catch (error) {
