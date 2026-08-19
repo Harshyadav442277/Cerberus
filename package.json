@@ -2,7 +2,7 @@
   "name": "safr-runtime",
   "version": "0.1.0",
   "private": true,
-  "description": "SAFR Runtime — enforces MAS's SAFR governance pattern in real time, gating an AI agent's stablecoin payments before they execute.",
+  "description": "SAFR Runtime \u2014 enforces MAS's SAFR governance pattern in real time, gating an AI agent's stablecoin payments before they execute.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -14,6 +14,7 @@
     "redteam": "tsx scripts/redteam.ts",
     "capture": "tsx scripts/capture.ts",
     "mutation": "node --env-file-if-exists=.env --import tsx scripts/mutation.ts",
+    "preflight": "node --env-file-if-exists=.env --import tsx scripts/preflight.ts",
     "demo": "tsx apps/agent/src/cli/run.ts",
     "demo:reset": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/reset-demo.ts",
     "demo:script": "tsx scripts/demo.ts",
@@ -44,7 +45,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "viem": "^2.55.11"
   }
 }

@@ -86,5 +86,16 @@
     "log": "terminal/baseline-typecheck.log",
     "logSha256": "18a8523cbfa6c2c3cd3a50b970c7111885803836fe24c4f5d50abf8564d2010c",
     "logBytes": 594
+  },
+  {
+    "name": "e0-preflight",
+    "command": "npm run preflight",
+    "exitCode": 1,
+    "signal": null,
+    "durationMs": 4940,
+    "startedAt": "2026-08-19T12:43:59.384Z",
+    "log": "terminal/e0-preflight.log",
+    "logSha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868",
+    "logBytes": 3796
   }
 ]
