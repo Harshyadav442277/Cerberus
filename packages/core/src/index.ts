@@ -20,3 +20,6 @@ export type { ProposedAction, ProposedActionPayload } from "./schemas/proposed-a
 
 export { AuditLogRecordSchema, HumanReviewSchema, SettlementSchema } from "./schemas/audit-log.js";
 export type { AuditLogRecord, HumanReview, Settlement } from "./schemas/audit-log.js";
+
+export { LOOPBACK_HOST, resolveBindHost } from "./bind-host.js";
+export type { BindHost } from "./bind-host.js";

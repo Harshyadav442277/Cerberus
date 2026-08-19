@@ -1,3 +1,4 @@
+import { resolveBindHost } from "@safr/core";
 import express from "express";
 import { ZodError, z } from "zod";
 import {
@@ -87,8 +88,19 @@ app.use(
   },
 );
 
-app.listen(executorEnv.port, () => {
-  console.log(`\n  CERBERUS isolated executor listening on http://localhost:${executorEnv.port}`);
+/**
+ * Loopback by default — Remediation 6B. This process holds the payment key, so it is
+ * the last service that should be reachable from off-host by default. POST /execute
+ * still requires a valid signed Execution Authorization; binding to loopback removes
+ * the ability of an unauthenticated network client to trigger it at all.
+ */
+const { host: HOST, exposed } = resolveBindHost(process.env.EXECUTOR_BIND_HOST);
+
+app.listen(executorEnv.port, HOST, () => {
+  console.log(`\n  CERBERUS isolated executor listening on http://${HOST}:${executorEnv.port}`);
+  if (exposed) {
+    console.log("  WARNING       bound beyond loopback via EXECUTOR_BIND_HOST");
+  }
   console.log("  payment key   isolated in executor process");
   console.log("  execute       POST /execute\n");
 });

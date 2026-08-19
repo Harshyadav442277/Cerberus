@@ -12,6 +12,7 @@
  *
  * Run: npm run api
  */
+import { resolveBindHost } from "@safr/core";
 import cors from "cors";
 import express from "express";
 import { ZodError } from "zod";
@@ -52,9 +53,27 @@ app.use(
   },
 );
 
-app.listen(PORT, () => {
-  console.log(`\n  CERBERUS API — SAFR Runtime listening on http://localhost:${PORT}`);
+/**
+ * Loopback by default — Remediation 6B.
+ *
+ * `app.listen(PORT)` binds 0.0.0.0, which publishes this control plane to every
+ * interface on the host. A signed Execution Authorization stops an external caller
+ * mutating an amount, but it does not stop one who guesses an audit ID from
+ * triggering authorization issuance or execution timing, and that is authority
+ * triggering nobody asked for.
+ *
+ * This prototype's trusted service interfaces are therefore loopback-scoped. Binding
+ * elsewhere is possible but deliberately explicit: an operator who sets
+ * API_BIND_HOST has chosen to expose it and is responsible for what sits in front.
+ */
+const { host: HOST, exposed } = resolveBindHost(process.env.API_BIND_HOST);
+
+app.listen(PORT, HOST, () => {
+  console.log(`\n  CERBERUS API — SAFR Runtime listening on http://${HOST}:${PORT}`);
+  if (exposed) {
+    console.log("  WARNING       bound beyond loopback via API_BIND_HOST");
+  }
   console.log(`  live feed     GET /audit/stream`);
-  console.log(`  escalations   POST /escalations/:actionId/decision\n`);
+  console.log(`  escalations   POST /escalations/:actionId/decision`);
   console.log(`  authorize     POST /execution-authorizations\n`);
 });
