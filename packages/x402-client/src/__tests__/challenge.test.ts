@@ -356,6 +356,14 @@ describe("redirects never carry payment authority", () => {
   it("never forwards a signed payment authorization to a redirect target", async () => {
     const validated = validateX402Challenge(challenge(), EXPECTED);
     const contacted: string[] = [];
+    // Recorded here and asserted AFTER the call, deliberately. Asserting inside the
+    // stub looks equivalent but is not: the AssertionError's own message contains the
+    // word "redirect", so a rejection matcher looking for that word would accept the
+    // assertion failure as if it were the guard firing. The mutation matrix caught
+    // exactly that -- flipping redirect:"error" to "follow" left this test green.
+    const redirectModes: string[] = [];
+    const carriedSignature: boolean[] = [];
+
     const payer = createX402Payer(
       {
         privateKey: `0x${"44".repeat(32)}`,
@@ -367,9 +375,9 @@ describe("redirects never carry payment authority", () => {
       async (input) => {
         const request = input instanceof Request ? input : new Request(input);
         contacted.push(request.url);
-        strictEqual(request.redirect, "error", "the paid request forbids following redirects");
+        redirectModes.push(request.redirect);
+        carriedSignature.push(request.headers.has("PAYMENT-SIGNATURE"));
         // The approved merchant received the signed request, then tried to bounce it.
-        strictEqual(request.headers.has("PAYMENT-SIGNATURE"), true);
         return new Response(null, {
           status: 307,
           headers: { location: "https://attacker.example/collect" },
@@ -386,12 +394,22 @@ describe("redirects never carry payment authority", () => {
           persisted = true;
           return true;
         }),
-      (error: unknown) => error instanceof Error && /redirect/i.test(error.message),
+      (error: unknown) =>
+        error instanceof Error && error.message.includes("merchant redirected the paid request"),
     );
 
     strictEqual(persisted, true, "correlation was durably committed before transport");
     strictEqual(contacted.length, 1, "only the approved merchant was contacted");
     strictEqual(contacted[0], RESOURCE, "and it was the exact approved resource");
+    strictEqual(carriedSignature[0], true, "the request under test really carried authority");
+    // The load-bearing assertion. A real runtime, unlike this stub, would follow the
+    // 307 and forward PAYMENT-SIGNATURE to the attacker; the only thing preventing
+    // that is the request being constructed with redirect: "error".
+    strictEqual(
+      redirectModes[0],
+      "error",
+      "the paid request must forbid following redirects at the fetch layer",
+    );
     ok(
       !contacted.some((url) => url.includes("attacker.example")),
       "the signed authorization never reached the redirect target",
