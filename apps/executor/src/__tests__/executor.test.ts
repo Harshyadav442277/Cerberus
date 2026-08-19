@@ -1,4 +1,4 @@
-import { deepStrictEqual, rejects, strictEqual } from "node:assert/strict";
+import { deepStrictEqual, ok, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { AuditLogRecord, ProposedAction } from "@safr/core";
 import type { HumanApprovalBinding, PaymentReservation } from "@safr/db";
@@ -153,11 +153,25 @@ const RESERVATION: PaymentReservation = {
  * compare-and-set semantics — AUTHORIZED once, then never again — so the durable
  * one-shot boundary is exercised here and not merely assumed.
  */
-function reservationStore(initial: PaymentReservation | null = RESERVATION) {
+function reservationStore(
+  initial: PaymentReservation | null = RESERVATION,
+  /** False makes the terminal compare-and-set lose, as if a reconciler won it. */
+  finalizeWins = true,
+  /**
+   * The state a competing worker committed. Installed at the moment the CAS is lost,
+   * which is when it would really become visible — installing it up front would stop
+   * the executor at beginSubmission and the race would never happen.
+   */
+  lostCasWinner: PaymentReservation | null = null,
+) {
   let current = initial ? { ...initial } : null;
   const calls: string[] = [];
   return {
     calls,
+    /** Lets a test install the winner's committed truth before the CAS is lost. */
+    setCurrent(next: PaymentReservation | null) {
+      current = next;
+    },
     port: {
       async beginSubmission(reservationId: string, authorizationId: string) {
         if (
@@ -202,9 +216,24 @@ function reservationStore(initial: PaymentReservation | null = RESERVATION) {
         };
         return current;
       },
-      async markSettled(_id: string, tx: string | null) {
+      /**
+       * The trusted terminalization boundary. The real implementation writes the
+       * reservation, the audit settlement and the anchor request in one transaction;
+       * what matters here is the compare-and-set result, because the executor must
+       * behave differently when it loses the race to a reconciliation worker.
+       */
+      async finalizeSettled(_id: string, tx: string) {
         calls.push(`settled:${tx}`);
-        if (current) current = { ...current, status: "SETTLED" };
+        if (finalizeWins === false) {
+          calls.push("lost-cas");
+          current = lostCasWinner;
+          return false;
+        }
+        if (current) current = { ...current, status: "SETTLED", settlement_tx: tx };
+        return true;
+      },
+      async readReservation() {
+        return current;
       },
       async markFailed() {
         calls.push("failed");
@@ -264,6 +293,7 @@ function harness(
     reservation?: PaymentReservation | null;
     currentMandate?: { mandate_id: string; version: number } | null;
     approval?: HumanApprovalBinding | null;
+    agentStatus?: "active" | "suspended" | null;
   } = {
     audit: AUDIT,
     action: ACTION,
@@ -279,6 +309,7 @@ function harness(
       reservation: PaymentReservation | null;
       currentMandate: { mandate_id: string; version: number } | null;
       approval: HumanApprovalBinding | null;
+      agentStatus: "active" | "suspended" | null;
     }>;
     challengeFetcher?: () => Promise<X402Challenge>;
     chain?: Eip3009ChainReader;
@@ -327,6 +358,7 @@ function harness(
           currentMandate:
             context.currentMandate === undefined ? CURRENT_MANDATE : context.currentMandate,
           approval: context.approval === undefined ? null : context.approval,
+          agentStatus: context.agentStatus === undefined ? "active" : context.agentStatus,
         };
       },
     },
@@ -489,6 +521,7 @@ describe("isolated executor", () => {
           reservation: RESERVATION,
           currentMandate: call === 1 ? CURRENT_MANDATE : null,
           approval: null,
+          agentStatus: "active",
         };
       },
     });
@@ -530,6 +563,96 @@ describe("isolated executor", () => {
     );
     strictEqual(h.constructed(), 0);
     strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  // ── Suspension is a kill switch, not a label ────────────────────────────────
+  //
+  // Every check the executor already performs is about the PROPOSAL: is this
+  // mandate current, is this approval fresh, is this the bound reservation. None of
+  // them answer "is this agent still allowed to spend at all". An administrator who
+  // suspends a compromised agent has to be able to stop a capability that was
+  // legitimately issued seconds earlier, and the only process that can guarantee
+  // that is the one holding the payment key.
+
+  it("refuses a suspended agent holding a valid authorization before the payment key exists", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION, agentStatus: "suspended" });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "AGENT_SUSPENDED",
+    );
+    // The authorization is genuine and unexpired; only the suspension stops it.
+    strictEqual(h.constructed(), 0, "payment key was never constructed");
+    strictEqual(h.paid(), 0, "no payment was attempted");
+    strictEqual(h.challenged(), 0, "the merchant was never contacted");
+    strictEqual(h.store.status(), "AUTHORIZED", "reservation is left pre-broadcast");
+  });
+
+  it("refuses an agent whose identity row is absent rather than assuming authority", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION, agentStatus: null });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("refuses an approved escalation once the agent is suspended", async () => {
+    const escalated: AuditLogRecord = {
+      ...AUDIT,
+      disposition: "ESCALATE",
+      reason: "counterparty_not_on_allowlist",
+      rule_triggered: "counterparty_policy",
+      human_review: {
+        reviewer_id: APPROVAL.reviewer_id,
+        decision: "approved",
+        decided_at: APPROVAL.decided_at,
+        note: "Verified out of band",
+      },
+    };
+    // A human approved this exact proposal. Approval is not immunity from suspension.
+    const h = harness({
+      audit: escalated,
+      action: ACTION,
+      approval: APPROVAL,
+      agentStatus: "suspended",
+    });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: escalated.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(h.constructed(), 0);
+    strictEqual(h.store.status(), "AUTHORIZED");
+  });
+
+  it("refuses when the agent is suspended during the unsigned challenge fetch", async () => {
+    // The race the addendum names: the executor has already validated everything and
+    // is waiting on the merchant's 402 when an administrator suspends the agent. The
+    // merchant answers correctly, so nothing about the challenge betrays the change.
+    const h = harness(undefined, undefined, undefined, undefined, {
+      async resolve(call) {
+        return {
+          audit: AUDIT,
+          action: ACTION,
+          reservation: RESERVATION,
+          currentMandate: CURRENT_MANDATE,
+          approval: null,
+          agentStatus: call === 1 ? "active" : "suspended",
+        };
+      },
+    });
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof ExecutionRefusedError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(h.challenged(), 1, "the merchant round trip did happen");
+    strictEqual(h.resolved(), 2, "trusted state was read again after the merchant answered");
+    strictEqual(h.constructed(), 0, "payment key was never constructed");
+    strictEqual(h.store.status(), "AUTHORIZED", "capability was not consumed");
   });
 
   it("refuses a challenge timeout without consuming authority or reaching the key", async () => {
@@ -849,5 +972,57 @@ describe("committed financial state gates execution", () => {
     await rejects(() => h.executor.execute({ audit_id: AUDIT.audit_id, envelope }));
     deepStrictEqual(h.store.calls, ["outcome_unknown"]);
     strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+  });
+});
+
+/**
+ * Attack F, executor side — losing the terminal compare-and-set.
+ *
+ * The direct executor and a reconciliation worker can both read the chain and both
+ * correctly conclude the same payment settled. Exactly one may write that conclusion.
+ * The loser must not invent its own version of the outcome, and must not report
+ * success it did not commit.
+ */
+describe("terminal transition races", () => {
+  it("reports the committed settlement when it loses the terminal transition", async () => {
+    // A reconciler already wrote the terminal truth for this reservation. The
+    // executor's own chain proof agrees, but the row it must report is the committed
+    // one — one payment has one transaction hash, and it is not this process's copy.
+    const store = reservationStore(RESERVATION, false, {
+      ...RESERVATION,
+      status: "SETTLED",
+      settlement_tx: "0xcommitted_by_reconciler",
+    });
+    const h = harness(undefined, store);
+
+    const settlement = await h.executor.execute({
+      audit_id: AUDIT.audit_id,
+      envelope: await signed(),
+    });
+
+    strictEqual(settlement.status, "settled");
+    strictEqual(
+      settlement.tx_hash,
+      "0xcommitted_by_reconciler",
+      "the committed transaction is reported, not this process's own view",
+    );
+    ok(store.calls.includes("lost-cas"), "the compare-and-set was genuinely lost");
+  });
+
+  it("never reports success when the terminal transition is lost to a non-settlement", async () => {
+    // Losing the transition to something that is NOT a settlement means this process
+    // cannot say what happened. Guessing "settled" here would be the exact failure the
+    // whole chain-proof design exists to prevent.
+    const store = reservationStore(RESERVATION, false, {
+      ...RESERVATION,
+      status: "RECONCILING",
+      settlement_tx: null,
+    });
+    const h = harness(undefined, store);
+
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
   });
 });
