@@ -12,13 +12,21 @@ file and the README's "Current finalist build" section win.
 | | |
 |---|---|
 | **Start SHA** (this pass began here) | `ec52e325be385493d57b57cf99c9a9dbb34b4a3c` |
-| **Tested source SHA** | recorded as `repository.sha` in `artifacts/final-evidence/manifest.json` |
-| **Release payload SHA** | the commit that carries the regenerated evidence |
-| **Attestation SHA** | a later documentation-only commit recording the CI result |
+| **Tested source SHA** | `98e735ccce49b0d22124cfb4316260870317d89a` — what `repository.sha` in `artifacts/final-evidence/manifest.json` attests, with `sourceTreeClean: true` |
+| **Release payload SHA** | `6d40e85bef71d2dfa51edff34a99c7a6b8eebad1` — carries the regenerated evidence; this is the commit CI ran against |
+| **Attestation SHA** | the documentation-only commit immediately after, recording the CI result below |
 
 Those last two are separate on purpose. A commit cannot truthfully contain its own SHA
 or the result of a CI run that has not started yet. The manifest attests the **source**
 it was generated against; the attestation commit records CI for the **payload**.
+
+**CI: PASS on exactly the release payload.** Run
+[32301340842](https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842),
+head SHA `6d40e85bef71d2dfa51edff34a99c7a6b8eebad1`, all 21 steps green in 1m56s. On a
+clean Linux runner with no wallet secrets it independently reproduced 384 passing tests
+across 78 suites with 0 failures, 12/12 adversarial classes, 12/12 red-team classes, a
+clean dependency audit, the portable evidence validation, and the assertion that no
+credential file was committed. Parent-SHA CI was not accepted as a substitute.
 
 ## Gate results
 
