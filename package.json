@@ -41,9 +41,14 @@
     "merchant": "tsx apps/merchant/src/server.ts",
     "phase1": "tsx packages/x402-client/scripts/phase1-pay.ts",
     "phase1:preflight": "tsx packages/x402-client/scripts/preflight.ts",
-    "wallets:new": "tsx packages/x402-client/scripts/gen-wallets.ts"
+    "wallets:new": "tsx packages/x402-client/scripts/gen-wallets.ts",
+    "sandbox": "node --env-file-if-exists=.env --import tsx scripts/sandbox.ts"
   },
   "devDependencies": {
+    "@safr/controls-repository": "workspace:*",
+    "@safr/core": "workspace:*",
+    "@safr/db": "workspace:*",
+    "@safr/disposition-engine": "workspace:*",
     "@types/node": "^22.10.2",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",

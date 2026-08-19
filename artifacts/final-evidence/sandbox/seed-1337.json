@@ -1,0 +1,72 @@
+{
+  "seed": 1337,
+  "agents": 50,
+  "actions": 1000,
+  "concurrency": 25,
+  "maliciousRate": 0.15,
+  "duplicateRate": 0.05,
+  "sharedMandateRate": 0.3,
+  "mandates": 33,
+  "dispositions": {
+    "ALLOW": 863,
+    "DENY": 70,
+    "ESCALATE": 67,
+    "OBSERVE": 0
+  },
+  "policyLatencyMs": {
+    "p50": 4.913,
+    "p95": 10.972,
+    "p99": 21.189
+  },
+  "reservationLatencyMs": {
+    "p50": 9.886,
+    "p95": 29.001,
+    "p99": 48.014
+  },
+  "durationSeconds": 1.093,
+  "throughputPerSecond": 915.08,
+  "hostileSubmitted": 158,
+  "reservationsCreated": 283,
+  "budgetRefusals": 284,
+  "velocityEscalations": 271,
+  "duplicatesSubmitted": 49,
+  "duplicatesRefusedByPolicy": 4,
+  "duplicatesDeduped": 25,
+  "duplicatesRetriedAfterRefusal": 0,
+  "replayViolations": 0,
+  "contextMismatches": 25,
+  "invariants": [
+    {
+      "label": "committed spend <= mandate budget",
+      "violations": 0,
+      "detail": "every budget authority within 50 USDC"
+    },
+    {
+      "label": "one proposal, at most one live reservation",
+      "violations": 0,
+      "detail": "no proposal produced a second financial effect"
+    },
+    {
+      "label": "one reservation, at most one authorization",
+      "violations": 0,
+      "detail": "no reservation backs a second capability"
+    },
+    {
+      "label": "no capacity committed for a refused proposal",
+      "violations": 0,
+      "detail": "DENY and ESCALATE never reached the financial layer"
+    },
+    {
+      "label": "velocity ceiling held without approval",
+      "violations": 0,
+      "detail": "no agent exceeded 8 reservations in the window"
+    },
+    {
+      "label": "no proposal reserved twice across the run",
+      "violations": 0,
+      "detail": "49 duplicate(s) submitted; no action_id reserved more than once"
+    }
+  ],
+  "violations": 0,
+  "result": "PASS"
+}

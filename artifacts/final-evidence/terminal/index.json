@@ -97,5 +97,27 @@
     "log": "terminal/e0-preflight.log",
     "logSha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868",
     "logBytes": 3796
+  },
+  {
+    "name": "sandbox-seed-1337",
+    "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 1902,
+    "startedAt": "2026-08-19T12:51:04.641Z",
+    "log": "terminal/sandbox-seed-1337.log",
+    "logSha256": "4ef534ab3edc5e6096888424e70d1e90c5fc82cbfea5b3dc7e264e8b38a5b5e9",
+    "logBytes": 2409
+  },
+  {
+    "name": "sandbox-seed-42",
+    "command": "npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 1769,
+    "startedAt": "2026-08-19T12:50:50.269Z",
+    "log": "terminal/sandbox-seed-42.log",
+    "logSha256": "be9a353c739decb8655d53eff4229bf47dfe307d1fc5d8cbeb8d9f615f2183ae",
+    "logBytes": 2401
   }
 ]

@@ -14,6 +14,18 @@ importers:
 
   .:
     devDependencies:
+      '@safr/controls-repository':
+        specifier: workspace:*
+        version: link:packages/controls-repository
+      '@safr/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@safr/db':
+        specifier: workspace:*
+        version: link:packages/db
+      '@safr/disposition-engine':
+        specifier: workspace:*
+        version: link:packages/disposition-engine
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1

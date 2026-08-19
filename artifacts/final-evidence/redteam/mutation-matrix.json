@@ -1,0 +1,129 @@
+{
+  "generatedFrom": "79c5b175bc0843feb96c4040711990bc6ba07256",
+  "guards": [
+    {
+      "id": "budget-lock",
+      "guard": "Budget advisory lock",
+      "risk": "two concurrent proposals both read the same headroom and both pass the cap",
+      "detected": true,
+      "failingTests": [
+        "atomic budget reservations"
+      ],
+      "note": ""
+    },
+    {
+      "id": "velocity-lock",
+      "guard": "Per-agent velocity lock",
+      "risk": "concurrent proposals both observe the same hourly count and both pass the limit",
+      "detected": true,
+      "failingTests": [
+        "atomic velocity reservations"
+      ],
+      "note": ""
+    },
+    {
+      "id": "post-402-recheck",
+      "guard": "Fresh authority recheck after the unsigned merchant 402",
+      "risk": "authority revoked while the merchant was responding is never noticed, and the payment proceeds on stale permission",
+      "detected": true,
+      "failingTests": [
+        "isolated executor"
+      ],
+      "note": ""
+    },
+    {
+      "id": "suspension-executor",
+      "guard": "Agent suspension check in the isolated executor",
+      "risk": "a suspended agent's existing capability still reaches the payment key",
+      "detected": true,
+      "failingTests": [
+        "isolated executor"
+      ],
+      "note": ""
+    },
+    {
+      "id": "suspension-reservation",
+      "guard": "Agent suspension check inside the reservation transaction",
+      "risk": "capacity is committed for an agent that has already been shut off",
+      "detected": true,
+      "failingTests": [
+        "suspension blocks capacity commitment"
+      ],
+      "note": ""
+    },
+    {
+      "id": "reservation-context",
+      "guard": "Reservation context equality on reuse",
+      "risk": "capacity reserved for 1 USDC is handed to a 5 USDC payment",
+      "detected": true,
+      "failingTests": [
+        "reservation context equality"
+      ],
+      "note": ""
+    },
+    {
+      "id": "correlation-before-transport",
+      "guard": "Durable payment correlation before transport",
+      "risk": "a signed payment is sent that no reconciler can later identify on chain",
+      "detected": true,
+      "failingTests": [
+        "paid retry uses only the pinned challenge"
+      ],
+      "note": ""
+    },
+    {
+      "id": "merchant-success-chain-proof",
+      "guard": "Chain proof required before SETTLED",
+      "risk": "a merchant claiming success with a fabricated transaction hash is believed",
+      "detected": true,
+      "failingTests": [
+        "committed financial state gates execution",
+        "EIP-3009 chain reconciliation"
+      ],
+      "note": ""
+    },
+    {
+      "id": "merchant-failure-unknown",
+      "guard": "Merchant-reported failure held as OUTCOME_UNKNOWN",
+      "risk": "capacity is released while the merchant still holds a live signed authorization it can settle",
+      "detected": true,
+      "failingTests": [
+        "committed financial state gates execution"
+      ],
+      "note": ""
+    },
+    {
+      "id": "anchor-digest-comparison",
+      "guard": "On-chain anchor digest comparison",
+      "risk": "an anchor transaction that anchored a different record passes verification",
+      "detected": true,
+      "failingTests": [
+        "on-chain anchor verification"
+      ],
+      "note": ""
+    },
+    {
+      "id": "redirect-refusal",
+      "guard": "Redirect refusal on the signed payment request",
+      "risk": "a live signed EIP-3009 authorization is forwarded to a host nobody approved",
+      "detected": true,
+      "failingTests": [
+        "redirects never carry payment authority"
+      ],
+      "note": ""
+    },
+    {
+      "id": "correlated-failure-trigger",
+      "guard": "Database trigger blocking correlated FAILED outside fenced reconciliation",
+      "risk": "a correlated payment is marked failed by the executor while it may still settle",
+      "detected": true,
+      "failingTests": [
+        "durable outcome reconciliation state"
+      ],
+      "note": ""
+    }
+  ],
+  "detected": 12,
+  "total": 12,
+  "workingTreeClean": true
+}
