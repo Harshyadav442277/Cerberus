@@ -151,7 +151,18 @@ export type ReserveBudgetResult =
   /** An earlier identical proposal already holds the capacity. Not a second effect. */
   | { outcome: "existing"; reservation: PaymentReservation }
   | { outcome: "insufficient_budget"; committed: string; requested: string; limit: string }
-  | { outcome: "velocity_escalation"; committed: number; limit: number };
+  | { outcome: "velocity_escalation"; committed: number; limit: number }
+  /** The agent is suspended, or has no identity. No capacity is committed. */
+  | { outcome: "agent_suspended" }
+  /**
+   * A live reservation exists for this proposal but does not describe this payment.
+   * Never silently reused and never silently replaced — the caller is refused.
+   */
+  | {
+      outcome: "context_mismatch";
+      reservation: PaymentReservation;
+      mismatched: readonly string[];
+    };
 
 /**
  * Committed spend for a budget authority, as one NUMERIC expression.
@@ -273,6 +284,79 @@ async function expireWithin(client: PoolClient, budgetKey: string, at: string): 
   );
 }
 
+/**
+ * Every field a reused reservation must still agree with.
+ *
+ * Reuse is an idempotency convenience, not a licence to inherit capacity that was
+ * committed for something else. The original Stage-1 exploit reserved 1 USDC, edited
+ * the action, and authorized 5 USDC against the same held capacity. Proposal
+ * immutability closed that route, but the reservation layer must hold its own
+ * invariant rather than depend on a neighbouring layer to hold it.
+ *
+ * NUMERIC columns are compared through the database's own equality below, so
+ * "1.0" and "1.00" agree on value rather than on formatting.
+ */
+export interface ReservationContext {
+  auditId: string;
+  actionId: string;
+  agentId: string;
+  mandateId: string;
+  mandateVersion: number;
+  currency: string;
+  amountDecimal: string;
+  amountAtomic: string;
+  chainId: number;
+  token: string;
+}
+
+/**
+ * Compares a live reservation against the context now being requested.
+ *
+ * Returns the names of every field that disagrees, so the refusal can say precisely
+ * what did not match instead of "mismatch".
+ */
+export async function reservationContextMismatches(
+  client: PoolClient,
+  existing: PaymentReservation,
+  requested: ReservationContext,
+): Promise<string[]> {
+  const mismatched: string[] = [];
+  if (existing.audit_id !== requested.auditId) mismatched.push("audit_id");
+  if (existing.action_id !== requested.actionId) mismatched.push("action_id");
+  if (existing.agent_id !== requested.agentId) mismatched.push("agent_id");
+  if (existing.mandate_id !== requested.mandateId) mismatched.push("mandate_id");
+  if (existing.mandate_version !== requested.mandateVersion) mismatched.push("mandate_version");
+  if (existing.budget_key !== budgetKeyForMandate(requested.mandateId)) {
+    mismatched.push("budget_key");
+  }
+  if (existing.currency !== requested.currency) mismatched.push("currency");
+  if (existing.chain_id !== requested.chainId) mismatched.push("chain_id");
+  // Token addresses are hex and case-insensitive; everything else is compared exactly.
+  if (existing.token.toLowerCase() !== requested.token.toLowerCase()) mismatched.push("token");
+
+  // Money is compared as NUMERIC by the database. A string comparison here would
+  // report a false mismatch between "1.0" and "1.00" and, worse, could miss a real
+  // one if either side were ever normalised differently.
+  const { rows } = await client.query<{ amount_same: boolean; atomic_same: boolean }>(
+    `SELECT $1::numeric = $2::numeric AS amount_same,
+            $3::numeric = $4::numeric AS atomic_same`,
+    [existing.amount_decimal, requested.amountDecimal, existing.amount_atomic, requested.amountAtomic],
+  );
+  if (!rows[0]?.amount_same) mismatched.push("amount_decimal");
+  if (!rows[0]?.atomic_same) mismatched.push("amount_atomic");
+  return mismatched;
+}
+
+/** Trusted current status for an agent, read inside the reservation transaction. */
+async function agentIsActive(client: PoolClient, agentId: string): Promise<boolean> {
+  const { rows } = await client.query<{ status: string }>(
+    `SELECT status FROM agent_identity WHERE agent_id = $1`,
+    [agentId],
+  );
+  // No identity row is not "unknown, proceed" — it is an absence of authority.
+  return rows[0]?.status === "active";
+}
+
 async function findLive(
   client: PoolClient,
   auditId: string,
@@ -328,11 +412,40 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [velocityKey]);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [budgetKey]);
 
+    // Suspension is enforced inside the same transaction that commits capacity, so
+    // there is no window in which an agent suspended before this point can still
+    // acquire a reservation. The control plane also refuses earlier, on a separate
+    // read; this is the check that makes the guarantee atomic rather than racy.
+    if (!(await agentIsActive(client, input.agentId))) {
+      await client.query("COMMIT");
+      return { outcome: "agent_suspended" };
+    }
+
     await expireWithin(client, budgetKey, at);
 
     const existing = await findLive(client, input.auditId, input.actionId);
     if (existing) {
+      // Idempotent reuse is only legitimate when the held capacity describes THIS
+      // payment. Any disagreement is an invariant violation, so the request is
+      // refused outright rather than being handed someone else's capacity or
+      // silently overwriting a reservation that another request may already be
+      // executing against.
+      const mismatched = await reservationContextMismatches(client, existing, {
+        auditId: input.auditId,
+        actionId: input.actionId,
+        agentId: input.agentId,
+        mandateId: input.mandateId,
+        mandateVersion: input.mandateVersion,
+        currency: input.currency,
+        amountDecimal: input.amountDecimal,
+        amountAtomic: input.amountAtomic,
+        chainId: input.chainId,
+        token: input.token,
+      });
       await client.query("COMMIT");
+      if (mismatched.length > 0) {
+        return { outcome: "context_mismatch", reservation: existing, mismatched };
+      }
       return { outcome: "existing", reservation: existing };
     }
 
@@ -423,7 +536,26 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
     if ((error as { code?: string }).code === "23505") {
       // Never let the recovery read mask the original failure.
       const winner = await findLive(client, input.auditId, input.actionId).catch(() => null);
-      if (winner) return { outcome: "existing", reservation: winner };
+      if (winner) {
+        // The same equality invariant applies to the race winner. Losing the insert
+        // race is not a reason to inherit capacity reserved for a different payment.
+        const mismatched = await reservationContextMismatches(client, winner, {
+          auditId: input.auditId,
+          actionId: input.actionId,
+          agentId: input.agentId,
+          mandateId: input.mandateId,
+          mandateVersion: input.mandateVersion,
+          currency: input.currency,
+          amountDecimal: input.amountDecimal,
+          amountAtomic: input.amountAtomic,
+          chainId: input.chainId,
+          token: input.token,
+        }).catch(() => ["unverifiable"]);
+        if (mismatched.length > 0) {
+          return { outcome: "context_mismatch", reservation: winner, mismatched };
+        }
+        return { outcome: "existing", reservation: winner };
+      }
     }
     throw error;
   } finally {
