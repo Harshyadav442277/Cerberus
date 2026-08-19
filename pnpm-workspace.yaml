@@ -3,7 +3,21 @@ packages:
   - "apps/*"
   - "contracts"
 
-# pnpm 10 blocks dependency build scripts by default. tsx needs esbuild's.
+# pnpm blocks dependency build scripts by default, and pnpm 11 makes an ignored
+# build a hard error rather than a warning.
+#
+# `allowBuilds` is the pnpm 11 spelling. The old `onlyBuiltDependencies` list is
+# still PARSED by pnpm 11 -- it shows up in `pnpm config list` -- but no longer
+# drives the behaviour, so it looked configured while every clean install failed
+# with ERR_PNPM_IGNORED_BUILDS. Kept below for anyone still on pnpm 10.
+#
+# Worth knowing: esbuild works without this script. Its platform binary comes from
+# the optional @esbuild/<platform> package, so the postinstall is belt and braces
+# rather than load-bearing.
+allowBuilds:
+  esbuild: true
+
+# pnpm 10 spelling, retained for older toolchains.
 onlyBuiltDependencies:
   - esbuild
 
