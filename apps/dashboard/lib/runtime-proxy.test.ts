@@ -87,4 +87,67 @@ describe("authenticated dashboard runtime proxy", () => {
     strictEqual(response.status, 404);
     strictEqual(calls, 0);
   });
+
+  it("proxies the read-only health route the sidebar polls from the browser", async () => {
+    const basic = configure();
+    let upstreamAuthorization: string | null = null;
+    let upstreamUrl = "";
+    const handler = createRuntimeReadHandler(async (input, init) => {
+      upstreamUrl = String(input);
+      upstreamAuthorization = new Headers(init?.headers).get("authorization");
+      return new Response(JSON.stringify({ ok: true, database: "up" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const response = await handler(
+      new Request("http://dashboard.test/api/runtime/health", {
+        headers: { authorization: basic },
+      }),
+      { params: Promise.resolve({ path: ["health"] }) },
+    );
+
+    strictEqual(response.status, 200);
+    strictEqual(upstreamAuthorization, "Bearer dashboard-upstream-token-at-least-32-bytes");
+    strictEqual(upstreamUrl.endsWith("/health"), true);
+  });
+
+  it("still requires dashboard login before health, and never returns the bearer", async () => {
+    configure();
+    let calls = 0;
+    const handler = createRuntimeReadHandler(async () => {
+      calls += 1;
+      return new Response("unreachable");
+    });
+
+    const response = await handler(
+      new Request("http://dashboard.test/api/runtime/health"),
+      { params: Promise.resolve({ path: ["health"] }) },
+    );
+
+    strictEqual(response.status, 401);
+    strictEqual(calls, 0);
+    strictEqual((await response.text()).includes("dashboard-upstream-token"), false);
+  });
+
+  it("allows health only as an exact single segment", async () => {
+    const basic = configure();
+    let calls = 0;
+    const handler = createRuntimeReadHandler(async () => {
+      calls += 1;
+      return new Response("unreachable");
+    });
+
+    for (const path of [["health", "detail"], ["health", ""], ["healthz"]]) {
+      const response = await handler(
+        new Request("http://dashboard.test/api/runtime/x", {
+          headers: { authorization: basic },
+        }),
+        { params: Promise.resolve({ path }) },
+      );
+      strictEqual(response.status, 404);
+    }
+    strictEqual(calls, 0);
+  });
 });

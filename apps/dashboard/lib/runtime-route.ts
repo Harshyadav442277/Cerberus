@@ -10,6 +10,10 @@ const CONTROL_PLANE_API =
   "http://localhost:4050";
 
 function allowedPath(parts: readonly string[]): boolean {
+  // The sidebar polls health from the browser every five seconds. It is a read-only
+  // status route with no payment or policy data; without it the status dots can only
+  // ever render the failure state.
+  if (parts.length === 1 && parts[0] === "health") return true;
   if (parts.length === 1 && parts[0] === "audit") return true;
   if (parts[0] === "audit" && parts.length === 2 && parts[1]) return true;
   if (parts[0] === "mandates" && parts[1] === "active" && parts.length === 2) return true;
