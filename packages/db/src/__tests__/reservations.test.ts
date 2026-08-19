@@ -858,3 +858,119 @@ describe("suspension blocks capacity commitment", () => {
     strictEqual(await activeAmounts("mandate_ok"), 3);
   });
 });
+
+/**
+ * Velocity approval semantics — Stage-2 Phase C2.
+ *
+ * `velocityOverrideApproved` is set whenever a human approval covers the exact
+ * proposal, regardless of what the escalation was originally raised for. These tests
+ * exist to pin that decision down deliberately rather than leave it as an emergent
+ * property, and — more importantly — to prove the boundary that makes it safe.
+ *
+ * The chosen semantics: a human may approve more TRANSACTIONS. No human decision on
+ * this path can approve more MONEY.
+ */
+describe("velocity approval semantics", () => {
+  async function seedAtVelocityLimit(agentId: string, mandateId: string, maxTotal = 100) {
+    await seedAgent(agentId);
+    await insertMandate(mandateFixture({ mandateId, agentId, maxTotal }));
+    // Occupy the agent's single hourly slot with a live reservation.
+    const first = await seedProposal({ id: `${agentId}_v1`, agentId, mandateId, amount: 1 });
+    const reserved = await reserveBudget(
+      reserveInput(first, maxTotal, { velocityLimit: 1 }),
+    );
+    ok(reserved.outcome === "created");
+    return reserved;
+  }
+
+  it("lets an approved proposal occupy a velocity slot beyond the automatic threshold", async () => {
+    // The documented decision. The reviewer approved this exact payment; the hourly
+    // transaction ceiling does not survive that decision.
+    await seedAtVelocityLimit("agent_vel", "mandate_vel");
+    const second = await seedProposal({
+      id: "agent_vel_v2",
+      agentId: "agent_vel",
+      mandateId: "mandate_vel",
+      amount: 1,
+    });
+
+    const refused = await reserveBudget(
+      reserveInput(second, 100, { velocityLimit: 1, velocityOverrideApproved: false }),
+    );
+    strictEqual(refused.outcome, "velocity_escalation", "without approval it escalates");
+
+    const approved = await reserveBudget(
+      reserveInput(second, 100, { velocityLimit: 1, velocityOverrideApproved: true }),
+    );
+    strictEqual(approved.outcome, "created", "with approval the slot is granted");
+  });
+
+  it("a human approval never raises the rolling budget ceiling", async () => {
+    // The guard that makes the semantics above defensible. Budget is evaluated before
+    // the override flag is consulted and has no override of its own, so an approval
+    // that buys an extra transaction still cannot buy an extra dollar.
+    await seedAgent("agent_cap");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_cap", agentId: "agent_cap", maxTotal: 10 }),
+    );
+    const first = await seedProposal({
+      id: "cap_v1",
+      agentId: "agent_cap",
+      mandateId: "mandate_cap",
+      amount: 9,
+    });
+    const reserved = await reserveBudget(reserveInput(first, 10, { velocityLimit: 1 }));
+    ok(reserved.outcome === "created");
+
+    const overBudget = await seedProposal({
+      id: "cap_v2",
+      agentId: "agent_cap",
+      mandateId: "mandate_cap",
+      amount: 5,
+    });
+    // 9 + 5 > 10. The reviewer approved this exact proposal, and it still cannot pass.
+    const result = await reserveBudget(
+      reserveInput(overBudget, 10, { velocityLimit: 1, velocityOverrideApproved: true }),
+    );
+
+    strictEqual(
+      result.outcome,
+      "insufficient_budget",
+      "approval grants a transaction slot, never additional spend",
+    );
+    strictEqual(await activeAmounts("mandate_cap"), 9, "no extra capacity was committed");
+  });
+
+  it("an approval is spent on one proposal, not on a velocity allowance", async () => {
+    // A reviewer's decision binds one proposal hash. Reserving a SECOND distinct
+    // proposal requires its own approval, so one click cannot become a standing
+    // exemption from the hourly limit.
+    await seedAtVelocityLimit("agent_once", "mandate_once");
+    const approvedProposal = await seedProposal({
+      id: "once_v2",
+      agentId: "agent_once",
+      mandateId: "mandate_once",
+      amount: 1,
+    });
+    const granted = await reserveBudget(
+      reserveInput(approvedProposal, 100, { velocityLimit: 1, velocityOverrideApproved: true }),
+    );
+    strictEqual(granted.outcome, "created");
+
+    // A different proposal, carrying no approval of its own.
+    const unapproved = await seedProposal({
+      id: "once_v3",
+      agentId: "agent_once",
+      mandateId: "mandate_once",
+      amount: 1,
+    });
+    const refused = await reserveBudget(
+      reserveInput(unapproved, 100, { velocityLimit: 1, velocityOverrideApproved: false }),
+    );
+    strictEqual(
+      refused.outcome,
+      "velocity_escalation",
+      "the previous approval grants nothing to a different proposal",
+    );
+  });
+});

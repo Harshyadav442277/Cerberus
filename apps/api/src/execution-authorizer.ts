@@ -218,8 +218,29 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
           },
         );
         if (!freshness.usable) throw approvalRefusal(freshness);
-        // The decision binds this exact proposal and current mandate version. It may
-        // therefore occupy a velocity slot beyond the automatic threshold.
+
+        // ── Chosen velocity-approval semantics (Stage-2 Phase C2) ──────────────
+        //
+        // A human approval of this exact proposal ALSO permits its velocity slot,
+        // whatever the escalation was originally raised for. The alternative —
+        // requiring the approval reason to name the velocity rule specifically —
+        // was considered and rejected, because:
+        //
+        //  - the velocity ceiling is only reached at reservation time, after the
+        //    reviewer has already decided, so a counterparty escalation could not
+        //    have told them about it even in principle; and
+        //  - refusing here would strand an approved payment on a second rule the
+        //    reviewer cannot address without a second approval round, which is a
+        //    worse outcome than the risk it avoids.
+        //
+        // What makes this safe is what an approval canNOT do. It binds one exact
+        // proposal hash under one exact mandate version, it is one-shot, and the
+        // rolling-window BUDGET ceiling is checked before this flag is consulted
+        // and has no override at all. So a human may approve more transactions;
+        // no human decision on this path can approve more money.
+        //
+        // Proven by "a human approval never raises the rolling budget ceiling" in
+        // packages/db/src/__tests__/reservations.test.ts.
         velocityOverrideApproved = true;
       }
 
