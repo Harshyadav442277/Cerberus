@@ -1,0 +1,122 @@
+name: CI
+
+# Runs the full local verification gate on every push and pull request.
+#
+# Deliberately absent: any live testnet payment, any funded wallet, any signing key.
+# CI proves the governance logic, the database privilege separation and the build.
+# The live Base Sepolia evidence run stays manual and human-supervised, because a
+# funded payment is not something a CI trigger should be able to cause.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: safr
+          POSTGRES_PASSWORD: safr
+          POSTGRES_DB: safr_runtime
+        ports:
+          - 5544:5432
+        options: >-
+          --health-cmd "pg_isready -U safr -d safr_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+
+    env:
+      # Schema-owner URL, used only by migrations and the test suite — exactly as it
+      # is locally. The per-process least-privilege logins are provisioned below.
+      DATABASE_URL: postgres://safr:safr@localhost:5544/safr_runtime
+      # Public, non-secret runtime settings. No signer key appears anywhere in CI.
+      X402_NETWORK: eip155:84532
+      EVM_RPC_URL: https://sepolia.base.org
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit
+        run: pnpm audit
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Migrate
+        run: npm run db:migrate
+
+      - name: Provision least-privilege roles
+        # The privilege suite connects as the real per-process logins, so the group
+        # roles from migrations 005 and 011 must exist before it runs. Passwords here
+        # are throwaway CI values for an ephemeral container.
+        run: |
+          cat > .env.agent <<'EOF'
+          AGENT_DATABASE_URL=postgres://cerberus_agent_app:ci_password_at_least_16@localhost:5544/safr_runtime
+          EOF
+          cat > .env.authorizer <<'EOF'
+          CONTROL_PLANE_DATABASE_URL=postgres://cerberus_control_app:ci_password_at_least_16@localhost:5544/safr_runtime
+          EOF
+          cat > .env.executor <<'EOF'
+          EXECUTOR_DATABASE_URL=postgres://cerberus_executor_app:ci_password_at_least_16@localhost:5544/safr_runtime
+          EOF
+          cat > .env.reconciler <<'EOF'
+          RECONCILER_DATABASE_URL=postgres://cerberus_reconciler_app:ci_password_at_least_16@localhost:5544/safr_runtime
+          EOF
+          cat > .env.anchor <<'EOF'
+          ANCHOR_DATABASE_URL=postgres://cerberus_anchor_app:ci_password_at_least_16@localhost:5544/safr_runtime
+          EOF
+          npm run db:roles
+
+      - name: Seed
+        run: npm run db:seed
+
+      - name: Schema and engine verification
+        run: npm run db:verify
+
+      - name: Tests
+        run: npm test
+
+      - name: Adversarial suite
+        run: npm run adversarial
+
+      - name: Security red-team gate
+        run: npm run redteam
+
+      - name: Contract compile
+        run: npm run contracts:compile
+
+      - name: Dashboard build
+        run: npm run build --prefix apps/dashboard
+
+      - name: Assert no credential files were committed
+        # A committed .env would defeat every privilege boundary above it. The files
+        # written in this job are CI-local and must never appear in the tree.
+        run: |
+          if git ls-files --error-unmatch .env .env.agent .env.authorizer \
+               .env.executor .env.reconciler .env.anchor 2>/dev/null; then
+            echo "A credential file is tracked in git."
+            exit 1
+          fi
+          echo "No credential files are tracked."
