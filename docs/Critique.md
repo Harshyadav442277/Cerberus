@@ -102,9 +102,9 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 
 ## Current phase boundary
 
-Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, and 5, including review hardening
-through Phase 5.2, are complete. The release gate passed the full **259/259-test
-suite across 48 suites** against real PostgreSQL. Phase 6 has not started.
+Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, 5 including review hardening through
+Phase 5.2, and Phase 6 are complete. The release gate passed the full **260/260-test
+suite across 48 suites** against real PostgreSQL.
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -191,10 +191,15 @@ from/to/value `Transfer`. The chain-derived transaction is recorded even when it
 differs from the merchant claim. Missing, mismatched, or unavailable evidence becomes
 `OUTCOME_UNKNOWN` and is retried by the existing keyless reconciler.
 
+Phase 6 exposes the existing proof as one repeatable `npm run adversarial` command.
+It executes named assertions across 12 deliberate attack classes, including the real
+PostgreSQL concurrency and privilege suites, parses their TAP totals, rejects missing
+evidence or zero-test matches, and derives the judge-facing summary from execution.
+The verified run passed **78/78 selected assertions across 12/12 classes** with no
+failures, skips, or cancellations.
+
 What may **not** yet be claimed:
 
-- **Phase 6.** The consolidated judge-facing adversarial suite has not been assembled
-  as a single evidence command, even though its component security tests are green.
 - The fresh funded hardened-path evidence run remains pending for Phase 8.
 - A nonce used without exact transfer evidence is intentionally retained for manual
   investigation; Cerberus does not guess that a cancellation was a payment.

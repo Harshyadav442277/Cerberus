@@ -48,8 +48,9 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
 - Schema migrated (`001_init`, `002_audit_anchor`) and seeded (`agent_treasury_01`, `mandate_001` v1)
 - `npm run db:verify` — 13/13
-- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 259/259
+- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 260/260
   across 48 suites, with typecheck and dashboard production build clean.
+- `npm run adversarial` — 12/12 attack classes, 78/78 selected assertions
 - Stage-1 evidence used merchant (`:4021`), API (`:4050`), and dashboard (`:3000`).
   Current runs also require the isolated executor (`:4060`) and keyless reconciler.
 - `npm run demo:script -- --thrice` — three consecutive clean runs

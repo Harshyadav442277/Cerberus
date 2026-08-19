@@ -57,8 +57,12 @@ until the current phase passes its Definition of Done.
    non-authoritative: only an exact chain-proven EIP-3009 transfer becomes SETTLED;
    mismatched or unavailable evidence remains UNKNOWN. The full suite passes 259/259
    tests across 48 suites.
-6. **Complete adversarial suite — not started.** Consolidate the critique's hostile
-   cases as repeatable evidence.
+6. **Complete adversarial suite — complete and verified.** `npm run adversarial`
+   executes named evidence across 12 attack classes, including real PostgreSQL-backed
+   privilege, replay, budget, velocity, and reconciliation tests. Its TAP-derived
+   summary passes 78/78 selected assertions with no failures, skips, or cancellations.
+   The complete regression suite passes 260/260 tests across 48 suites; typecheck,
+   dashboard production build, and contract compile are clean.
 7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and
    adversarial cases without broadening the product.
 8. **Demo hardening and freeze — not started.** Run the complete hardened path,

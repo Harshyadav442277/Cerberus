@@ -180,6 +180,7 @@ on port `5544`; the Windows setup used for the published evidence is documented 
 ```bash
 npm run typecheck
 npm test
+npm run adversarial
 npm run build --prefix apps/dashboard
 npm run contracts:compile
 ```
@@ -187,10 +188,13 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **259 tests, 48 suites, 259 passed, 0 failed**.
+- The test runner reports **260 tests, 48 suites, 260 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
+- The judge-facing adversarial verifier reports **12/12 attack classes** and **78/78
+  selected assertions** passed, with zero failed, skipped, or cancelled assertions.
+  It validates named TAP evidence and fails if a class matches no tests.
 - The Next.js production build completes and lists seven application routes, including
   the server-only reviewer proxy.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.

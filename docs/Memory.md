@@ -43,24 +43,26 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   obtains a fresh clock/context read and rechecks authorization, mandate, approval,
   and reservation authority before consuming or signing. The unsigned request has a
   10-second timeout, and the final database CAS operations enforce expiry. The full
-  suite is now 259/259 across 48 suites after Phase 5.2. Phase 5
+  suite is now 260/260 across 48 suites after Phase 6. Phase 5
   `OUTCOME_UNKNOWN` reconciliation is complete: correlation is durable before
   transport, a keyless fenced worker resolves
   exact settlement or expired-unused non-payment, and audit/dashboard state preserves
-  UNKNOWN honestly. Phases 6–8 have not started. The fresh funded hardened-path run
-  also remains pending.
+  UNKNOWN honestly. Phase 6 is complete: `npm run adversarial` passed 78/78 selected
+  assertions across 12/12 attack classes using named TAP evidence and real PostgreSQL
+  where required. Phases 7–8 have not started. The fresh funded hardened-path run also
+  remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **259/259 across 48 suites**, Aug 19 after Stage-2 Phase 5.2, against
+- **Test count:** **260/260 across 48 suites**, Aug 19 after Stage-2 Phase 6, against
   real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
   test database properties and are worthless against stubs. Test files run with
   `--test-concurrency=1` because the database suites share one database. Historical
   entries below preserve the counts correct when written.
-- **Next concrete step:** Phase 6 consolidated adversarial suite. The fresh funded
-  ALLOW plus dashboard-approved ESCALATE run also remains required before the hardened
-  path is presented as live evidence.
+- **Next concrete step:** stop for Phase 6 approval, then capture a fresh funded ALLOW
+  plus dashboard-approved ESCALATE through the hardened path before presenting it as
+  live evidence. Do not begin Phase 7 automatically.
 
 **Current finalist claim limits (after Stage-2 Phase 5 implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
@@ -91,7 +93,7 @@ mandate policy bodies are database-immutable by version. Transaction-count veloc
 is concurrency-safe at reservation time and preserves ESCALATE semantics.
 
 **Command reference** (run from repo root; no nested pnpm):
-`npm run typecheck` · `npm test` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reconciler` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
+`npm run typecheck` · `npm test` · `npm run adversarial` · `npm run db:up` · `npm run db:migrate` · `npm run db:migrate:down` · `npm run db:migrate:status` · `npm run db:roles` · `npm run db:seed` · `npm run db:verify` · `npm run merchant` · `npm run demo` · `npm run demo:reset` · `npm run demo:script` · `npm run api` · `npm run executor` · `npm run reconciler` · `npm run reviewer:auto` · `npm run dashboard` · `npm run audit:verify` · `npm run audit:tamper-demo` · `npm run contracts:compile` · `npm run contracts:deploy` · `npm run phase1:preflight` · `npm run phase1`
 
 `npm run demo` / `demo:script` need `npm run merchant` running and an authenticated
 dashboard click or separate `npm run reviewer:auto`. Use `reviewer:auto -- --count=3`
@@ -214,6 +216,37 @@ Bible Section 7.2 sets `allowed_days: ["Mon".."Fri"]`, and the seed originally f
 ---
 
 ## Log
+
+### Aug 19 — Stage-2 Phase 6: consolidated adversarial proof
+
+**Judge command.** `npm run adversarial` runs selected existing security assertions in
+12 deliberate classes: hostile-agent/key isolation, reviewer impersonation, database
+privilege attacks, forged authority, replay/duplicate execution, concurrent budget,
+velocity concurrency, stale authority, x402 challenge mutation, merchant false
+failure, merchant fake success, and crash/reconciliation. Each class names its required
+test evidence; the runner parses TAP totals and fails on missing evidence, zero tests,
+child failure, cancellation, or an assertion failure. PASS text is not hardcoded.
+
+**Coverage strengthened.** The authenticated reviewer attack now also asserts that no
+execution authorization row is created. A distinct post-signature timeout test proves
+one signed request attempt becomes `OUTCOME_UNKNOWN`, retains capacity, and does not
+retry.
+
+**Measured verification.** The consolidated run passed **12/12 classes and 78/78
+selected assertions**, with 0 failed, 0 skipped, and 0 cancelled. The full suite passed
+**260/260 tests across 48 suites** against real PostgreSQL. Typecheck, the seven-route
+dashboard production build, and the solc 0.8.36 compile of the 263-byte `AuditAnchor`
+bytecode are clean.
+
+**Not proven by Phase 6.** Fresh funded hardened-path Base Sepolia settlement and
+authenticated dashboard ESCALATE evidence remain pending. Reconciled audit records do
+not yet have durable anchor finalization; the reconciler login still inherits the
+broader executor role; same-host filesystem compromise remains outside the prototype
+process-isolation claim; and production finality would require a configurable
+confirmation threshold. Phase 7 has not started.
+
+**Next:** stop for approval, then capture fresh hardened live evidence. Do not begin
+Phase 7 automatically.
 
 ### Aug 19 — Stage-2 Phase 5.2: chain-proven merchant success
 
