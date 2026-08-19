@@ -13,3 +13,21 @@ export {
 export type { AuditAnchorRow } from "./repository.js";
 export { createAuditLog } from "./audit-log.js";
 export type { AuditLog } from "./audit-log.js";
+export {
+  POSTGRES_FINALIZATION_STORE,
+  drainFinalizations,
+  finalizeOne,
+} from "./finalizer.js";
+export type {
+  AnchorRecordStore,
+  FinalizationRunResult,
+  FinalizationStore,
+  FinalizeOneOptions,
+} from "./finalizer.js";
+export { createAnchorChainReader, verifyAnchorOnChain } from "./verify-chain.js";
+export type {
+  AnchorChainReader,
+  AnchorTransactionReceipt,
+  AnchorVerification,
+  VerifyAnchorOptions,
+} from "./verify-chain.js";
