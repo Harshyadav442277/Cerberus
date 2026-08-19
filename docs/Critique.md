@@ -104,9 +104,11 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 
 Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, 5 including review hardening through
 Phase 5.2, and Phase 6 are complete, followed by the finalist security remediation
-pass. The release gate passed the full **363/363-test suite across 72 suites**
-against real PostgreSQL, plus **12/12 adversarial classes** and **9/9 red-team
-classes**, with **12/12 security guards proven detectable** by the mutation matrix.
+pass, and then the final release remediation pass. The release gate passed the full
+**384/384-test suite across 78 suites** against real PostgreSQL, plus **12/12
+adversarial classes** and **12/12 red-team classes**, with **12/12 security guards
+proven detectable** by the mutation matrix. *(At the finalist completion build these
+figures were 363/72 and 9/9.)*
 See [submission/SECURITY_REMEDIATION.md](submission/SECURITY_REMEDIATION.md) and
 [submission/REDTEAM_REPORT.md](submission/REDTEAM_REPORT.md).
 
@@ -201,11 +203,13 @@ PostgreSQL concurrency and privilege suites, parses their TAP totals, rejects mi
 evidence or zero-test matches, and derives the judge-facing summary from execution.
 The verified run passed **80 selected assertions across 12/12 classes** with no
 failures, skips, or cancellations. The finalist security remediation adds a second
-gate, `npm run redteam`, covering nine further attack classes (agent suspension,
+gate, `npm run redteam`, covering further attack classes (agent suspension,
 hostile-agent audit falsification, fake on-chain anchors, terminal-state atomicity,
 finalization crash recovery, executor/reconciler races, reservation context
-equality, HTTP exposure, and reconciler/anchor least privilege) with **9/9 classes
-and 60 assertions** passing.
+equality, HTTP exposure, and reconciler/anchor least privilege). The final release
+remediation extended it to capability and read authentication, trusted issuance time,
+and the paid-request timeout: **12/12 classes and 70 assertions** passing. *(That gate
+was 9/9 and 60 assertions when first introduced.)*
 
 What may **not** yet be claimed:
 

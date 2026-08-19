@@ -73,8 +73,10 @@ outcome that had to be avoided this close to a demo.
 
 ### Verification after the upgrade
 
-Figures below are as at the dependency upgrade. The later finalist completion build
-raised the suite to 363 tests across 72 suites; the audit result is unchanged.
+Figures below are as at the dependency upgrade and are historical. Later builds raised
+the suite to 363 tests across 72 suites, then 381 across 78 suites at the final release
+remediation, and 384 across 78 at the freeze pass; the audit result is unchanged. The current gate is in the README's
+"Current finalist build" section.
 
 Raising a transitive dependency is only safe if the build still works, so each of
 these was re-run against the overridden tree:

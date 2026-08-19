@@ -88,8 +88,12 @@ export function createAuditLog(options: AuditLogOptions = {}): AuditLog {
       // One durable row saying "this record is terminal, please anchor it". The
       // trusted worker does everything else. Swallowing the error keeps Architecture
       // 6.1's promise that anchoring can never fail a disposition; the record itself
-      // is already committed, and an un-enqueued record is re-enqueued by the
-      // sweeper rather than lost.
+      // is already committed and remains valid and re-hashable.
+      //
+      // Known finalist limitation: there is no sweeper that later finds terminal
+      // audit rows with no `audit_finalization` row, so a record whose enqueue failed
+      // during a narrow database outage stays unanchored until an operator re-enqueues
+      // it. See docs/EDGE_CASES.md — "Finalization enqueue that never happened".
       await enqueue(auditId).catch((error: unknown) => {
         console.warn(
           `  [anchor] ${auditId} not enqueued — ${error instanceof Error ? error.message : String(error)}`,

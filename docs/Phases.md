@@ -77,10 +77,12 @@ until the current phase passes its Definition of Done.
    digest it writes. Reservation reuse verifies every field it inherits, both HTTP
    services bind loopback, `GET /escalations` is reviewer-authenticated behind a
    server-side proxy, and the reconciler and anchor worker have dedicated
-   least-privilege roles. All 8 dependency vulnerabilities were fixed. The full suite
-   passes 330/330 tests across 61 suites; adversarial holds at 12/12 classes with 80
-   assertions; the new `npm run redteam` gate passes 9/9 classes with 60 assertions;
-   dependency audit is clean. Residual limitations — inclusion rather than finality on
+   least-privilege roles. All 8 dependency vulnerabilities were fixed. At the close of
+   this round the full suite passed 330/330 tests across 61 suites; adversarial held at
+   12/12 classes with 80 assertions; the new `npm run redteam` gate passed 9/9 classes
+   with 60 assertions; dependency audit was clean. *(Those are this round's historical
+   figures. The current gate is 384/78 with 12/12 red-team classes — see the README's
+   "Current finalist build" section.)* Residual limitations — inclusion rather than finality on
    the settlement path, and deployment hardening beyond bearer auth plus loopback — are
    documented in `docs/submission/SECURITY_REMEDIATION.md`.
 7. **Seeded judge-facing sandbox — complete and verified.** `npm run sandbox`

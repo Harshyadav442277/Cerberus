@@ -271,8 +271,8 @@ npm run redteam
 
 **Expected:**
 ```
-Attack classes passed:  9/9
-Assertions passed:      60
+Attack classes passed:  12/12
+Assertions passed:      70
 RESULT: PASS
 ```
 

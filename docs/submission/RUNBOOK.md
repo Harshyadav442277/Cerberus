@@ -1,7 +1,9 @@
 # Cerberus — operator runbook, cold start to judged demo
 
-**Feature frozen at `ba5c853` (`ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`).** Bug fixes, demo reliability, wording
-and evidence recapture only — no new features.
+**Architecture and features are hard frozen; general code is soft frozen.** Bug fixes,
+demo reliability, wording and evidence recapture only — no new features. Feature freeze
+was first declared at `ba5c853`; the freeze policy and the current release SHAs are in
+[FINAL_FREEZE.md](FINAL_FREEZE.md), which is authoritative.
 
 
 Everything needed to take this machine from powered-off to a running demo, and the
@@ -53,10 +55,10 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 - Postgres 18.6 running on `localhost:5544`, database `safr_runtime`, role `safr`
 - Schema migrated (`001_init`, `002_audit_anchor`) and seeded (`agent_treasury_01`, `mandate_001` v1)
 - `npm run db:verify` — 13/13
-- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 260/260
-  across 48 suites, with typecheck and dashboard production build clean.
+- The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 384/384
+  across 78 suites, with typecheck and dashboard production build clean.
 - `npm run adversarial` — 12/12 attack classes, 80 selected assertions
-- `npm run redteam` — 9/9 attack classes, 60 assertions (finalist security remediation)
+- `npm run redteam` — 12/12 attack classes, 70 assertions
 - `npm run mutation` — 12/12 security guards proven detectable
 - `npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25` — 0 violations
 - `npm run preflight` — gates any funded live run; exits non-zero until every

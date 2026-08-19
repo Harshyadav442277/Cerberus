@@ -9,7 +9,12 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 
 ## Current state at a glance
 
-- **FEATURE FROZEN** at `ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`. Bug fixes, demo reliability, wording and evidence recapture only.
+- **ARCHITECTURE AND FEATURE FROZEN — HARD. GENERAL CODE FROZEN — SOFT.** The freeze
+  policy and the exact release SHAs are in
+  [`submission/FINAL_FREEZE.md`](submission/FINAL_FREEZE.md), which is authoritative.
+  Feature freeze was first declared at `ba5c853`; the final release-candidate lineage
+  is `cd75049` → `bb3f6a2` → `ec52e32` → this polish pass. Remaining work is signer
+  provisioning, funded evidence, recording and rehearsal — not product code.
 
 - **Project name:** **CERBERUS** (corrected spelling locked by the project owner on Aug 13), named for the three-headed guardian of Hades. The three heads map to ALLOW, DENY, and ESCALATE; SAFR Runtime remains the technical description.
 - **Phase 0:** **complete.** Funded-wallet and network checks pass.
@@ -57,16 +62,19 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   authority, atomic terminal financial/audit state with a durable finalization
   outbox and trusted anchor worker, reservation context equality, loopback-scoped
   services with reviewer-authenticated escalation reads, dedicated reconciler and
-  anchor database roles, and a clean dependency audit. Phases 7–8 have not started.
-  The fresh funded hardened-path run also remains pending.
+  anchor database roles, and a clean dependency audit. *(As written, Phases 7–8 had not
+  started. Phase 7 is since complete; Phase 8's narration was recorded and the visual
+  edit intentionally omitted.)* The fresh funded hardened-path run remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **363/363 across 72 suites**, Aug 19 after the finalist completion
-  build (330/61 after the security remediation pass; 260/48 after Stage-2 Phase 6),
+- **Test count:** **384/384 across 78 suites** at the final freeze pass
+  (historically: 381/78 after the final release remediation pass; 363/72 at the
+  finalist completion build; 330/61 after the security
+  remediation pass; 260/48 after Stage-2 Phase 6),
   against real PostgreSQL on `5544`. Adversarial: 12/12 classes, 80 assertions. Red
-  team (`npm run redteam`): 9/9 classes, 60 assertions. Mutation matrix
+  team (`npm run redteam`): 12/12 classes, 70 assertions. Mutation matrix
   (`npm run mutation`): 12/12 guards proven detectable. Sandbox: 0 violations on two
   seeds. Dependency audit: clean. The reservation, finalization
   and privilege suites test database properties and are worthless against stubs.

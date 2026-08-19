@@ -40,6 +40,28 @@ pins the merchant's exact live x402 challenge before the payment key is reached.
 separate keyless worker reconciles ambiguous EIP-3009 outcomes from durable nonce and
 transfer evidence. See `Critique.md` for the fixed hardening order and claim limits.
 
+### The trust boundary, stated once
+
+The untrusted party is **the agent**. Everything below follows from that.
+
+| Role | Holds | Authority |
+|---|---|---|
+| **Agent** (untrusted) | *No* payment key, *no* Execution Authorization signing key, *no* anchor key, *no* reviewer credential. Least-privilege DB role. | Proposes actions and requests authority. **Cannot author trusted terminal financial truth.** Its only finalization power is `INSERT (audit_id)` on a durable outbox. |
+| **Control plane** (`apps/api`) | Execution Authorization signing key; control-plane DB role. | Re-evaluates policy under trusted time, holds reservation authority, issues Execution Authorizations. |
+| **Executor** (`apps/executor`) | Payment key. The only application that may load `EXECUTOR_EVM_PRIVATE_KEY` or construct the x402 payer. | Validates the exact x402 challenge, consumes the capability one-shot, writes terminal settlement **from chain proof**. |
+| **Reconciler** | *No* signer. Own keyless DB role and public RPC. | Resolves `OUTCOME_UNKNOWN` from durable nonce and on-chain evidence only. |
+| **Anchor worker** | Anchor signer only. | Recomputes the digest from the stored audit record; never trusts a supplied digest. |
+| **Reviewer** | Separate human credential. | The only source of human approval. Reviewer identity is server-controlled. |
+
+**Explicitly outside this threat model: full host or root compromise.** Process and
+database-role separation is defeated by root on the same machine, exactly as it would
+be on any single-host deployment. Nothing in this repository claims to prevent it.
+Production resistance requires separately administered hosts or containers with
+workload identity and a secrets manager or HSM.
+
+The per-item current status of every known limitation is in
+[`EDGE_CASES.md`](EDGE_CASES.md).
+
 ---
 
 ## 1. System architecture (Bible Section 6, reproduced)

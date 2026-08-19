@@ -1,6 +1,8 @@
 # Cerberus — evidence manifest
 
-**Feature frozen at `ba5c853` (`ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`).**
+**Architecture and features are hard frozen; general code is soft frozen.** Feature
+freeze was first declared at `ba5c853`; the freeze policy and the current release SHAs
+are in [FINAL_FREEZE.md](FINAL_FREEZE.md), which is authoritative.
 
 > **Read this first.** This file contains evidence from two different builds, and the
 > distinction matters.

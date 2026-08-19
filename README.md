@@ -42,7 +42,7 @@ Cerberus places that missing control point before execution. Clear violations ar
   one corporate mandate — cannot overspend a rolling window.
 - The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
 - Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
-- **381 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+- **384 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
 
 ## Current finalist build
 
@@ -53,7 +53,7 @@ labelled as such.
 | | |
 |---|---|
 | **Source identity** | Recorded by SHA in the generated final-evidence manifest; no hand-maintained “current commit” value |
-| **Automated tests** | **381 passed / 381**, 78 suites, 0 failed |
+| **Automated tests** | **384 passed / 384**, 78 suites, 0 failed |
 | **Adversarial suite** (`npm run adversarial`) | **12/12 attack classes**, 80 assertions |
 | **Security red team** (`npm run redteam`) | **12/12 attack classes**, 70 assertions |
 | **Mutation matrix** (`npm run mutation`) | **12/12 security guards proven detectable** |
@@ -150,7 +150,9 @@ Read in this order. The Bible is the source of truth and overrides everything el
 | [Critique.md](docs/Critique.md) | Approved Stage-2 security critique and fixed hardening order |
 | [Phases.md](docs/Phases.md) | Build phases with a Definition of Done each |
 | [Design.md](docs/Design.md) | Dashboard visual design |
+| [EDGE_CASES.md](docs/EDGE_CASES.md) | **Current register of every known edge case, limitation and deferred production requirement, verified against this build** |
 | [Memory.md](docs/Memory.md) | Working log: current state, decisions, blockers, next step |
+| [submission/FINAL_FREEZE.md](docs/submission/FINAL_FREEZE.md) | Release status, exact SHAs, gate results, and the architecture/feature/code freeze policy |
 | [submission/RUNBOOK.md](docs/submission/RUNBOOK.md) | Cold start to judged demo, and the failure modes actually hit |
 | [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | Verified local and Base Sepolia evidence, transaction manifest, and known limitations |
 
@@ -277,7 +279,7 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **381 tests, 78 suites, 381 passed, 0 failed**, then restores
+- The test runner reports **384 tests, 78 suites, 384 passed, 0 failed**, then restores
   the canonical demo seed before returning.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would

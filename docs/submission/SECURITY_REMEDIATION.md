@@ -3,8 +3,9 @@
 **Baseline inspected:** `6159474` (`origin/main`, "Record Phase 6 adversarial proof")
 **Baseline verification:** 260 tests / 48 suites; adversarial 12/12 classes, 78/78 assertions
 
-**After remediation** (figures as at the close of this pass; the later finalist
-completion build raised them to 363 / 72 — see the README's current-build section):
+**After remediation** (figures as at the close of this pass, and historical: later
+builds raised them to 363 / 72, then 381 / 78, then 384 / 78 — see the README's current-build
+section, which is authoritative for current figures):
 330 tests / 61 suites; adversarial 12/12 classes, 80 assertions;
 red team 9/9 classes, 60 assertions; dependency audit clean.
 
