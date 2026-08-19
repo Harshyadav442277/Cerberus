@@ -1,0 +1,51 @@
+# env CERBERUS_EVIDENCE_OUTPUT=1 npm run mutation
+# started 2026-08-19T18:03:10.888Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 mutation
+> node --env-file-if-exists=.env --import tsx scripts/mutation.ts
+
+
+CERBERUS SECURITY MUTATION MATRIX
+
+Removing one security guard at a time. Each must break its own tests.
+
+  budget-lock                    DETECTED (1 expected assertion failed)
+  velocity-lock                  DETECTED (1 expected assertion failed)
+  post-402-recheck               DETECTED (2 expected assertions failed)
+  suspension-executor            DETECTED (1 expected assertion failed)
+  suspension-reservation         DETECTED (2 expected assertions failed)
+  reservation-context            DETECTED (2 expected assertions failed)
+  correlation-before-transport   DETECTED (1 expected assertion failed)
+  merchant-success-chain-proof   DETECTED (4 expected assertions failed)
+  merchant-failure-unknown       DETECTED (1 expected assertion failed)
+  anchor-digest-comparison       DETECTED (2 expected assertions failed)
+  redirect-refusal               DETECTED (1 expected assertion failed)
+  correlated-failure-trigger     DETECTED (1 expected assertion failed)
+
+Mutation targets after run: restored byte-for-byte
+
+MATRIX
+
+Guard removed                                             Result
+------------------------------------------------------------------------------
+Budget advisory lock                                      DETECTED
+Per-agent velocity lock                                   DETECTED
+Fresh authority recheck after the unsigned merchant 402   DETECTED
+Agent suspension check in the isolated executor           DETECTED
+Agent suspension check inside the reservation transaction DETECTED
+Reservation context equality on reuse                     DETECTED
+Durable payment correlation before transport              DETECTED
+Chain proof required before SETTLED                       DETECTED
+Merchant-reported failure held as OUTCOME_UNKNOWN         DETECTED
+On-chain anchor digest comparison                         DETECTED
+Redirect refusal on the signed payment request            DETECTED
+Database trigger blocking correlated FAILED outside fenced reconciliationDETECTED
+
+Guards proven detectable: 12/12
+
+RESULT: PASS
+# ------------------------------------------------------------------------
+# exit 0 after 9611ms

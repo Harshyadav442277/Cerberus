@@ -14,17 +14,17 @@
     "OBSERVE": 0
   },
   "policyLatencyMs": {
-    "p50": 4.887,
-    "p95": 8.448,
-    "p99": 20.891
+    "p50": 10.759,
+    "p95": 19.843,
+    "p99": 24.831
   },
   "reservationLatencyMs": {
-    "p50": 9.793,
-    "p95": 26.119,
-    "p99": 37.776
+    "p50": 23.295,
+    "p95": 60.91,
+    "p99": 80.2
   },
-  "durationSeconds": 1.059,
-  "throughputPerSecond": 944.49,
+  "durationSeconds": 2.512,
+  "throughputPerSecond": 398.15,
   "hostileSubmitted": 139,
   "reservationsCreated": 271,
   "budgetRefusals": 318,
@@ -34,7 +34,7 @@
   "duplicatesDeduped": 32,
   "duplicatesRetriedAfterRefusal": 0,
   "replayViolations": 0,
-  "contextMismatches": 32,
+  "contextMismatches": 0,
   "invariants": [
     {
       "label": "committed spend <= mandate budget",

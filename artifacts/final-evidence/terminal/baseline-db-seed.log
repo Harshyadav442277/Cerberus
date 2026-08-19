@@ -1,0 +1,16 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 db:seed
+> node --env-file-if-exists=.env --import tsx packages/db/src/cli/seed.ts
+
+
+  seeded agent    agent_treasury_01 (0x0000000000000000000000000000000000000000)
+                  EXECUTOR_WALLET_ADDRESS not set — wallet_address left as zero address
+  seeded mandate  mandate_001 v1
+                  per_transaction_max      1 USDC
+                  rolling 24h max_total    3 USDC
+                  allowlist                merchant_xyz, merchant_abc
+                  unknown counterparty     ESCALATE
+                  allowed_days             Mon, Tue, Wed, Thu, Fri, Sat, Sun
+                  max_transactions_per_hour 10
+

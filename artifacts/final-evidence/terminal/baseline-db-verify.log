@@ -1,0 +1,25 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 db:verify
+> node --env-file-if-exists=.env --import tsx packages/db/src/cli/verify.ts
+
+
+Phase 2/3 verification — schema mirrors Bible Section 7, engine agrees with it
+
+  OK    agent_identity has exactly the Bible Section 7 columns
+  OK    mandate has exactly the Bible Section 7 columns
+  OK    proposed_action has exactly the Bible Section 7 columns
+  OK    audit_log has exactly the Bible Section 7 columns
+  OK    agent_identity round-trips with zero shape loss
+  OK    mandate round-trips with zero shape loss (deep equality)
+  OK    no mandate active before effective_from
+  OK    version 1 active inside its effective range
+  OK    version 2 active after version 1's effective_to
+  OK    effective_to is exclusive and effective_from inclusive at the boundary
+  OK    scenario 1 — clean payment to merchant_xyz resolves to ALLOW
+  OK    scenario 2 — cap breach at merchant_abc resolves to DENY
+  OK    scenario 3 — unknown counterparty merchant_new resolves to ESCALATE
+
+All checks passed. Phase 2 Definition of Done met, and the stored mandate
+drives the three Bible Section 9 demo outcomes through the real engine.
+

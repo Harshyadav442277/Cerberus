@@ -1,0 +1,37 @@
+
+> @safr/dashboard@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.23
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1197ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/4) ...
+   Generating static pages (1/4) 
+   Generating static pages (2/4) 
+   Generating static pages (3/4) 
+ ✓ Generating static pages (4/4)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                  Size  First Load JS
+┌ ƒ /                                     3.17 kB         109 kB
+├ ○ /_not-found                             988 B         103 kB
+├ ƒ /agent                                  129 B         102 kB
+├ ƒ /api/escalations/[actionId]/decision    129 B         102 kB
+├ ƒ /audit/[auditId]                        160 B         106 kB
+├ ○ /escalations                          2.15 kB         104 kB
+└ ƒ /mandate                                129 B         102 kB
++ First Load JS shared by all              102 kB
+  ├ chunks/635-8d770860d36fa8fb.js        46.2 kB
+  ├ chunks/f625b344-4dca96ade7eb2f50.js   54.2 kB
+  └ other shared chunks (total)           1.92 kB
+
+
+ƒ Middleware                              34.2 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-19T13:11:44.724Z",
+  "generatedAt": "2026-08-19T18:08:38.529Z",
   "repository": {
-    "sha": "652c2d6e3893eeb0f39ff98539810bed49c571c5",
+    "sha": "cd75049c0ade2f8e1ec03227079cb2bcf5c77b50",
     "branch": "main",
-    "workingTreeClean": false
+    "sourceTreeClean": true
   },
   "network": {
     "name": "Base Sepolia",
@@ -11,200 +11,152 @@
     "auditAnchorContract": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
   },
   "verification": {
-    "tests": "363",
+    "tests": "381",
     "testsFailed": "0",
-    "suites": "72",
+    "suites": "78",
     "adversarialClasses": "12/12",
     "adversarialAssertions": "80",
-    "redteamClasses": "9/9",
-    "redteamAssertions": "60",
+    "redteamClasses": "12/12",
+    "redteamAssertions": "70",
     "dependencyAudit": "No known vulnerabilities found",
     "mutationGuardsDetected": "12/12"
   },
   "captures": [
     {
-      "name": "baseline-adversarial",
-      "command": "npm run adversarial",
-      "exitCode": 0,
-      "durationMs": 37120,
-      "log": "terminal/baseline-adversarial.log",
-      "sha256": "ad643652a9f169bb1e317f14049ac76dee6151e2db68d7b853b6f5b734f3a5c9"
-    },
-    {
-      "name": "baseline-contracts",
-      "command": "npm run contracts:compile",
-      "exitCode": 0,
-      "durationMs": 1164,
-      "log": "terminal/baseline-contracts.log",
-      "sha256": "b87d338db2d01c34356fe7ec25a97d11cc59d69a5d4ae253d1bcffb3ac3388c4"
-    },
-    {
-      "name": "baseline-dashboard-build",
-      "command": "npm run build --prefix apps/dashboard",
-      "exitCode": 0,
-      "durationMs": 20079,
-      "log": "terminal/baseline-dashboard-build.log",
-      "sha256": "54dad1ba8a27632ba992484e281408098e87199c17844e2cf7d6a0fea579bbab"
-    },
-    {
-      "name": "baseline-db-verify",
-      "command": "npm run db:verify",
-      "exitCode": 0,
-      "durationMs": 923,
-      "log": "terminal/baseline-db-verify.log",
-      "sha256": "3cd32c91059f1294c6d2d4fc34bca4a95b6e13ec2398463b02168be91950a7ad"
-    },
-    {
-      "name": "baseline-dependency-audit",
-      "command": "corepack pnpm audit",
-      "exitCode": 0,
-      "durationMs": 864,
-      "log": "terminal/baseline-dependency-audit.log",
-      "sha256": "825a802c7b08f73b2ef7d71239e8737598e7aeb1542ce8715200ebe7a9397a64"
-    },
-    {
-      "name": "baseline-redteam",
-      "command": "npm run redteam",
-      "exitCode": 0,
-      "durationMs": 19306,
-      "log": "terminal/baseline-redteam.log",
-      "sha256": "e637fabe8f79dfe13e22406e54383e3526cb77336dd42c17a34df6a695b3d78a"
-    },
-    {
-      "name": "baseline-tests",
-      "command": "npm test",
-      "exitCode": 0,
-      "durationMs": 34641,
-      "log": "terminal/baseline-tests.log",
-      "sha256": "8d82294f4a2097a27875bc0ba659c5d5c0f618061d6a38f557b4b2fd92d476ee"
-    },
-    {
-      "name": "baseline-typecheck",
-      "command": "npm run typecheck",
-      "exitCode": 0,
-      "durationMs": 3931,
-      "log": "terminal/baseline-typecheck.log",
-      "sha256": "18a8523cbfa6c2c3cd3a50b970c7111885803836fe24c4f5d50abf8564d2010c"
-    },
-    {
       "name": "e0-preflight",
       "command": "npm run preflight",
       "exitCode": 1,
-      "durationMs": 4940,
+      "durationMs": 1640,
       "log": "terminal/e0-preflight.log",
-      "sha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868"
+      "sha256": "4353bcddd1daad37d8d56a633c73a9da2816a12e966aae6133b12ec56d3c134c"
     },
     {
       "name": "gate-adversarial",
       "command": "npm run adversarial",
       "exitCode": 0,
-      "durationMs": 32081,
+      "durationMs": 17964,
       "log": "terminal/gate-adversarial.log",
-      "sha256": "6b6bde0d2fbde48338c4d7e1c8c6682041da3a4316174db1e6d86afe16bee5bf"
-    },
-    {
-      "name": "gate-audit-verify",
-      "command": "npm run audit:verify",
-      "exitCode": 1,
-      "durationMs": 2252,
-      "log": "terminal/gate-audit-verify.log",
-      "sha256": "e39ee5bdfc930b16c1eadb7fa2066926724d5ec88add1462e091f2cd3381cd03"
+      "sha256": "9e7760cb82dc2bf1dd1e5c57cab897f48fc41aa576ebc730ff8baed53401bb10"
     },
     {
       "name": "gate-contracts",
       "command": "npm run contracts:compile",
       "exitCode": 0,
-      "durationMs": 983,
+      "durationMs": 775,
       "log": "terminal/gate-contracts.log",
-      "sha256": "d35f124eeae8914d0ea7e1a039658db6d98ba6c773098af68215f7a2bf8df23c"
+      "sha256": "6feee0501d475c25862033cec791dd3a4ad07ab0b73fe01039d8ace44270b4c4"
     },
     {
       "name": "gate-dashboard-build",
       "command": "npm run build --prefix apps/dashboard",
       "exitCode": 0,
-      "durationMs": 18527,
+      "durationMs": 15899,
       "log": "terminal/gate-dashboard-build.log",
-      "sha256": "341d952d42edf823c19cb3b3361cb253c5d71ef699d442dc677d791f6c9c0804"
+      "sha256": "770e745d8cef0c25b8d67bb9106bf9674e301c820e05da17151174987c8e77e4"
     },
     {
       "name": "gate-db-verify",
       "command": "npm run db:verify",
       "exitCode": 0,
-      "durationMs": 651,
+      "durationMs": 326,
       "log": "terminal/gate-db-verify.log",
-      "sha256": "13267c7efbe32f84c32fb5593ba352ccff8cfa4ae2b7cbfb0ad5d754fccdd2c9"
+      "sha256": "c08211ea2a686581819bbb37afc1e377e15c126e553f9a1d4f0eff5ed2544223"
+    },
+    {
+      "name": "gate-demo-clean",
+      "command": "npm run demo -- clean",
+      "exitCode": 0,
+      "durationMs": 16054,
+      "log": "terminal/gate-demo-clean.log",
+      "sha256": "2d89d56899bec3e41d6792a14aadea4e8af688234feb41d896ee51c1a5a657b5"
+    },
+    {
+      "name": "gate-demo-deny",
+      "command": "npm run demo -- cap_breach",
+      "exitCode": 0,
+      "durationMs": 15824,
+      "log": "terminal/gate-demo-deny.log",
+      "sha256": "de29f7fc794e6c19ea0c24fd1b72ffaf3d74f314e34a6f7c310da2f0574a9f5c"
+    },
+    {
+      "name": "gate-demo-escalate",
+      "command": "npm run demo -- new_counterparty",
+      "exitCode": 0,
+      "durationMs": 21009,
+      "log": "terminal/gate-demo-escalate.log",
+      "sha256": "0f080e35da82f954326221b7efbedb9424da401b1e175ff0ffd23af05168b3be"
+    },
+    {
+      "name": "gate-demo-reset",
+      "command": "npm run demo:reset",
+      "exitCode": 0,
+      "durationMs": 422,
+      "log": "terminal/gate-demo-reset.log",
+      "sha256": "bfdaac5be46f7b50649bafee1dc71e7efca178d95d85456b10fa14135dce288b"
     },
     {
       "name": "gate-dependency-audit",
       "command": "corepack pnpm audit",
       "exitCode": 0,
-      "durationMs": 751,
+      "durationMs": 964,
       "log": "terminal/gate-dependency-audit.log",
-      "sha256": "5b35d2ee3dba4a396e9971f4e06df41a240a7c8139eacb4489055daedc950072"
+      "sha256": "77b3f57679245b8e76bc80433170d632eea58ec5e83255733e7a4fe162814634"
     },
     {
       "name": "gate-mutation",
-      "command": "npm run mutation",
+      "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run mutation",
       "exitCode": 0,
-      "durationMs": 20728,
+      "durationMs": 9611,
       "log": "terminal/gate-mutation.log",
-      "sha256": "1c2ed6a716282f839104e06f6c4e50a5f0b773fcd69c80a4c6bf866ee0a2cd6c"
+      "sha256": "ac07d071076951bf595da1af8b6486aaf670fb75b5c3c21215b96bdb5f19c886"
     },
     {
       "name": "gate-redteam",
       "command": "npm run redteam",
       "exitCode": 0,
-      "durationMs": 16621,
+      "durationMs": 17668,
       "log": "terminal/gate-redteam.log",
-      "sha256": "1da9cdf911adb83992abe13fccff1dcba04298f248652564878124cf14c913d5"
+      "sha256": "4170a257fd4d276d3a896499ddbed4f6551459e7aa300bec9995a8c476698416"
+    },
+    {
+      "name": "gate-reviewer-auto",
+      "command": "npm run reviewer:auto -- --decision=approved",
+      "exitCode": 0,
+      "durationMs": 333,
+      "log": "terminal/gate-reviewer-auto.log",
+      "sha256": "9dc2ed4ec0457c15aa02451be98cb4e0b830440baaff6548eda088179ed9f863"
     },
     {
       "name": "gate-sandbox-1337",
-      "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
+      "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
       "exitCode": 0,
-      "durationMs": 1789,
+      "durationMs": 2627,
       "log": "terminal/gate-sandbox-1337.log",
-      "sha256": "5f269d0a0962d7c871892956e52507a3ad05a188db154bf1653de28b6315ce78"
+      "sha256": "f59fa7cc99fd9e502443d21571f2d1b0b7fb17298d3b7fde9031cb21459d20dd"
     },
     {
       "name": "gate-sandbox-42",
-      "command": "npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
+      "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
       "exitCode": 0,
-      "durationMs": 1896,
+      "durationMs": 3269,
       "log": "terminal/gate-sandbox-42.log",
-      "sha256": "588a875b39bc2b27c88a80c99b840ccaee21bcd97400003644a20da874e54055"
+      "sha256": "454b01f7c36f4b496c244591212f77f6ed590ece3d525f95c45c54dec9bc5e70"
     },
     {
       "name": "gate-tests",
       "command": "npm test",
       "exitCode": 0,
-      "durationMs": 32934,
+      "durationMs": 17364,
       "log": "terminal/gate-tests.log",
-      "sha256": "9f281b03680cf3b18de64e177961bc8e7d66db9707027f519c9e75fdd216df20"
+      "sha256": "182801161db4e20e5eca07fce0dab7d4ccc1192f589f1ade7424b8d1370857db"
     },
     {
       "name": "gate-typecheck",
       "command": "npm run typecheck",
       "exitCode": 0,
-      "durationMs": 3294,
+      "durationMs": 2951,
       "log": "terminal/gate-typecheck.log",
-      "sha256": "dd9d3ec28d373abb0af7975078adb471bb6ca84ac13152c6d5bebfb000d252c0"
-    },
-    {
-      "name": "sandbox-seed-1337",
-      "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
-      "exitCode": 0,
-      "durationMs": 1902,
-      "log": "terminal/sandbox-seed-1337.log",
-      "sha256": "4ef534ab3edc5e6096888424e70d1e90c5fc82cbfea5b3dc7e264e8b38a5b5e9"
-    },
-    {
-      "name": "sandbox-seed-42",
-      "command": "npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
-      "exitCode": 0,
-      "durationMs": 1769,
-      "log": "terminal/sandbox-seed-42.log",
-      "sha256": "be9a353c739decb8655d53eff4229bf47dfe307d1fc5d8cbeb8d9f615f2183ae"
+      "sha256": "851330ad4754988e6ec7752c066b2f8c6e6ad613832b2666324d0d36d0fd5490"
     }
   ],
   "sandbox": [
@@ -219,11 +171,11 @@
         "ESCALATE": 67,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 1030.73,
+      "throughputPerSecond": 512.69,
       "policyLatencyMs": {
-        "p50": 4.519,
-        "p95": 8.839,
-        "p99": 21.583
+        "p50": 8.336,
+        "p95": 15.93,
+        "p99": 21.63
       },
       "violations": 0,
       "result": "PASS"
@@ -239,11 +191,11 @@
         "ESCALATE": 64,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 944.49,
+      "throughputPerSecond": 398.15,
       "policyLatencyMs": {
-        "p50": 4.887,
-        "p95": 8.448,
-        "p99": 20.891
+        "p50": 10.759,
+        "p95": 19.843,
+        "p99": 24.831
       },
       "violations": 0,
       "result": "PASS"
@@ -259,7 +211,7 @@
         "risk": "two concurrent proposals both read the same headroom and both pass the cap",
         "detected": true,
         "failingTests": [
-          "atomic budget reservations"
+          "holds one shared budget when two different agents race the same mandate"
         ],
         "note": ""
       },
@@ -269,7 +221,7 @@
         "risk": "concurrent proposals both observe the same hourly count and both pass the limit",
         "detected": true,
         "failingTests": [
-          "atomic velocity reservations"
+          "serializes one agent's velocity across distinct mandate budget locks"
         ],
         "note": ""
       },
@@ -279,7 +231,8 @@
         "risk": "authority revoked while the merchant was responding is never noticed, and the payment proceeds on stale permission",
         "detected": true,
         "failingTests": [
-          "isolated executor"
+          "refuses when the mandate is revoked during the unsigned challenge fetch",
+          "refuses when the agent is suspended during the unsigned challenge fetch"
         ],
         "note": ""
       },
@@ -289,7 +242,7 @@
         "risk": "a suspended agent's existing capability still reaches the payment key",
         "detected": true,
         "failingTests": [
-          "isolated executor"
+          "refuses a suspended agent holding a valid authorization before the payment key exists"
         ],
         "note": ""
       },
@@ -299,7 +252,8 @@
         "risk": "capacity is committed for an agent that has already been shut off",
         "detected": true,
         "failingTests": [
-          "suspension blocks capacity commitment"
+          "commits no reservation for a suspended agent",
+          "commits no reservation for an agent with no identity row"
         ],
         "note": ""
       },
@@ -309,7 +263,8 @@
         "risk": "capacity reserved for 1 USDC is handed to a 5 USDC payment",
         "detected": true,
         "failingTests": [
-          "reservation context equality"
+          "cannot reuse a smaller reservation for a larger payment",
+          "refuses reuse when the token, chain, currency, agent or mandate version differs"
         ],
         "note": ""
       },
@@ -319,7 +274,7 @@
         "risk": "a signed payment is sent that no reconciler can later identify on chain",
         "detected": true,
         "failingTests": [
-          "paid retry uses only the pinned challenge"
+          "does not send when durable correlation persistence refuses"
         ],
         "note": ""
       },
@@ -329,8 +284,10 @@
         "risk": "a merchant claiming success with a fabricated transaction hash is believed",
         "detected": true,
         "failingTests": [
-          "committed financial state gates execution",
-          "EIP-3009 chain reconciliation"
+          "settles only with the chain-proven transaction, not the merchant-provided hash",
+          "keeps a fake merchant success and fake transaction OUTCOME_UNKNOWN",
+          "proves settlement only from a used nonce and the exact successful transfer",
+          "does not confuse nonce cancellation or mismatched transfer evidence with payment"
         ],
         "note": ""
       },
@@ -340,7 +297,7 @@
         "risk": "capacity is released while the merchant still holds a live signed authorization it can settle",
         "detected": true,
         "failingTests": [
-          "committed financial state gates execution"
+          "keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission"
         ],
         "note": ""
       },
@@ -350,7 +307,8 @@
         "risk": "an anchor transaction that anchored a different record passes verification",
         "detected": true,
         "failingTests": [
-          "on-chain anchor verification"
+          "detects a database record_hash changed to match a tampered record",
+          "detects an anchor_tx_hash swapped for an unrelated successful transaction"
         ],
         "note": ""
       },
@@ -360,7 +318,7 @@
         "risk": "a live signed EIP-3009 authorization is forwarded to a host nobody approved",
         "detected": true,
         "failingTests": [
-          "redirects never carry payment authority"
+          "never forwards a signed payment authorization to a redirect target"
         ],
         "note": ""
       },
@@ -370,7 +328,7 @@
         "risk": "a correlated payment is marked failed by the executor while it may still settle",
         "detected": true,
         "failingTests": [
-          "durable outcome reconciliation state"
+          "rejects ordinary and direct FAILED transitions after correlation is persisted"
         ],
         "note": ""
       }
@@ -384,7 +342,13 @@
     "deny": null,
     "preflight": "terminal/e0-preflight.log"
   },
-  "recordings": [],
+  "recordings": [
+    {
+      "path": "recording/baseline-adversarial.mp4",
+      "bytes": 31420,
+      "sha256": "f8f7b2bab2152dbcb7c05731c19402db7162b5ca527f955926d8a6ad0ef9ddbb"
+    }
+  ],
   "screenshots": [],
   "files": [
     {
@@ -393,146 +357,161 @@
       "sha256": "893cf3dce95152656c2339c93b9df9d6b84dc3ad6b0eda185a950259313dadff"
     },
     {
+      "path": "recording/baseline-adversarial.mp4",
+      "bytes": 31420,
+      "sha256": "f8f7b2bab2152dbcb7c05731c19402db7162b5ca527f955926d8a6ad0ef9ddbb"
+    },
+    {
       "path": "redteam/mutation-matrix.json",
-      "bytes": 4067,
-      "sha256": "c1e1b899282c939021ba197c29c224f0d2ed312abfc93b28c680bbdf003dd33a"
+      "bytes": 5051,
+      "sha256": "bb9c5d2028c58b1a01939cec871d44b8cfbda76eed10bbd028f5324671e7e7fa"
     },
     {
       "path": "sandbox/seed-1337.json",
-      "bytes": 1818,
-      "sha256": "5867fc68875d937296f7a208b6176b40e51933e3fc9b00211a88571a8f28226e"
+      "bytes": 1817,
+      "sha256": "da62b946c0dd352b4187181d312590a73d7c46fa7a52f19e37d694eb68a5ce95"
     },
     {
       "path": "sandbox/seed-42.json",
-      "bytes": 1816,
-      "sha256": "f40a80c4b4b5288110851105ad485a484205f015eac482ca8fff5581033be2bf"
+      "bytes": 1815,
+      "sha256": "9534b7ff5abe0554be9b8e14850d4661aead9b103fc1aacfb75acf0d8f4f7378"
     },
     {
       "path": "terminal/baseline-adversarial.log",
-      "bytes": 2144,
-      "sha256": "ad643652a9f169bb1e317f14049ac76dee6151e2db68d7b853b6f5b734f3a5c9"
+      "bytes": 1714,
+      "sha256": "4f54e71b3e0c10b2cda046926ef1ced701c7ea08eb5cba5fd08d59c78c41557a"
     },
     {
-      "path": "terminal/baseline-contracts.log",
-      "bytes": 730,
-      "sha256": "b87d338db2d01c34356fe7ec25a97d11cc59d69a5d4ae253d1bcffb3ac3388c4"
+      "path": "terminal/baseline-contract-compile.log",
+      "bytes": 295,
+      "sha256": "c736bd6c4f3a6181a42b2b44f5aad0fc6653bc31e05e4fce1f7bdc67b95ac1b7"
     },
     {
       "path": "terminal/baseline-dashboard-build.log",
-      "bytes": 1827,
-      "sha256": "54dad1ba8a27632ba992484e281408098e87199c17844e2cf7d6a0fea579bbab"
+      "bytes": 1359,
+      "sha256": "3bd00e836b3a16cb6cbc6f954984097cd14784c235e4142d8f4839cb4b46cb88"
+    },
+    {
+      "path": "terminal/baseline-db-migrate.log",
+      "bytes": 291,
+      "sha256": "53ebb3bb5911236509f9495610094deab0a45fec80034b92ec5c16c693cb9b7d"
+    },
+    {
+      "path": "terminal/baseline-db-seed.log",
+      "bytes": 759,
+      "sha256": "15e8f746945d424f6161dd0e392cb5bce867ff0242b2064ec551dbebc24ad7b0"
     },
     {
       "path": "terminal/baseline-db-verify.log",
-      "bytes": 1681,
-      "sha256": "3cd32c91059f1294c6d2d4fc34bca4a95b6e13ec2398463b02168be91950a7ad"
-    },
-    {
-      "path": "terminal/baseline-dependency-audit.log",
-      "bytes": 259,
-      "sha256": "825a802c7b08f73b2ef7d71239e8737598e7aeb1542ce8715200ebe7a9397a64"
-    },
-    {
-      "path": "terminal/baseline-redteam.log",
-      "bytes": 2758,
-      "sha256": "e637fabe8f79dfe13e22406e54383e3526cb77336dd42c17a34df6a695b3d78a"
+      "bytes": 1255,
+      "sha256": "e38e7635dcde93bf9d327e2774c7c0e809db530ab0d4df279b235ac6f67b3298"
     },
     {
       "path": "terminal/baseline-tests.log",
-      "bytes": 31473,
-      "sha256": "8d82294f4a2097a27875bc0ba659c5d5c0f618061d6a38f557b4b2fd92d476ee"
+      "bytes": 25291,
+      "sha256": "533650d7b0ed031d0dff9c9402de4672d134e007544b259a0e389b1746595eba"
     },
     {
       "path": "terminal/baseline-typecheck.log",
-      "bytes": 594,
-      "sha256": "18a8523cbfa6c2c3cd3a50b970c7111885803836fe24c4f5d50abf8564d2010c"
+      "bytes": 271,
+      "sha256": "68964cba73f56976caba29cb50f2052c1f4e35998feb2116d533029038f88aa6"
     },
     {
       "path": "terminal/e0-preflight.log",
-      "bytes": 3796,
-      "sha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868"
+      "bytes": 3088,
+      "sha256": "4353bcddd1daad37d8d56a633c73a9da2816a12e966aae6133b12ec56d3c134c"
     },
     {
       "path": "terminal/gate-adversarial.log",
-      "bytes": 2144,
-      "sha256": "6b6bde0d2fbde48338c4d7e1c8c6682041da3a4316174db1e6d86afe16bee5bf"
-    },
-    {
-      "path": "terminal/gate-audit-verify.log",
-      "bytes": 1211,
-      "sha256": "e39ee5bdfc930b16c1eadb7fa2066926724d5ec88add1462e091f2cd3381cd03"
+      "bytes": 2042,
+      "sha256": "9e7760cb82dc2bf1dd1e5c57cab897f48fc41aa576ebc730ff8baed53401bb10"
     },
     {
       "path": "terminal/gate-contracts.log",
-      "bytes": 729,
-      "sha256": "d35f124eeae8914d0ea7e1a039658db6d98ba6c773098af68215f7a2bf8df23c"
+      "bytes": 627,
+      "sha256": "6feee0501d475c25862033cec791dd3a4ad07ab0b73fe01039d8ace44270b4c4"
     },
     {
       "path": "terminal/gate-dashboard-build.log",
-      "bytes": 1857,
-      "sha256": "341d952d42edf823c19cb3b3361cb253c5d71ef699d442dc677d791f6c9c0804"
+      "bytes": 1841,
+      "sha256": "770e745d8cef0c25b8d67bb9106bf9674e301c820e05da17151174987c8e77e4"
     },
     {
       "path": "terminal/gate-db-verify.log",
-      "bytes": 1681,
-      "sha256": "13267c7efbe32f84c32fb5593ba352ccff8cfa4ae2b7cbfb0ad5d754fccdd2c9"
+      "bytes": 1579,
+      "sha256": "c08211ea2a686581819bbb37afc1e377e15c126e553f9a1d4f0eff5ed2544223"
+    },
+    {
+      "path": "terminal/gate-demo-clean.log",
+      "bytes": 1042,
+      "sha256": "2d89d56899bec3e41d6792a14aadea4e8af688234feb41d896ee51c1a5a657b5"
+    },
+    {
+      "path": "terminal/gate-demo-deny.log",
+      "bytes": 1091,
+      "sha256": "de29f7fc794e6c19ea0c24fd1b72ffaf3d74f314e34a6f7c310da2f0574a9f5c"
+    },
+    {
+      "path": "terminal/gate-demo-escalate.log",
+      "bytes": 1134,
+      "sha256": "0f080e35da82f954326221b7efbedb9424da401b1e175ff0ffd23af05168b3be"
+    },
+    {
+      "path": "terminal/gate-demo-reset.log",
+      "bytes": 648,
+      "sha256": "bfdaac5be46f7b50649bafee1dc71e7efca178d95d85456b10fa14135dce288b"
     },
     {
       "path": "terminal/gate-dependency-audit.log",
       "bytes": 259,
-      "sha256": "5b35d2ee3dba4a396e9971f4e06df41a240a7c8139eacb4489055daedc950072"
+      "sha256": "77b3f57679245b8e76bc80433170d632eea58ec5e83255733e7a4fe162814634"
     },
     {
       "path": "terminal/gate-mutation.log",
-      "bytes": 2510,
-      "sha256": "1c2ed6a716282f839104e06f6c4e50a5f0b773fcd69c80a4c6bf866ee0a2cd6c"
+      "bytes": 2602,
+      "sha256": "ac07d071076951bf595da1af8b6486aaf670fb75b5c3c21215b96bdb5f19c886"
     },
     {
       "path": "terminal/gate-redteam.log",
-      "bytes": 2758,
-      "sha256": "1da9cdf911adb83992abe13fccff1dcba04298f248652564878124cf14c913d5"
+      "bytes": 3408,
+      "sha256": "4170a257fd4d276d3a896499ddbed4f6551459e7aa300bec9995a8c476698416"
+    },
+    {
+      "path": "terminal/gate-reviewer-auto.log",
+      "bytes": 613,
+      "sha256": "9dc2ed4ec0457c15aa02451be98cb4e0b830440baaff6548eda088179ed9f863"
     },
     {
       "path": "terminal/gate-sandbox-1337.log",
-      "bytes": 2409,
-      "sha256": "5f269d0a0962d7c871892956e52507a3ad05a188db154bf1653de28b6315ce78"
+      "bytes": 2338,
+      "sha256": "f59fa7cc99fd9e502443d21571f2d1b0b7fb17298d3b7fde9031cb21459d20dd"
     },
     {
       "path": "terminal/gate-sandbox-42.log",
-      "bytes": 2400,
-      "sha256": "588a875b39bc2b27c88a80c99b840ccaee21bcd97400003644a20da874e54055"
+      "bytes": 2331,
+      "sha256": "454b01f7c36f4b496c244591212f77f6ed590ece3d525f95c45c54dec9bc5e70"
     },
     {
       "path": "terminal/gate-tests.log",
-      "bytes": 34685,
-      "sha256": "9f281b03680cf3b18de64e177961bc8e7d66db9707027f519c9e75fdd216df20"
+      "bytes": 37621,
+      "sha256": "182801161db4e20e5eca07fce0dab7d4ccc1192f589f1ade7424b8d1370857db"
     },
     {
       "path": "terminal/gate-typecheck.log",
-      "bytes": 594,
-      "sha256": "dd9d3ec28d373abb0af7975078adb471bb6ca84ac13152c6d5bebfb000d252c0"
+      "bytes": 492,
+      "sha256": "851330ad4754988e6ec7752c066b2f8c6e6ad613832b2666324d0d36d0fd5490"
     },
     {
       "path": "terminal/index.json",
-      "bytes": 8000,
-      "sha256": "c1b352432638c9e3a935e044a9aa7496ef0b9f509b4b849412812cae2c956bdd"
-    },
-    {
-      "path": "terminal/sandbox-seed-1337.log",
-      "bytes": 2409,
-      "sha256": "4ef534ab3edc5e6096888424e70d1e90c5fc82cbfea5b3dc7e264e8b38a5b5e9"
-    },
-    {
-      "path": "terminal/sandbox-seed-42.log",
-      "bytes": 2401,
-      "sha256": "be9a353c739decb8655d53eff4229bf47dfe307d1fc5d8cbeb8d9f615f2183ae"
+      "bytes": 5949,
+      "sha256": "d7601721163f936b028d664b46867db7d12582ff16312ef7ebbebb2274e68bd0"
     }
   ],
   "knownLimitations": [
     "No fresh funded live payment on the hardened path. Phase E is blocked on operator key provisioning and funding.",
-    "Automated screen capture was unavailable in the build environment; see docs/submission/MANUAL_RECORDING_GUIDE.md.",
+    "A baseline adversarial recording is present; no fresh funded live-payment recording is claimed.",
     "Settlement proves exact successful chain inclusion, not finality. No confirmation threshold gates the settlement path.",
-    "Trusted services are loopback scoped. This is a deployment boundary, not service-to-service authentication.",
+    "Sensitive control-plane routes use bearer authentication and restricted browser CORS; loopback binding remains defense in depth. TLS and credential rotation are deployment responsibilities.",
     "Process isolation is by OS boundary and database role; host-level compromise defeats it."
   ]
 }

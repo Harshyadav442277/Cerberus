@@ -1,0 +1,64 @@
+# env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25
+# started 2026-08-19T18:03:33.608Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 sandbox
+> node --env-file-if-exists=.env --import tsx scripts/sandbox.ts --seed 1337 --agents 50 --actions 1000 --concurrency 25
+
+
+CERBERUS SEEDED ADVERSARIAL SANDBOX
+
+Seed                    1337
+Agents                  50
+Actions                 1000
+Concurrency             25
+Shared mandates         33 mandate(s) across 50 agents
+
+ALLOW                   863
+DENY                    70
+ESCALATE                67
+
+Policy latency (ms)
+  p50                   8.34
+  p95                   15.93
+  p99                   21.63
+
+Reservation latency (ms)
+  p50                   18.50
+  p95                   42.53
+  p99                   85.18
+
+Total duration          1.95 s
+Throughput              512.7 actions/s
+
+Hostile proposals       158
+Reservations created    283
+Budget refusals         284
+Velocity escalations    271
+Duplicates submitted    49
+  refused by policy     4
+  refused at reserve    25
+  retried after refusal 0
+Context mismatches      0
+
+Invariants, queried from PostgreSQL after the run
+
+  PASS  committed spend <= mandate budget              every budget authority within 50 USDC
+  PASS  one proposal, at most one live reservation     no proposal produced a second financial effect
+  PASS  one reservation, at most one authorization     no reservation backs a second capability
+  PASS  no capacity committed for a refused proposal   DENY and ESCALATE never reached the financial layer
+  PASS  velocity ceiling held without approval         no agent exceeded 8 reservations in the window
+  PASS  no proposal reserved twice across the run      49 duplicate(s) submitted; no action_id reserved more than once
+
+Budget violations       0
+Duplicate effects       0
+Replay violations       0
+
+RESULT                  PASS
+
+  report  artifacts/final-evidence/sandbox/seed-1337.json
+
+# ------------------------------------------------------------------------
+# exit 0 after 2627ms

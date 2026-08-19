@@ -1,0 +1,16 @@
+# npm run contracts:compile
+# started 2026-08-19T18:04:01.893Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 contracts:compile
+> tsx contracts/src/compile.ts
+
+
+  AuditAnchor compiled with solc 0.8.36+commit.8a079791.Emscripten.clang
+  abi entries    3
+  bytecode size  263 bytes
+
+# ------------------------------------------------------------------------
+# exit 0 after 775ms

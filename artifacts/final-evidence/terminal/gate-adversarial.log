@@ -1,0 +1,51 @@
+# npm run adversarial
+# started 2026-08-19T18:02:26.254Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 adversarial
+> tsx scripts/adversarial.ts
+
+
+CERBERUS ADVERSARIAL VERIFICATION
+
+Executing real assertions; PostgreSQL-backed classes use the configured database.
+
+  [1/12] Hostile-agent authority attacks... PASS (7 assertions)
+  [2/12] Reviewer impersonation... PASS (2 assertions)
+  [3/12] Database privilege attacks... PASS (8 assertions)
+  [4/12] Forged authority... PASS (7 assertions)
+  [5/12] Replay / duplicate execution... PASS (7 assertions)
+  [6/12] Concurrent budget attacks... PASS (3 assertions)
+  [7/12] Velocity concurrency... PASS (4 assertions)
+  [8/12] Stale authority... PASS (9 assertions)
+  [9/12] x402 merchant mutation... PASS (9 assertions)
+  [10/12] Merchant false failure... PASS (8 assertions)
+  [11/12] Merchant fake success... PASS (7 assertions)
+  [12/12] Crash / reconciliation... PASS (9 assertions)
+
+SUMMARY
+
+Hostile-agent authority attacks        PASS (7/7)
+Reviewer impersonation                 PASS (2/2)
+Database privilege attacks             PASS (8/8)
+Forged authority                       PASS (7/7)
+Replay / duplicate execution           PASS (7/7)
+Concurrent budget attacks              PASS (3/3)
+Velocity concurrency                   PASS (4/4)
+Stale authority                        PASS (9/9)
+x402 merchant mutation                 PASS (9/9)
+Merchant false failure                 PASS (8/8)
+Merchant fake success                  PASS (7/7)
+Crash / reconciliation                 PASS (9/9)
+
+Attack classes passed:  12/12
+Assertions passed:      80
+Assertions failed:      0
+Assertions skipped:     0
+Assertions cancelled:   0
+
+RESULT: PASS
+# ------------------------------------------------------------------------
+# exit 0 after 17964ms

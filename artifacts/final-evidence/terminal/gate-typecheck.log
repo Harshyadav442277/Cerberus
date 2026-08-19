@@ -1,0 +1,11 @@
+# npm run typecheck
+# started 2026-08-19T18:01:53.277Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+# ------------------------------------------------------------------------
+# exit 0 after 2951ms

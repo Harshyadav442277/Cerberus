@@ -1,0 +1,62 @@
+# npm run redteam
+# started 2026-08-19T18:02:48.417Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 redteam
+> tsx scripts/redteam.ts
+
+
+CERBERUS SECURITY RED-TEAM GATE
+
+Each class executes real assertions against the remediated code.
+PostgreSQL-backed classes use the configured database.
+
+  [1/12] A — Suspended agent reaches the payment key... PASS (10 assertions)
+  [2/12] B — Hostile agent falsifies audit truth... PASS (5 assertions)
+  [3/12] C — Fake on-chain anchor passes verification... PASS (12 assertions)
+  [4/12] D — Direct settlement crash splits financial and audit truth... PASS (3 assertions)
+  [5/12] E — Anchor worker crash loses the finalization... PASS (7 assertions)
+  [6/12] F — Executor and reconciler both write terminal truth... PASS (5 assertions)
+  [7/12] G — Reservation context mismatch authorizes a different payment... PASS (5 assertions)
+  [8/12] H — Unauthenticated network client reaches trusted authority... PASS (13 assertions)
+  [9/12] I — Reconciler and anchor worker hold more authority than they need... PASS (6 assertions)
+  [10/12] J — Historical proposal time bypasses current policy... PASS (1 assertions)
+  [11/12] K — Paid request hangs forever after authority is transmitted... PASS (2 assertions)
+  [12/12] L — Normal agent evaluation needs forbidden reservation reads... PASS (1 assertions)
+
+SUMMARY
+
+A  Suspended agent reaches the payment key                  PASS (10/10)
+   R1 — suspension is a kill switch
+B  Hostile agent falsifies audit truth                      PASS (5/5)
+   R3 — the agent does not own final audit state
+C  Fake on-chain anchor passes verification                 PASS (12/12)
+   R2 — verification independently reads Base Sepolia
+D  Direct settlement crash splits financial and audit truth PASS (3/3)
+   R4A — one transaction commits both, plus the anchor request
+E  Anchor worker crash loses the finalization               PASS (7/7)
+   R4C — durable, leased, idempotent outbox
+F  Executor and reconciler both write terminal truth        PASS (5/5)
+   R4D — every terminal update checks it won its CAS
+G  Reservation context mismatch authorizes a different payment PASS (5/5)
+   R5 — reuse verifies every field it inherits
+H  Unauthenticated network client reaches trusted authority PASS (13/13)
+   R6 — bearer-authenticated authority/read routes plus restricted CORS
+I  Reconciler and anchor worker hold more authority than they need PASS (6/6)
+   R7 — dedicated least-privilege database roles
+J  Historical proposal time bypasses current policy         PASS (1/1)
+   P1 — issuance re-evaluates time windows against trusted current time
+K  Paid request hangs forever after authority is transmitted PASS (2/2)
+   P1 — paid submission has a finite timeout and remains outcome-unknown
+L  Normal agent evaluation needs forbidden reservation reads PASS (1/1)
+   P1 — settled counters use agent-readable audit truth; reservations stay denied
+
+Attack classes passed:  12/12
+Assertions passed:      70
+Assertions failed:      0
+
+RESULT: PASS
+# ------------------------------------------------------------------------
+# exit 0 after 17668ms

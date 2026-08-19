@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "652c2d6e3893eeb0f39ff98539810bed49c571c5",
+  "generatedFrom": "b5da17029239249e39e3b1b357e2ca3cf6f4764a",
   "guards": [
     {
       "id": "budget-lock",
@@ -7,7 +7,7 @@
       "risk": "two concurrent proposals both read the same headroom and both pass the cap",
       "detected": true,
       "failingTests": [
-        "atomic budget reservations"
+        "holds one shared budget when two different agents race the same mandate"
       ],
       "note": ""
     },
@@ -17,7 +17,7 @@
       "risk": "concurrent proposals both observe the same hourly count and both pass the limit",
       "detected": true,
       "failingTests": [
-        "atomic velocity reservations"
+        "serializes one agent's velocity across distinct mandate budget locks"
       ],
       "note": ""
     },
@@ -27,7 +27,8 @@
       "risk": "authority revoked while the merchant was responding is never noticed, and the payment proceeds on stale permission",
       "detected": true,
       "failingTests": [
-        "isolated executor"
+        "refuses when the mandate is revoked during the unsigned challenge fetch",
+        "refuses when the agent is suspended during the unsigned challenge fetch"
       ],
       "note": ""
     },
@@ -37,7 +38,7 @@
       "risk": "a suspended agent's existing capability still reaches the payment key",
       "detected": true,
       "failingTests": [
-        "isolated executor"
+        "refuses a suspended agent holding a valid authorization before the payment key exists"
       ],
       "note": ""
     },
@@ -47,7 +48,8 @@
       "risk": "capacity is committed for an agent that has already been shut off",
       "detected": true,
       "failingTests": [
-        "suspension blocks capacity commitment"
+        "commits no reservation for a suspended agent",
+        "commits no reservation for an agent with no identity row"
       ],
       "note": ""
     },
@@ -57,7 +59,8 @@
       "risk": "capacity reserved for 1 USDC is handed to a 5 USDC payment",
       "detected": true,
       "failingTests": [
-        "reservation context equality"
+        "cannot reuse a smaller reservation for a larger payment",
+        "refuses reuse when the token, chain, currency, agent or mandate version differs"
       ],
       "note": ""
     },
@@ -67,7 +70,7 @@
       "risk": "a signed payment is sent that no reconciler can later identify on chain",
       "detected": true,
       "failingTests": [
-        "paid retry uses only the pinned challenge"
+        "does not send when durable correlation persistence refuses"
       ],
       "note": ""
     },
@@ -77,8 +80,10 @@
       "risk": "a merchant claiming success with a fabricated transaction hash is believed",
       "detected": true,
       "failingTests": [
-        "committed financial state gates execution",
-        "EIP-3009 chain reconciliation"
+        "settles only with the chain-proven transaction, not the merchant-provided hash",
+        "keeps a fake merchant success and fake transaction OUTCOME_UNKNOWN",
+        "proves settlement only from a used nonce and the exact successful transfer",
+        "does not confuse nonce cancellation or mismatched transfer evidence with payment"
       ],
       "note": ""
     },
@@ -88,7 +93,7 @@
       "risk": "capacity is released while the merchant still holds a live signed authorization it can settle",
       "detected": true,
       "failingTests": [
-        "committed financial state gates execution"
+        "keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission"
       ],
       "note": ""
     },
@@ -98,7 +103,8 @@
       "risk": "an anchor transaction that anchored a different record passes verification",
       "detected": true,
       "failingTests": [
-        "on-chain anchor verification"
+        "detects a database record_hash changed to match a tampered record",
+        "detects an anchor_tx_hash swapped for an unrelated successful transaction"
       ],
       "note": ""
     },
@@ -108,7 +114,7 @@
       "risk": "a live signed EIP-3009 authorization is forwarded to a host nobody approved",
       "detected": true,
       "failingTests": [
-        "redirects never carry payment authority"
+        "never forwards a signed payment authorization to a redirect target"
       ],
       "note": ""
     },
@@ -118,12 +124,12 @@
       "risk": "a correlated payment is marked failed by the executor while it may still settle",
       "detected": true,
       "failingTests": [
-        "durable outcome reconciliation state"
+        "rejects ordinary and direct FAILED transitions after correlation is persisted"
       ],
       "note": ""
     }
   ],
   "detected": 12,
   "total": 12,
-  "workingTreeClean": true
+  "mutationTargetsRestored": true
 }

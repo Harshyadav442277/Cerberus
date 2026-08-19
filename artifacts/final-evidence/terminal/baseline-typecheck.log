@@ -1,0 +1,8 @@
+captured_at=2026-08-19T00:26:03Z
+git_sha=6159474452b8f15f179f86341944fd0193325165
+## main...origin/main
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
