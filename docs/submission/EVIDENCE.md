@@ -122,9 +122,13 @@ Worth having ready for Q&A rather than being caught by it.
 - **Rolling window.** `rolling_window.window` is fixed at 24h matching the seeded
   mandate rather than parsed generally.
 - **Time windows.** An overnight window that wraps past midnight is unsupported.
-- **Auth.** The local escalation endpoint has no authentication. Deliberate — the demo
-  stack is closed and local. A shared deployment would need reviewer identity, roles,
-  CSRF/origin policy, and least-privilege database users first.
+- **Auth.** *(Historical Stage-1 limitation — since fixed.)* At Stage 1 the local
+  escalation endpoint had no authentication. Both the decision endpoint and the
+  pending-escalation list are now reviewer-authenticated, reviewer identity comes from
+  trusted server configuration rather than the request body, the dashboard reaches
+  them through server-side proxies that keep the token out of browser JavaScript, and
+  each process holds its own least-privilege database login. See
+  [SECURITY_REMEDIATION.md](./SECURITY_REMEDIATION.md).
 - **Intent generation.** Judged runs use the deterministic fixture planner, not the
   LLM path, so results are reproducible. The LLM path exists and is schema-validated
   identically, but it is not in the decision path either way.

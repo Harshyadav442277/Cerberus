@@ -42,13 +42,85 @@ Cerberus places that missing control point before execution. Clear violations ar
   one corporate mandate — cannot overspend a rolling window.
 - The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
 - Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
-- **143 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+- **330 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+
+## Current finalist build
+
+Everything in this section describes the build as it stands right now. Numbers
+elsewhere in the repository that disagree with this section are historical and are
+labelled as such.
+
+| | |
+|---|---|
+| **Commit** | `6159474` + uncommitted finalist security remediation (see below) |
+| **Automated tests** | **330 passed / 330**, 61 suites, 0 failed |
+| **Adversarial suite** (`npm run adversarial`) | **12/12 attack classes**, 80 assertions |
+| **Security red team** (`npm run redteam`) | **9/9 attack classes**, 60 assertions |
+| **Dependency audit** (`corepack pnpm audit`) | **no known vulnerabilities** |
+| **Typecheck / dashboard build / contract compile** | all clean |
+| **Database verification** (`npm run db:verify`) | all checks pass |
+| **Fresh live evidence** | **Not yet captured on the hardened path.** No funded payment has been made since the finalist signer-isolation boundary landed. |
+| **Phase 7** | **Not started.** |
+
+### Security posture
+
+Assume the AI is hostile. Each statement below is backed by executing assertions, not
+by design intent:
+
+- It cannot approve itself, change its mandate, or manufacture budget.
+- It cannot reuse execution authority, and cannot access the payment key.
+- It cannot change the approved payment.
+- **It cannot falsify financial settlement.** The agent's database role has no
+  `UPDATE (settlement)` on `audit_log`; terminal settlement is written by the process
+  that proved the payment on chain, in the same transaction that settles the
+  reservation.
+- **It cannot manufacture audit proof.** It holds no anchor signer and has no write
+  privilege on `audit_anchor`. Its only finalization power is `INSERT (audit_id)` on a
+  durable outbox — a request that a trusted worker satisfies by re-reading the stored
+  record and computing the digest itself.
+- **Suspending it stops execution.** `agent_identity.status` is enforced at
+  authorization issuance, inside the reservation transaction, and twice in the
+  executor — including after the merchant's 402 response, so an agent suspended
+  mid-flight is refused before the payment key is constructed.
+- Neither the merchant nor the AI decides whether money moved — Cerberus verifies the
+  chain. The audit verifier now does the same for anchors: it fetches the receipt from
+  Base Sepolia and compares the digest read *from the chain* against both the
+  recomputed and the stored one.
+
+Full detail, including every attack test and every residual limitation, is in
+[submission/SECURITY_REMEDIATION.md](docs/submission/SECURITY_REMEDIATION.md).
+
+### Current limitations
+
+Stated plainly, because a security claim is only worth what its exceptions admit:
+
+- **Loopback-scoped, not internet-safe.** The control plane and executor bind
+  `127.0.0.1` by default. This prototype implements the private-network deployment
+  boundary, not service-to-service authentication. No public-internet safety is
+  claimed.
+- **Inclusion, not finality.** Settlement proof requires an exact successful on-chain
+  transfer. It does **not** wait for a confirmation threshold. A production deployment
+  should wait for a configurable confirmation/finality depth before treating
+  accounting state as irreversible. The audit verifier reports confirmation depth and
+  supports a threshold; the settlement path deliberately does not gate on it, because
+  doing so would make every demo ALLOW report `OUTCOME_UNKNOWN` for several blocks.
+- **Anchoring requires its worker.** `npm run anchor` must be running for digests to
+  reach the chain. If it is not, digests are still stored durably in Postgres and
+  records report as pending — never as anchored.
+- **Testnet prototype.** Base Sepolia, hackathon scope. Not a production payment
+  system.
+
+### Historical Stage-1 evidence
+
+The public transactions below prove the Stage-1 rail and governance flow. They
+**predate** the finalist signer-isolation boundary and this remediation pass, and are
+retained as history rather than presented as current evidence.
 
 Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://base-sepolia.blockscout.com/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
-Those public transactions prove the Stage-1 rail and governance flow. They predate
-the finalist signer-isolation boundary; the hardened path must be rerun before its
-live-settlement evidence is claimed. Its code and adversarial tests are complete.
+These prove the Stage-1 rail and governance flow. The hardened path must be rerun
+before its live-settlement evidence is claimed; its code, adversarial tests and
+security remediation are complete.
 
 ## Documents
 
@@ -181,6 +253,7 @@ on port `5544`; the Windows setup used for the published evidence is documented 
 npm run typecheck
 npm test
 npm run adversarial
+npm run redteam
 npm run build --prefix apps/dashboard
 npm run contracts:compile
 ```
@@ -188,15 +261,17 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **260 tests, 48 suites, 260 passed, 0 failed**.
+- The test runner reports **330 tests, 61 suites, 330 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
-- The judge-facing adversarial verifier reports **12/12 attack classes** and **78/78
+- The judge-facing adversarial verifier reports **12/12 attack classes** and **80
   selected assertions** passed, with zero failed, skipped, or cancelled assertions.
   It validates named TAP evidence and fails if a class matches no tests.
-- The Next.js production build completes and lists seven application routes, including
-  the server-only reviewer proxy.
+- The security red-team gate (`npm run redteam`) reports **9/9 attack classes** and
+  **60 assertions** passed, covering the finalist hardening round.
+- The Next.js production build completes and lists eight application routes, including
+  the two server-only reviewer proxies.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.
 
 The tests include the structural guarantee that `DENY` reaches neither authorization

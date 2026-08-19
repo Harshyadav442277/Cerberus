@@ -24,10 +24,11 @@ The hardened runtime has five long-running services:
 
 ```bash
 npm run merchant     # :4021
-npm run api          # :4050, trusted re-evaluation + authorization signer
-npm run executor     # :4060, isolated x402 payment key
+npm run api          # :4050, trusted re-evaluation + authorization signer (loopback)
+npm run executor     # :4060, isolated x402 payment key (loopback)
 npm run dashboard    # :3000
 npm run reconciler   # keyless Base Sepolia EIP-3009 reconciliation worker
+npm run anchor       # trusted audit-anchor worker — holds the anchor signer
 ```
 
 Verify all four health endpoints before running the agent. Atomic reservations and
@@ -50,7 +51,9 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
 - `npm run db:verify` — 13/13
 - The Stage-1 snapshot was `npm test` 91/91; the current hardened suite is 260/260
   across 48 suites, with typecheck and dashboard production build clean.
-- `npm run adversarial` — 12/12 attack classes, 78/78 selected assertions
+- `npm run adversarial` — 12/12 attack classes, 80 selected assertions
+- `npm run redteam` — 9/9 attack classes, 60 assertions (finalist security remediation)
+- `corepack pnpm audit` — no known vulnerabilities
 - Stage-1 evidence used merchant (`:4021`), API (`:4050`), and dashboard (`:3000`).
   Current runs also require the isolated executor (`:4060`) and keyless reconciler.
 - `npm run demo:script -- --thrice` — three consecutive clean runs
@@ -156,6 +159,19 @@ npm run dashboard        # terminal 4 — :3000, compliance dashboard
 
 ```bash
 npm run reconciler       # terminal 5 — keyless ambiguous-outcome recovery
+```
+
+Terminal 6 — trusted anchor worker:
+
+```bash
+npm run anchor           # terminal 6 — drains the audit-finalization outbox
+```
+
+The agent no longer anchors its own audit records: it holds no anchor signer and its
+database role has no write privilege on `audit_anchor`. Without this worker running,
+terminal records still get a durable digest in Postgres but never reach the chain,
+and `npm run audit:verify` will correctly report them as UNVERIFIED rather than
+pretending they are anchored. Use `npm run anchor:once` to drain and exit.
 ```
 
 Reviewer decisions require the same high-entropy `REVIEWER_API_TOKEN` in the API's

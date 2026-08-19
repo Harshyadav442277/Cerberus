@@ -49,20 +49,33 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   exact settlement or expired-unused non-payment, and audit/dashboard state preserves
   UNKNOWN honestly. Phase 6 is complete: `npm run adversarial` passed 78/78 selected
   assertions across 12/12 attack classes using named TAP evidence and real PostgreSQL
-  where required. Phases 7–8 have not started. The fresh funded hardened-path run also
-  remains pending.
+  where required. **The finalist security remediation pass is complete** — agent
+  suspension enforced as a real kill switch, on-chain anchor verification that
+  actually reads Base Sepolia, the hostile agent stripped of settlement and anchor
+  authority, atomic terminal financial/audit state with a durable finalization
+  outbox and trusted anchor worker, reservation context equality, loopback-scoped
+  services with reviewer-authenticated escalation reads, dedicated reconciler and
+  anchor database roles, and a clean dependency audit. Phases 7–8 have not started.
+  The fresh funded hardened-path run also remains pending.
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **260/260 across 48 suites**, Aug 19 after Stage-2 Phase 6, against
-  real PostgreSQL on `5544`. The reservation and durable replay concurrency suites
-  test database properties and are worthless against stubs. Test files run with
-  `--test-concurrency=1` because the database suites share one database. Historical
-  entries below preserve the counts correct when written.
-- **Next concrete step:** stop for Phase 6 approval, then capture a fresh funded ALLOW
-  plus dashboard-approved ESCALATE through the hardened path before presenting it as
-  live evidence. Do not begin Phase 7 automatically.
+- **Test count:** **330/330 across 61 suites**, Aug 19 after the finalist security
+  remediation pass (was 260/48 after Stage-2 Phase 6), against real PostgreSQL on
+  `5544`. Adversarial: 12/12 classes, 80 assertions. Red team (`npm run redteam`):
+  9/9 classes, 60 assertions. Dependency audit: clean. The reservation, finalization
+  and privilege suites test database properties and are worthless against stubs.
+  Test files run with `--test-concurrency=1` because the database suites share one
+  database. Historical entries below preserve the counts correct when written.
+- **Next concrete step:** the security remediation gate is green, so the block on the
+  funded run is lifted. Capture a fresh funded ALLOW plus dashboard-approved ESCALATE
+  through the hardened path before presenting it as live evidence. Phase 7 has not
+  started.
+- **New operational requirement:** `npm run anchor` must run alongside the other
+  services. The agent no longer anchors its own records — it holds no anchor signer
+  and no `audit_anchor` privilege — so without the worker, digests are stored
+  durably but never reach the chain.
 
 **Current finalist claim limits (after Stage-2 Phase 5 implementation):** the
 reservation ID is committed financial state; authorizations are recorded and consumed
@@ -104,6 +117,84 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
 Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
+
+---
+
+## Aug 19 — Finalist security remediation pass
+
+Ran before any Phase 7 work and before any funded payment, against the security
+remediation addendum. Baseline inspected first: the local checkout was 26 commits
+behind `origin/main` and still sitting on the pre-hardening `4f974ff`. Fast-forwarded
+to `6159474` and re-verified the stated baseline exactly — 260/260 tests across 48
+suites, adversarial 12/12 classes and 78/78 assertions — before changing anything.
+
+**What was actually still broken.** Most of the original financial-authority findings
+were already closed. Six genuine gaps remained:
+
+1. **Suspension was decorative.** `agent_identity.status` had existed since migration
+   001 and nothing read it. A suspended agent kept full execution authority.
+2. **`audit:verify` never touched the chain.** It re-hashed the record, compared it to
+   `audit_anchor.record_hash`, then printed "on chain" because the same table said
+   `status='anchored'`. Every value came from one database, so anyone who could write
+   that table satisfied the verifier completely.
+3. **The hostile agent owned final audit truth.** Its role held
+   `UPDATE (settlement) ON audit_log` and both `INSERT` and `UPDATE` on `audit_anchor`,
+   and its process loaded `AUDIT_ANCHOR_PRIVATE_KEY`.
+4. **Terminal financial and audit state could diverge.** The executor set the
+   reservation SETTLED and depended on an agent callback for the audit settlement and
+   the anchor. A crash between them left SETTLED with `settlement IS NULL`.
+5. **Reservation reuse verified nothing.** `reserveBudget` returned any live row
+   matching `audit_id OR action_id` without checking amount, token, chain, agent,
+   mandate version or currency.
+6. **Both HTTP services bound `0.0.0.0`,** and `GET /escalations` was unauthenticated.
+
+**What changed.** Suspension is now enforced at four independent points, including
+inside the reservation transaction (so no capacity is ever committed for a suspended
+agent) and again in the executor after the merchant's 402 response. A new
+`verify-chain` module fetches the receipt from Base Sepolia, requires success, the
+expected chain and contract, decodes the `Anchored` event, and demands recomputed ==
+stored == chain-proven; RPC failure yields UNVERIFIED and a non-zero exit, never a
+pass. Migration 011 revokes the agent's settlement and anchor privileges, adds an
+`audit_finalization` outbox, and creates `cerberus_anchor_role` and
+`cerberus_reconciler_role`. A single `terminalizeSettlement()` transaction commits
+reservation status, audit settlement and the anchor request together, and both the
+direct executor and the reconciler go through it. A new trusted anchor worker
+(`npm run anchor`) drains the outbox under a lease, re-reading each record and
+computing the digest itself — so the agent's one remaining power, `INSERT (audit_id)`,
+cannot influence what gets anchored.
+
+**Deliberate non-implementations, stated rather than hidden.** Confirmation depth is
+reported by the audit verifier with a configurable threshold, but the *settlement*
+path still treats exact successful inclusion as SETTLED: gating it would make every
+demo ALLOW report `OUTCOME_UNKNOWN` for several blocks, which the addendum explicitly
+said to avoid. The deployment boundary is loopback scoping, not service-to-service
+authentication, and no public-internet safety is claimed anywhere.
+
+**Two pre-existing problems found in passing.** `apps/reviewer` had never had its
+dependencies installed, so `npm run typecheck` failed at baseline on a missing
+`dotenv`. And `.gitignore` covered `.env.agent`/`.env.executor`/`.env.authorizer`/
+`.env.reviewer` but not `.env.reconciler`. Both fixed.
+
+**Dependency audit.** The remembered figure was "6: 4 high, 2 moderate". The actual
+current audit was **8 (5 high, 2 moderate, 1 low)** — all transitive, all build-time,
+dev-only or optional-and-unused, none on the payment path. All eight fixed by pnpm
+`overrides` raising `postcss`, `nanoid`, `tmp` and `sharp`, with no framework major
+version forced. Audit now reports no known vulnerabilities.
+
+**Verified.** typecheck clean; `npm test` **330/330 across 61 suites**;
+`npm run adversarial` **12/12 classes, 80 assertions** (no regression — Attack I);
+`npm run redteam` **9/9 classes, 60 assertions**; dashboard production build clean
+with eight routes; `AuditAnchor` compiles; `npm run db:verify` all checks pass;
+`corepack pnpm audit` clean. The agent's *real* database login was additionally
+tested directly and is denied settlement writes, anchor inserts, anchor updates and
+finalization completion, while retaining only the narrow outbox enqueue.
+
+**Not done, deliberately.** No funded payment. Phase 7 not started. The fresh
+hardened-path live evidence run remains pending, and the README now says so in one
+authoritative place rather than in scattered stale numbers.
+
+Full detail: `docs/submission/SECURITY_REMEDIATION.md`,
+`docs/submission/DEPENDENCY_AUDIT.md`.
 
 ---
 

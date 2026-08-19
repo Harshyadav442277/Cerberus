@@ -63,6 +63,26 @@ until the current phase passes its Definition of Done.
    summary passes 78/78 selected assertions with no failures, skips, or cancellations.
    The complete regression suite passes 260/260 tests across 48 suites; typecheck,
    dashboard production build, and contract compile are clean.
+6.5. **Finalist security remediation — complete and verified.** A targeted pass over
+   the gaps that survived Phase 6, run before any Phase 7 work and before any funded
+   payment. Agent suspension became a real kill switch, enforced at authorization
+   issuance, inside the reservation transaction, and twice in the executor — including
+   after the merchant's 402 response. Audit verification stopped trusting the database
+   about the chain and now fetches the receipt from Base Sepolia, checks the contract
+   and event, and requires recomputed == stored == chain-proven, treating RPC failure
+   as UNVERIFIED rather than a pass. The hostile agent lost `UPDATE (settlement)` on
+   `audit_log`, all `audit_anchor` writes, and the anchor signing key; terminal
+   financial and audit state now commit in one transaction together with a durable
+   finalization request, drained by a trusted anchor worker that re-derives every
+   digest it writes. Reservation reuse verifies every field it inherits, both HTTP
+   services bind loopback, `GET /escalations` is reviewer-authenticated behind a
+   server-side proxy, and the reconciler and anchor worker have dedicated
+   least-privilege roles. All 8 dependency vulnerabilities were fixed. The full suite
+   passes 330/330 tests across 61 suites; adversarial holds at 12/12 classes with 80
+   assertions; the new `npm run redteam` gate passes 9/9 classes with 60 assertions;
+   dependency audit is clean. Residual limitations — inclusion rather than finality on
+   the settlement path, and loopback scoping rather than service authentication — are
+   documented in `docs/submission/SECURITY_REMEDIATION.md`.
 7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and
    adversarial cases without broadening the product.
 8. **Demo hardening and freeze — not started.** Run the complete hardened path,

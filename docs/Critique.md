@@ -103,8 +103,10 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 ## Current phase boundary
 
 Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, 5 including review hardening through
-Phase 5.2, and Phase 6 are complete. The release gate passed the full **260/260-test
-suite across 48 suites** against real PostgreSQL.
+Phase 5.2, and Phase 6 are complete, followed by the finalist security remediation
+pass. The release gate passed the full **330/330-test suite across 61 suites**
+against real PostgreSQL, plus **12/12 adversarial classes** and **9/9 red-team
+classes**. See [submission/SECURITY_REMEDIATION.md](submission/SECURITY_REMEDIATION.md).
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed
@@ -195,8 +197,13 @@ Phase 6 exposes the existing proof as one repeatable `npm run adversarial` comma
 It executes named assertions across 12 deliberate attack classes, including the real
 PostgreSQL concurrency and privilege suites, parses their TAP totals, rejects missing
 evidence or zero-test matches, and derives the judge-facing summary from execution.
-The verified run passed **78/78 selected assertions across 12/12 classes** with no
-failures, skips, or cancellations.
+The verified run passed **80 selected assertions across 12/12 classes** with no
+failures, skips, or cancellations. The finalist security remediation adds a second
+gate, `npm run redteam`, covering nine further attack classes (agent suspension,
+hostile-agent audit falsification, fake on-chain anchors, terminal-state atomicity,
+finalization crash recovery, executor/reconciler races, reservation context
+equality, HTTP exposure, and reconciler/anchor least privilege) with **9/9 classes
+and 60 assertions** passing.
 
 What may **not** yet be claimed:
 
