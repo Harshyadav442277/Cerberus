@@ -13,6 +13,7 @@
     "adversarial": "tsx scripts/adversarial.ts",
     "redteam": "tsx scripts/redteam.ts",
     "capture": "tsx scripts/capture.ts",
+    "mutation": "node --env-file-if-exists=.env --import tsx scripts/mutation.ts",
     "demo": "tsx apps/agent/src/cli/run.ts",
     "demo:reset": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/reset-demo.ts",
     "demo:script": "tsx scripts/demo.ts",
