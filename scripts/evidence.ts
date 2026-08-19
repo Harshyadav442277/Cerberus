@@ -81,12 +81,21 @@ function collectFiles(): FileEntry[] {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
-/** Pulls a headline number out of a captured log rather than restating it by hand. */
-function fromLog(name: string, pattern: RegExp): string | null {
-  const path = resolve(EVIDENCE, "terminal", `${name}.log`);
-  if (!existsSync(path)) return null;
-  const match = readFileSync(path, "utf8").match(pattern);
-  return match ? (match[1] ?? match[0]).trim() : null;
+/**
+ * Pulls a headline number out of a captured log rather than restating it by hand.
+ *
+ * Prefers the `gate-` capture over the `baseline-` one. Both exist by design — the
+ * baseline records the state before any change, the gate records the final state —
+ * and reporting the baseline as if it were current would understate the build.
+ */
+function fromLog(suffix: string, pattern: RegExp): string | null {
+  for (const prefix of ["gate-", "baseline-"]) {
+    const path = resolve(EVIDENCE, "terminal", `${prefix}${suffix}.log`);
+    if (!existsSync(path)) continue;
+    const match = readFileSync(path, "utf8").match(pattern);
+    if (match) return (match[1] ?? match[0]).trim();
+  }
+  return null;
 }
 
 function buildManifest(): Record<string, unknown> {
@@ -120,14 +129,14 @@ function buildManifest(): Record<string, unknown> {
       auditAnchorContract: "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7",
     },
     verification: {
-      tests: fromLog("baseline-tests", /^\s*\S?\s*pass (\d+)\s*$/m),
-      testsFailed: fromLog("baseline-tests", /^\s*\S?\s*fail (\d+)\s*$/m),
-      suites: fromLog("baseline-tests", /^\s*\S?\s*suites (\d+)\s*$/m),
-      adversarialClasses: fromLog("baseline-adversarial", /Attack classes passed:\s+(\S+)/),
-      adversarialAssertions: fromLog("baseline-adversarial", /Assertions passed:\s+(\d+)/),
-      redteamClasses: fromLog("baseline-redteam", /Attack classes passed:\s+(\S+)/),
-      redteamAssertions: fromLog("baseline-redteam", /Assertions passed:\s+(\d+)/),
-      dependencyAudit: fromLog("baseline-dependency-audit", /(No known vulnerabilities found)/),
+      tests: fromLog("tests", /^\s*\S?\s*pass (\d+)\s*$/m),
+      testsFailed: fromLog("tests", /^\s*\S?\s*fail (\d+)\s*$/m),
+      suites: fromLog("tests", /^\s*\S?\s*suites (\d+)\s*$/m),
+      adversarialClasses: fromLog("adversarial", /Attack classes passed:\s+(\S+)/),
+      adversarialAssertions: fromLog("adversarial", /Assertions passed:\s+(\d+)/),
+      redteamClasses: fromLog("redteam", /Attack classes passed:\s+(\S+)/),
+      redteamAssertions: fromLog("redteam", /Assertions passed:\s+(\d+)/),
+      dependencyAudit: fromLog("dependency-audit", /(No known vulnerabilities found)/),
       mutationGuardsDetected:
         mutation && typeof mutation.detected === "number" && typeof mutation.total === "number"
           ? `${mutation.detected}/${mutation.total}`
@@ -311,15 +320,27 @@ function validate(): Problem[] {
     }
   }
 
-  // Captured commands must record an exit code, and a non-zero one must be explained.
+  // Captured commands must record an exit code, and a non-zero one must be EXPECTED
+  // and explained here. Two of these gates are supposed to fail on this machine, and
+  // saying so explicitly is the difference between honest evidence and a suite that
+  // has learned to ignore its own red.
+  const expectedNonZero: Record<string, string> = {
+    "e0-preflight":
+      "signing keys are not provisioned; Phase E is blocked and says so",
+    "gate-audit-verify":
+      "no anchor key is configured, so records are stored but not on chain; the verifier correctly refuses to call UNVERIFIED a pass",
+  };
   for (const capture of manifest.captures as Array<Record<string, unknown>>) {
+    const name = String(capture.name);
     if (capture.exitCode === null || capture.exitCode === undefined) {
-      problems.push({ severity: "FAIL", detail: `capture has no exit code: ${capture.name}` });
-    } else if (capture.exitCode !== 0 && !String(capture.name).startsWith("e0-preflight")) {
-      problems.push({
-        severity: "WARN",
-        detail: `capture exited ${capture.exitCode}: ${capture.name}`,
-      });
+      problems.push({ severity: "FAIL", detail: `capture has no exit code: ${name}` });
+    } else if (capture.exitCode !== 0) {
+      const reason = expectedNonZero[name];
+      problems.push(
+        reason
+          ? { severity: "WARN", detail: `${name} exited ${capture.exitCode} as expected — ${reason}` }
+          : { severity: "FAIL", detail: `unexplained non-zero exit ${capture.exitCode}: ${name}` },
+      );
     }
   }
 

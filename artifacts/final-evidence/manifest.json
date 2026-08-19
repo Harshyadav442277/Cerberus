@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-19T13:00:06.653Z",
+  "generatedAt": "2026-08-19T13:11:44.724Z",
   "repository": {
-    "sha": "3fcd4212880a7f33be1aa8345617ccc5f8c87195",
+    "sha": "652c2d6e3893eeb0f39ff98539810bed49c571c5",
     "branch": "main",
     "workingTreeClean": false
   },
@@ -11,9 +11,9 @@
     "auditAnchorContract": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
   },
   "verification": {
-    "tests": "330",
+    "tests": "363",
     "testsFailed": "0",
-    "suites": "61",
+    "suites": "72",
     "adversarialClasses": "12/12",
     "adversarialAssertions": "80",
     "redteamClasses": "9/9",
@@ -95,6 +95,102 @@
       "sha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868"
     },
     {
+      "name": "gate-adversarial",
+      "command": "npm run adversarial",
+      "exitCode": 0,
+      "durationMs": 32081,
+      "log": "terminal/gate-adversarial.log",
+      "sha256": "6b6bde0d2fbde48338c4d7e1c8c6682041da3a4316174db1e6d86afe16bee5bf"
+    },
+    {
+      "name": "gate-audit-verify",
+      "command": "npm run audit:verify",
+      "exitCode": 1,
+      "durationMs": 2252,
+      "log": "terminal/gate-audit-verify.log",
+      "sha256": "e39ee5bdfc930b16c1eadb7fa2066926724d5ec88add1462e091f2cd3381cd03"
+    },
+    {
+      "name": "gate-contracts",
+      "command": "npm run contracts:compile",
+      "exitCode": 0,
+      "durationMs": 983,
+      "log": "terminal/gate-contracts.log",
+      "sha256": "d35f124eeae8914d0ea7e1a039658db6d98ba6c773098af68215f7a2bf8df23c"
+    },
+    {
+      "name": "gate-dashboard-build",
+      "command": "npm run build --prefix apps/dashboard",
+      "exitCode": 0,
+      "durationMs": 18527,
+      "log": "terminal/gate-dashboard-build.log",
+      "sha256": "341d952d42edf823c19cb3b3361cb253c5d71ef699d442dc677d791f6c9c0804"
+    },
+    {
+      "name": "gate-db-verify",
+      "command": "npm run db:verify",
+      "exitCode": 0,
+      "durationMs": 651,
+      "log": "terminal/gate-db-verify.log",
+      "sha256": "13267c7efbe32f84c32fb5593ba352ccff8cfa4ae2b7cbfb0ad5d754fccdd2c9"
+    },
+    {
+      "name": "gate-dependency-audit",
+      "command": "corepack pnpm audit",
+      "exitCode": 0,
+      "durationMs": 751,
+      "log": "terminal/gate-dependency-audit.log",
+      "sha256": "5b35d2ee3dba4a396e9971f4e06df41a240a7c8139eacb4489055daedc950072"
+    },
+    {
+      "name": "gate-mutation",
+      "command": "npm run mutation",
+      "exitCode": 0,
+      "durationMs": 20728,
+      "log": "terminal/gate-mutation.log",
+      "sha256": "1c2ed6a716282f839104e06f6c4e50a5f0b773fcd69c80a4c6bf866ee0a2cd6c"
+    },
+    {
+      "name": "gate-redteam",
+      "command": "npm run redteam",
+      "exitCode": 0,
+      "durationMs": 16621,
+      "log": "terminal/gate-redteam.log",
+      "sha256": "1da9cdf911adb83992abe13fccff1dcba04298f248652564878124cf14c913d5"
+    },
+    {
+      "name": "gate-sandbox-1337",
+      "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
+      "exitCode": 0,
+      "durationMs": 1789,
+      "log": "terminal/gate-sandbox-1337.log",
+      "sha256": "5f269d0a0962d7c871892956e52507a3ad05a188db154bf1653de28b6315ce78"
+    },
+    {
+      "name": "gate-sandbox-42",
+      "command": "npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
+      "exitCode": 0,
+      "durationMs": 1896,
+      "log": "terminal/gate-sandbox-42.log",
+      "sha256": "588a875b39bc2b27c88a80c99b840ccaee21bcd97400003644a20da874e54055"
+    },
+    {
+      "name": "gate-tests",
+      "command": "npm test",
+      "exitCode": 0,
+      "durationMs": 32934,
+      "log": "terminal/gate-tests.log",
+      "sha256": "9f281b03680cf3b18de64e177961bc8e7d66db9707027f519c9e75fdd216df20"
+    },
+    {
+      "name": "gate-typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "durationMs": 3294,
+      "log": "terminal/gate-typecheck.log",
+      "sha256": "dd9d3ec28d373abb0af7975078adb471bb6ca84ac13152c6d5bebfb000d252c0"
+    },
+    {
       "name": "sandbox-seed-1337",
       "command": "npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
       "exitCode": 0,
@@ -123,11 +219,11 @@
         "ESCALATE": 67,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 915.08,
+      "throughputPerSecond": 1030.73,
       "policyLatencyMs": {
-        "p50": 4.913,
-        "p95": 10.972,
-        "p99": 21.189
+        "p50": 4.519,
+        "p95": 8.839,
+        "p99": 21.583
       },
       "violations": 0,
       "result": "PASS"
@@ -143,11 +239,11 @@
         "ESCALATE": 64,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 1050.28,
+      "throughputPerSecond": 944.49,
       "policyLatencyMs": {
-        "p50": 4.282,
-        "p95": 7.922,
-        "p99": 17.657
+        "p50": 4.887,
+        "p95": 8.448,
+        "p99": 20.891
       },
       "violations": 0,
       "result": "PASS"
@@ -299,17 +395,17 @@
     {
       "path": "redteam/mutation-matrix.json",
       "bytes": 4067,
-      "sha256": "573f665d974e0e244a819365d13453cda5c7aea3f0a433e697135ecaf1d5a3f4"
+      "sha256": "c1e1b899282c939021ba197c29c224f0d2ed312abfc93b28c680bbdf003dd33a"
     },
     {
       "path": "sandbox/seed-1337.json",
-      "bytes": 1819,
-      "sha256": "1ae9c7d81fe38d25335d41286b060288ce6dddefece5112fdd30ee34cd6d6021"
+      "bytes": 1818,
+      "sha256": "5867fc68875d937296f7a208b6176b40e51933e3fc9b00211a88571a8f28226e"
     },
     {
       "path": "sandbox/seed-42.json",
       "bytes": 1816,
-      "sha256": "207aee9b2fafe94bcbc95907ff896c1ede3fbf65627362c67f997e975901ed7a"
+      "sha256": "f40a80c4b4b5288110851105ad485a484205f015eac482ca8fff5581033be2bf"
     },
     {
       "path": "terminal/baseline-adversarial.log",
@@ -357,9 +453,69 @@
       "sha256": "8e32f41f166370e3f24fb3a904469eff5eca436626edf08ee33f89dbec01d868"
     },
     {
+      "path": "terminal/gate-adversarial.log",
+      "bytes": 2144,
+      "sha256": "6b6bde0d2fbde48338c4d7e1c8c6682041da3a4316174db1e6d86afe16bee5bf"
+    },
+    {
+      "path": "terminal/gate-audit-verify.log",
+      "bytes": 1211,
+      "sha256": "e39ee5bdfc930b16c1eadb7fa2066926724d5ec88add1462e091f2cd3381cd03"
+    },
+    {
+      "path": "terminal/gate-contracts.log",
+      "bytes": 729,
+      "sha256": "d35f124eeae8914d0ea7e1a039658db6d98ba6c773098af68215f7a2bf8df23c"
+    },
+    {
+      "path": "terminal/gate-dashboard-build.log",
+      "bytes": 1857,
+      "sha256": "341d952d42edf823c19cb3b3361cb253c5d71ef699d442dc677d791f6c9c0804"
+    },
+    {
+      "path": "terminal/gate-db-verify.log",
+      "bytes": 1681,
+      "sha256": "13267c7efbe32f84c32fb5593ba352ccff8cfa4ae2b7cbfb0ad5d754fccdd2c9"
+    },
+    {
+      "path": "terminal/gate-dependency-audit.log",
+      "bytes": 259,
+      "sha256": "5b35d2ee3dba4a396e9971f4e06df41a240a7c8139eacb4489055daedc950072"
+    },
+    {
+      "path": "terminal/gate-mutation.log",
+      "bytes": 2510,
+      "sha256": "1c2ed6a716282f839104e06f6c4e50a5f0b773fcd69c80a4c6bf866ee0a2cd6c"
+    },
+    {
+      "path": "terminal/gate-redteam.log",
+      "bytes": 2758,
+      "sha256": "1da9cdf911adb83992abe13fccff1dcba04298f248652564878124cf14c913d5"
+    },
+    {
+      "path": "terminal/gate-sandbox-1337.log",
+      "bytes": 2409,
+      "sha256": "5f269d0a0962d7c871892956e52507a3ad05a188db154bf1653de28b6315ce78"
+    },
+    {
+      "path": "terminal/gate-sandbox-42.log",
+      "bytes": 2400,
+      "sha256": "588a875b39bc2b27c88a80c99b840ccaee21bcd97400003644a20da874e54055"
+    },
+    {
+      "path": "terminal/gate-tests.log",
+      "bytes": 34685,
+      "sha256": "9f281b03680cf3b18de64e177961bc8e7d66db9707027f519c9e75fdd216df20"
+    },
+    {
+      "path": "terminal/gate-typecheck.log",
+      "bytes": 594,
+      "sha256": "dd9d3ec28d373abb0af7975078adb471bb6ca84ac13152c6d5bebfb000d252c0"
+    },
+    {
       "path": "terminal/index.json",
-      "bytes": 3863,
-      "sha256": "bf4ab815cf0a4ad14d71a0e048dcd2960333f2f31fc1d26c3e5e3f4c3a793b91"
+      "bytes": 8000,
+      "sha256": "c1b352432638c9e3a935e044a9aa7496ef0b9f509b4b849412812cae2c956bdd"
     },
     {
       "path": "terminal/sandbox-seed-1337.log",
