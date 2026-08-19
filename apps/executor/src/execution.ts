@@ -42,7 +42,14 @@ export class ExecutionRefusedError extends Error {
       /** No mandate authorises this agent now, or not the one this was reserved under. */
       | "STALE_MANDATE"
       /** The approval is missing, expired, or no longer binds this proposal/authority. */
-      | "STALE_APPROVAL",
+      | "STALE_APPROVAL"
+      /**
+       * The agent is suspended, or has no identity row, at execution time.
+       *
+       * Read here independently of the control plane and independently of the
+       * caller, because suspension can land after the authorization was signed.
+       */
+      | "AGENT_SUSPENDED",
   ) {
     super(code);
     this.name = "ExecutionRefusedError";
@@ -76,6 +83,16 @@ export interface TrustedExecutionContext {
   currentMandate: { mandate_id: string; version: number } | null;
   /** The separately bound approval, read at execution time for escalated audits. */
   approval: HumanApprovalBinding | null;
+  /**
+   * The agent's status NOW, read from the database by this process.
+   *
+   * Never accepted from the caller and never inherited from the control plane's
+   * earlier decision. Suspension is a kill switch, and a kill switch that only
+   * consulted state captured before the authorization was signed would not stop an
+   * agent suspended afterwards. Null means no identity row exists, which is treated
+   * as suspended: authority must be positively established.
+   */
+  agentStatus: "active" | "suspended" | null;
 }
 
 export interface ExecutionContextPort {
@@ -100,7 +117,18 @@ export interface ExecutionReservationPort {
     correlation: PaymentAttemptCorrelation,
     reconcileAfter: string,
   ): Promise<PaymentReservation | null>;
-  markSettled(reservationId: string, settlementTx: string | null): Promise<void>;
+  /**
+   * Terminal finalization for a chain-proven settlement.
+   *
+   * Writes the reservation's terminal status, the audit record's terminal settlement,
+   * and the durable anchor request in ONE transaction. Returns false when the
+   * compare-and-set matched no row, which means a reconciliation worker resolved this
+   * payment first. Losing that race is not an error, but it does mean this process
+   * must report the winner's truth rather than its own.
+   */
+  finalizeSettled(reservationId: string, settlementTx: string): Promise<boolean>;
+  /** The reservation as it stands now. Used only to read the winner after a lost CAS. */
+  readReservation(reservationId: string): Promise<PaymentReservation | null>;
   markFailed(reservationId: string): Promise<void>;
   markOutcomeUnknown(reservationId: string): Promise<void>;
 }
@@ -131,10 +159,18 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
 
   return {
     async execute(input): Promise<Settlement> {
-      const { audit, action, reservation, currentMandate, approval } = await options.context.resolve(
-        input.audit_id,
-      );
+      const { audit, action, reservation, currentMandate, approval, agentStatus } =
+        await options.context.resolve(input.audit_id);
       const nowMs = options.nowMs?.() ?? Date.now();
+
+      // The kill switch, checked first and in the process that holds the payment key.
+      // Everything below this line — including target construction and signature
+      // verification — is skipped for a suspended agent, so no refusal path gets
+      // anywhere near key material.
+      if (agentStatus !== "active") {
+        throw new ExecutionRefusedError("AGENT_SUSPENDED");
+      }
+
       const executable =
         audit.disposition === "ALLOW" ||
         audit.disposition === "OBSERVE" ||
@@ -208,6 +244,14 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
       // clock immediately before the durable capability is consumed.
       const freshNowMs = options.nowMs?.() ?? Date.now();
       const fresh = await options.context.resolve(input.audit_id);
+
+      // An administrator may have suspended this agent while the merchant was
+      // answering. This is the recheck that closes that race, and it runs before the
+      // durable capability is consumed and before the payer is constructed.
+      if (fresh.agentStatus !== "active") {
+        throw new ExecutionRefusedError("AGENT_SUSPENDED");
+      }
+
       const freshExecutable =
         fresh.audit.disposition === "ALLOW" ||
         fresh.audit.disposition === "OBSERVE" ||
@@ -325,17 +369,42 @@ export function createIsolatedExecutor(options: ExecutorOptions): {
             options.chain,
           );
           if (proof.outcome === "settled") {
-            // Financial truth comes from the chain, not the merchant-provided hash.
-            await options.reservations.markSettled(
+            // Financial truth comes from the chain, not the merchant-provided hash,
+            // and it is committed together with the audit truth and the anchor
+            // request. Nothing about this record's terminal state depends on the
+            // agent calling back afterwards.
+            const won = await options.reservations.finalizeSettled(
               reservation.reservation_id,
               proof.transactionHash,
             );
-            return {
-              status: "settled",
-              tx_hash: proof.transactionHash,
-              rail: result.rail,
-              settled_at: result.settled_at,
-            };
+            if (won) {
+              return {
+                status: "settled",
+                tx_hash: proof.transactionHash,
+                rail: result.rail,
+                settled_at: result.settled_at,
+              };
+            }
+
+            // The compare-and-set matched no row: a reconciliation worker proved the
+            // same settlement first and already wrote the terminal truth. There is
+            // exactly one terminal state and one transaction hash, so report the
+            // committed one rather than this process's own view of it.
+            const winner = await options.reservations.readReservation(
+              reservation.reservation_id,
+            );
+            if (winner?.status === "SETTLED" && winner.settlement_tx) {
+              return {
+                status: "settled",
+                tx_hash: winner.settlement_tx,
+                rail: result.rail,
+                settled_at: result.settled_at,
+              };
+            }
+            // Lost the transition to something that is not a settlement. Never guess.
+            throw new SettlementOutcomeUnknownError(
+              `settlement proven on chain but the terminal transition was lost (reservation is ${winner?.status ?? "unreadable"})`,
+            );
           }
         } catch {
           // RPC failure or temporarily unavailable evidence is ambiguity, not failure.

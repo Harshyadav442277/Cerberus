@@ -4,16 +4,18 @@ import {
   consumeAuthorization,
   deferReconciliation,
   getActiveMandate,
+  getAgentIdentity,
   getAuditLogRecord,
   getHumanApproval,
   getLiveReservationForAudit,
   getProposedAction,
+  getReservation,
   markFailed,
   markOutcomeUnknown,
   markReconciledFailed,
   markReconciledSettled,
-  markSettled,
   recordPaymentAttempt,
+  terminalizeSettlement,
 } from "@safr/db";
 import type { AuthorizationUseStore } from "@safr/execution-authorization";
 import {
@@ -39,14 +41,35 @@ export const dbExecutionContext: ExecutionContextPort = {
       ? { mandate_id: active.mandate_id, version: active.version }
       : null;
     const approval = await getHumanApproval(auditId);
-    return { audit, action, reservation, currentMandate, approval };
+    // Read here, by the process holding the payment key, on every resolve — including
+    // the post-402 fresh recheck. The control plane's earlier verdict is not reused.
+    const agent = await getAgentIdentity(audit.agent_id);
+    return {
+      audit,
+      action,
+      reservation,
+      currentMandate,
+      approval,
+      agentStatus: agent?.status ?? null,
+    };
   },
 };
 
 export const dbReservations: ExecutionReservationPort = {
   beginSubmission,
   recordPaymentAttempt,
-  markSettled,
+  // One trusted terminalization path, shared with the reconciler. The executor no
+  // longer settles the reservation and leaves audit truth to an agent callback.
+  async finalizeSettled(reservationId, settlementTx) {
+    const result = await terminalizeSettlement({
+      reservationId,
+      outcome: "settled",
+      settlementTx,
+      from: "SUBMITTING",
+    });
+    return result.won;
+  },
+  readReservation: getReservation,
   markFailed,
   markOutcomeUnknown,
 };
@@ -62,9 +85,34 @@ export const dbAuthorizationUseStore: AuthorizationUseStore = {
   consume: (authorizationId, nonce) => consumeAuthorization(authorizationId, nonce),
 };
 
+/**
+ * Reconciliation shares the executor's terminalization path rather than keeping its
+ * own near-copy of it. Remediation 4B: one trusted abstraction, so the direct and
+ * reconciled routes cannot drift into subtly different terminal states.
+ */
 export const dbReconciliationStore: ReconciliationStore = {
   claim: claimReconciliation,
-  settle: markReconciledSettled,
-  fail: markReconciledFailed,
+  async settle(reservationId, reconciliationToken, transactionHash, at) {
+    const result = await terminalizeSettlement({
+      reservationId,
+      outcome: "settled",
+      settlementTx: transactionHash,
+      reconciliationToken,
+      from: "RECONCILING",
+      at,
+    });
+    return result.won;
+  },
+  async fail(reservationId, reconciliationToken, reason, at) {
+    const result = await terminalizeSettlement({
+      reservationId,
+      outcome: "failed",
+      reconciliationToken,
+      from: "RECONCILING",
+      reason,
+      at,
+    });
+    return result.won;
+  },
   defer: deferReconciliation,
 };
