@@ -1,6 +1,6 @@
 import { ok, rejects, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
+import type { AgentIdentity, AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
 import type {
   HumanApprovalBinding,
   PaymentReservation,
@@ -184,18 +184,38 @@ function approval(overrides: Partial<HumanApprovalBinding> = {}): HumanApprovalB
   };
 }
 
+/** The trusted identity row the control plane reads. Active unless a test says otherwise. */
+function agentIdentity(status: AgentIdentity["status"] = "active"): AgentIdentity {
+  return {
+    agent_id: ACTION.agent_id,
+    display_name: "Treasury Agent",
+    owner_org: "acme_corp",
+    created_at: "2026-08-01T00:00:00.000Z",
+    wallet_address: "0x2222222222222222222222222222222222222222",
+    status,
+  };
+}
+
 function authorizer(
   action = ACTION,
   audit = AUDIT,
   store = reservations(),
-  options: { mandate?: Mandate; currentMandate?: Mandate | null; approval?: HumanApprovalBinding | null } = {},
+  options: {
+    mandate?: Mandate;
+    currentMandate?: Mandate | null;
+    approval?: HumanApprovalBinding | null;
+    /** Null models an agent with no identity row at all. */
+    agent?: AgentIdentity | null;
+  } = {},
 ) {
   const historical = options.mandate ?? MANDATE;
   const current = options.currentMandate === undefined ? historical : options.currentMandate;
+  const agent = options.agent === undefined ? agentIdentity() : options.agent;
   return createExecutionAuthorizer({
     context: {
       async getAudit() { return audit; },
       async getAction() { return action; },
+      async getAgent() { return agent; },
       async loadEvaluationContext(_agentId: string, at: string) {
         // The authorizer asks twice: once at proposed_at for the historical record,
         // once at "now" for current authority. Answering differently is what lets a
@@ -223,6 +243,7 @@ describe("trusted execution authorizer", () => {
       context: {
         async getAudit() { reads += 1; return AUDIT; },
         async getAction() { reads += 1; return ACTION; },
+        async getAgent() { reads += 1; return agentIdentity(); },
         async loadEvaluationContext() {
           reads += 1;
           return { mandate: MANDATE, counters: { rolling_total_24h: 0, hourly_tx_count: 0 } };
@@ -475,5 +496,116 @@ describe("human approval must still cover what is about to happen", () => {
       (error) =>
         error instanceof AuthorizationIssuanceError && error.code === "HUMAN_APPROVAL_REQUIRED",
     );
+  });
+});
+
+// ── Suspension must remove financial authority, not merely label it ──────────
+//
+// agent_identity.status has existed since migration 001, but storing "suspended"
+// and refusing to act on it are different things. These assert the control plane
+// reads the trusted identity itself and refuses BEFORE any capacity is committed,
+// so a suspension already in force can never consume budget or mint a capability.
+describe("suspension is a kill switch at authorization issuance", () => {
+  it("refuses to issue a capability to a suspended agent", async () => {
+    const store = reservations();
+    await rejects(
+      () =>
+        authorizer(ACTION, AUDIT, store, { agent: agentIdentity("suspended") }).issue(
+          AUDIT.audit_id,
+        ),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(store.calls.reserve, 0, "no capacity is committed for a suspended agent");
+    strictEqual(store.calls.bind, 0, "no capability is bound");
+    strictEqual(store.rows.size, 0, "no reservation row exists at all");
+  });
+
+  it("refuses an agent with no identity row rather than assuming authority", async () => {
+    const store = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { agent: null }).issue(AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(store.calls.reserve, 0);
+    strictEqual(store.rows.size, 0);
+  });
+
+  it("refuses when suspension lands between the identity read and the reservation", async () => {
+    // The reservation transaction performs its own status check, so even a
+    // suspension that arrives inside the issuance window commits no capacity.
+    const store = reservations();
+    const racing = {
+      ...store,
+      port: {
+        ...store.port,
+        async reserve(): Promise<ReserveBudgetResult> {
+          store.calls.reserve += 1;
+          return { outcome: "agent_suspended" };
+        },
+      },
+    };
+    await rejects(
+      () => authorizer(ACTION, AUDIT, racing).issue(AUDIT.audit_id),
+      (error) => error instanceof AuthorizationIssuanceError && error.code === "AGENT_SUSPENDED",
+    );
+    strictEqual(store.calls.bind, 0, "nothing is signed when the reservation refuses");
+    strictEqual(store.rows.size, 0, "no reservation row was created");
+  });
+
+  it("refuses to reuse a reservation that describes a different payment", async () => {
+    // The reservation layer holds its own invariant. Whatever the caller believes it
+    // is paying for, capacity committed for another payment is never handed over.
+    const store = reservations();
+    const mismatching = {
+      ...store,
+      port: {
+        ...store.port,
+        async reserve(input: ReserveBudgetInput): Promise<ReserveBudgetResult> {
+          store.calls.reserve += 1;
+          return {
+            outcome: "context_mismatch",
+            reservation: {
+              reservation_id: "res_existing",
+              audit_id: input.auditId,
+              action_id: input.actionId,
+              agent_id: input.agentId,
+              mandate_id: input.mandateId,
+              mandate_version: input.mandateVersion,
+              budget_key: `mandate:${input.mandateId}`,
+              currency: input.currency,
+              amount_decimal: "1",
+              amount_atomic: "1000000",
+              chain_id: input.chainId,
+              token: input.token,
+              status: "RESERVED",
+              authorization_id: null,
+              settlement_tx: null,
+              payment_payer: null,
+              payment_pay_to: null,
+              payment_nonce: null,
+              payment_payload_hash: null,
+              payment_valid_before: null,
+              submission_block: null,
+              reconcile_after: null,
+              reconciliation_attempts: 0,
+              reconciliation_token: null,
+              reconciliation_error: null,
+              counts_at: "2026-08-18T10:00:00.000Z",
+              expires_at: "2026-08-18T10:02:00.000Z",
+              created_at: "2026-08-18T10:00:00.000Z",
+              updated_at: "2026-08-18T10:00:00.000Z",
+            },
+            mismatched: ["amount_decimal", "amount_atomic"],
+          };
+        },
+      },
+    };
+    await rejects(
+      () => authorizer(ACTION, AUDIT, mismatching).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError &&
+        error.code === "RESERVATION_CONTEXT_MISMATCH",
+    );
+    strictEqual(store.calls.bind, 0, "no capability is minted against mismatched capacity");
   });
 });

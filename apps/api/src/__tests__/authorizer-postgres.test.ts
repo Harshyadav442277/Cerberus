@@ -6,6 +6,7 @@ import {
   bindAuthorization,
   claimHumanDecision,
   closePool,
+  getAgentIdentity,
   getHumanApproval,
   getAuditLogRecord,
   getIssuedAuthorization,
@@ -110,6 +111,7 @@ const authorizer = createExecutionAuthorizer({
     getAction: getProposedAction,
     loadEvaluationContext,
     getApproval: getHumanApproval,
+    getAgent: getAgentIdentity,
   },
   reservations: {
     reserve: reserveBudget,
