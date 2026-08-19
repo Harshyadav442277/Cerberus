@@ -1,5 +1,5 @@
 # npm test
-# started 2026-08-19T18:02:00.518Z
+# started 2026-08-19T20:35:23.507Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -8,550 +8,553 @@ npm warn Unknown project config "store-dir". This will stop working in the next 
 > node --import tsx scripts/test.ts
 
 ▶ normal evaluation under the real hostile-agent database role
-  ✔ loads its mandate and settled counters without reservation-table access (13.407243ms)
-✔ normal evaluation under the real hostile-agent database role (47.086815ms)
+  [32m✔ loads its mandate and settled counters without reservation-table access [90m(34.476796ms)[39m[39m
+[32m✔ normal evaluation under the real hostile-agent database role [90m(87.012833ms)[39m[39m
 ▶ repository scan preconditions
-  ✔ finds the source tree (0.605021ms)
-✔ repository scan preconditions (1.390602ms)
+  [32m✔ finds the source tree [90m(1.264475ms)[39m[39m
+[32m✔ repository scan preconditions [90m(2.820232ms)[39m[39m
 ▶ x402 is isolated behind the executor (Rules R6 + finalist Phase 1)
-  ✔ scrubs accidentally inherited payment and authorization keys from the agent process (0.439445ms)
-  ✔ loads only the agent-specific environment file (0.200453ms)
-  ✔ the shared database package never loads the schema-owner root environment (0.320539ms)
-  ✔ the agent has no reviewer credential, decision client, or trusted config path (0.632728ms)
-  ✔ the agent has no control-plane, executor, or schema-owner database config path (0.444608ms)
-  ✔ only the isolated executor and x402 diagnostics import @safr/x402-client (0.997866ms)
-  ✔ the orchestrator itself does not import the x402 client (0.234984ms)
-  ✔ the entire agent application contains no x402 or payment-key reference (0.459431ms)
-  ✔ no non-executor application references the payment-key variable (0.540279ms)
-  ✔ no module outside packages/x402-client imports the raw @x402/* SDK (0.695063ms)
-✔ x402 is isolated behind the executor (Rules R6 + finalist Phase 1) (5.455845ms)
+  [32m✔ scrubs accidentally inherited payment and authorization keys from the agent process [90m(1.048319ms)[39m[39m
+  [32m✔ loads only the agent-specific environment file [90m(0.452563ms)[39m[39m
+  [32m✔ the shared database package never loads the schema-owner root environment [90m(0.63736ms)[39m[39m
+  [32m✔ the agent has no reviewer credential, decision client, or trusted config path [90m(1.307311ms)[39m[39m
+  [32m✔ the agent has no control-plane, executor, or schema-owner database config path [90m(0.870781ms)[39m[39m
+  [32m✔ only the isolated executor and x402 diagnostics import @safr/x402-client [90m(2.059541ms)[39m[39m
+  [32m✔ the orchestrator itself does not import the x402 client [90m(0.488214ms)[39m[39m
+  [32m✔ the entire agent application contains no x402 or payment-key reference [90m(0.829584ms)[39m[39m
+  [32m✔ no non-executor application references the payment-key variable [90m(0.975851ms)[39m[39m
+  [32m✔ no module outside packages/x402-client imports the raw @x402/* SDK [90m(5.002848ms)[39m[39m
+[32m✔ x402 is isolated behind the executor (Rules R6 + finalist Phase 1) [90m(14.677502ms)[39m[39m
 ▶ no interception-after-the-fact anywhere (Architecture 2.1)
-  ✔ nothing indicates global fetch is patched (0.889984ms)
-  ✔ nothing indicates fetch is reassigned (1.752365ms)
-  ✔ nothing indicates http-proxy is used (3.202639ms)
-  ✔ nothing indicates a proxy agent is configured (0.725103ms)
-  ✔ nothing indicates undici interceptors are installed (0.700384ms)
-  ✔ nothing indicates XHR is patched (0.368498ms)
-✔ no interception-after-the-fact anywhere (Architecture 2.1) (7.907387ms)
+  [32m✔ nothing indicates global fetch is patched [90m(1.676902ms)[39m[39m
+  [32m✔ nothing indicates fetch is reassigned [90m(3.499186ms)[39m[39m
+  [32m✔ nothing indicates http-proxy is used [90m(1.658221ms)[39m[39m
+  [32m✔ nothing indicates a proxy agent is configured [90m(1.120306ms)[39m[39m
+  [32m✔ nothing indicates undici interceptors are installed [90m(1.255142ms)[39m[39m
+  [32m✔ nothing indicates XHR is patched [90m(0.605012ms)[39m[39m
+[32m✔ no interception-after-the-fact anywhere (Architecture 2.1) [90m(10.235601ms)[39m[39m
 ▶ governance lives only in the engine (Rules R3)
-  ✔ the merchant resource server contains no governance logic (0.487217ms)
-  ✔ the intent generator never sees a mandate (0.248081ms)
-  ✔ no LLM call exists anywhere in the decision path (0.673582ms)
-✔ governance lives only in the engine (Rules R3) (1.557211ms)
+  [32m✔ the merchant resource server contains no governance logic [90m(0.737286ms)[39m[39m
+  [32m✔ the intent generator never sees a mandate [90m(0.311851ms)[39m[39m
+  [32m✔ no LLM call exists anywhere in the decision path [90m(0.991016ms)[39m[39m
+[32m✔ governance lives only in the engine (Rules R3) [90m(2.225339ms)[39m[39m
 ▶ DENY — the payment is never constructed
-  ✔ does not invoke pay(), and does not even construct the settlement port (0.950807ms)
-  ✔ still writes an audit record for the refusal (0.220594ms)
-  ✔ refuses when no mandate is in force, without reaching settlement (0.202805ms)
-✔ DENY — the payment is never constructed (2.034536ms)
+  [32m✔ does not invoke pay(), and does not even construct the settlement port [90m(1.686958ms)[39m[39m
+  [32m✔ still writes an audit record for the refusal [90m(0.37469ms)[39m[39m
+  [32m✔ refuses when no mandate is in force, without reaching settlement [90m(0.299081ms)[39m[39m
+[32m✔ DENY — the payment is never constructed [90m(3.546776ms)[39m[39m
 ▶ ESCALATE — held until a human decides
-  ✔ does not invoke pay() until the decision resolves approved (6.986675ms)
-  ✔ never invokes pay() when the reviewer denies (1.1916ms)
-  ✔ observes a trusted approval without writing reviewer authority itself (0.452822ms)
-✔ ESCALATE — held until a human decides (8.973041ms)
+  [32m✔ does not invoke pay() until the decision resolves approved [90m(10.101697ms)[39m[39m
+  [32m✔ never invokes pay() when the reviewer denies [90m(1.511809ms)[39m[39m
+  [32m✔ observes a trusted approval without writing reviewer authority itself [90m(0.455096ms)[39m[39m
+[32m✔ ESCALATE — held until a human decides [90m(12.485213ms)[39m[39m
 ▶ ALLOW — settlement proceeds
-  ✔ holds a transaction-time velocity escalation for real approval, then retries once (2.035472ms)
-  ✔ never reaches payment when a transaction-time velocity escalation is denied (0.558807ms)
-  ✔ fails closed when the trusted authorizer refuses and never constructs settlement (0.63303ms)
-  ✔ invokes pay() exactly once and writes the settlement back (0.541567ms)
-  ✔ treats even a returned executor failure as UNKNOWN and does not finalize (0.216781ms)
-  ✔ on a thrown pay(), reports UNKNOWN without writing a false failure or anchor (0.288278ms)
-✔ ALLOW — settlement proceeds (4.735679ms)
+  [32m✔ holds a transaction-time velocity escalation for real approval, then retries once [90m(3.961773ms)[39m[39m
+  [32m✔ never reaches payment when a transaction-time velocity escalation is denied [90m(1.012527ms)[39m[39m
+  [32m✔ fails closed when the trusted authorizer refuses and never constructs settlement [90m(0.548442ms)[39m[39m
+  [32m✔ invokes pay() exactly once and writes the settlement back [90m(0.738778ms)[39m[39m
+  [32m✔ treats even a returned executor failure as UNKNOWN and does not finalize [90m(0.311098ms)[39m[39m
+  [32m✔ on a thrown pay(), reports UNKNOWN without writing a false failure or anchor [90m(0.407269ms)[39m[39m
+[32m✔ ALLOW — settlement proceeds [90m(7.651508ms)[39m[39m
 ▶ the engine's verdict is what drives the branch
-  ✔ a rolling-window breach denies even though the amount is under the per-tx cap (0.248727ms)
-  ✔ velocity escalates rather than denying, and settles once approved (0.209709ms)
-✔ the engine's verdict is what drives the branch (0.553343ms)
+  [32m✔ a rolling-window breach denies even though the amount is under the per-tx cap [90m(0.275945ms)[39m[39m
+  [32m✔ velocity escalates rather than denying, and settles once approved [90m(0.351666ms)[39m[39m
+[32m✔ the engine's verdict is what drives the branch [90m(0.803118ms)[39m[39m
 ▶ approval request staleness
-  ✔ accepts a decision made under the mandate still in force (0.937403ms)
-  ✔ refuses the 12:04 click after the 12:03 mandate change (0.169401ms)
-  ✔ refuses when the reviewer's page reports an older version than the server holds (0.10425ms)
-  ✔ refuses when no mandate is in force at all (0.081636ms)
-  ✔ refuses a decision under a different mandate entirely (0.094527ms)
-  ✔ accepts when the client does not report a version (0.076352ms)
-✔ approval request staleness (2.143158ms)
+  [32m✔ accepts a decision made under the mandate still in force [90m(1.777287ms)[39m[39m
+  [32m✔ refuses the 12:04 click after the 12:03 mandate change [90m(0.270871ms)[39m[39m
+  [32m✔ refuses when the reviewer's page reports an older version than the server holds [90m(0.173208ms)[39m[39m
+  [32m✔ refuses when no mandate is in force at all [90m(0.14838ms)[39m[39m
+  [32m✔ refuses a decision under a different mandate entirely [90m(0.151013ms)[39m[39m
+  [32m✔ accepts when the client does not report a version [90m(0.151686ms)[39m[39m
+[32m✔ approval request staleness [90m(3.95756ms)[39m[39m
 ▶ execution authorizer over PostgreSQL
-  ✔ commits a durable reservation and binds the signed authorization to it (116.51125ms)
-  ✔ refuses a second authorization for the same audit (65.386507ms)
-  ✔ refuses concurrent authorizations that would exceed the shared mandate budget (77.224466ms)
-  ✔ atomically escalates one of two concurrent actions at a velocity limit of one (107.701317ms)
-  ✔ rejects an in-place v17 policy mutation after authorization before key use (60.442171ms)
-  ✔ rejects every policy-bearing field rewrite for the same version (77.537516ms)
-  ✔ allows one-way lifecycle closure but rejects reopening or rewriting it (52.932428ms)
-✔ execution authorizer over PostgreSQL (576.351586ms)
+  [32m✔ commits a durable reservation and binds the signed authorization to it [90m(209.974827ms)[39m[39m
+  [32m✔ refuses a second authorization for the same audit [90m(116.503247ms)[39m[39m
+  [32m✔ refuses concurrent authorizations that would exceed the shared mandate budget [90m(145.418134ms)[39m[39m
+  [32m✔ atomically escalates one of two concurrent actions at a velocity limit of one [90m(239.053285ms)[39m[39m
+  [32m✔ rejects an in-place v17 policy mutation after authorization before key use [90m(133.745804ms)[39m[39m
+  [32m✔ rejects every policy-bearing field rewrite for the same version [90m(148.761543ms)[39m[39m
+  [32m✔ allows one-way lifecycle closure but rejects reopening or rewriting it [90m(119.376381ms)[39m[39m
+[32m✔ execution authorizer over PostgreSQL [90m(1136.993546ms)[39m[39m
 ▶ sensitive control-plane read authentication
-  ✔ protects every sensitive dashboard read before database access (48.111054ms)
-✔ sensitive control-plane read authentication (92.551257ms)
+  [32m✔ protects every sensitive dashboard read before database access [90m(83.409682ms)[39m[39m
+[32m✔ sensitive control-plane read authentication [90m(158.855123ms)[39m[39m
 ▶ escalation decision body
-  ✔ defaults the Bible §9 example note without accepting reviewer authority (1.252326ms)
-  ✔ strips a forged reviewer_id from the untrusted body (0.190484ms)
-  ✔ accepts deny (0.130493ms)
-  ✔ rejects unknown decisions (0.523522ms)
-✔ escalation decision body (2.796082ms)
+  [32m✔ defaults the Bible §9 example note without accepting reviewer authority [90m(1.97218ms)[39m[39m
+  [32m✔ strips a forged reviewer_id from the untrusted body [90m(0.270801ms)[39m[39m
+  [32m✔ accepts deny [90m(0.226054ms)[39m[39m
+  [32m✔ rejects unknown decisions [90m(0.885175ms)[39m[39m
+[32m✔ escalation decision body [90m(4.503092ms)[39m[39m
 ▶ trusted execution authorizer
-  ✔ fails closed on invalid signer/target configuration before reading audit state (1.081731ms)
-  ✔ re-evaluates an ALLOW and signs the pinned audit context (30.544469ms)
-  ✔ refuses a cap breach even if a compromised caller presents an ALLOW audit (0.286106ms)
-  ✔ requires persisted approval for an ESCALATE (0.587926ms)
-✔ trusted execution authorizer (33.14762ms)
+  [32m✔ fails closed on invalid signer/target configuration before reading audit state [90m(1.885059ms)[39m[39m
+  [32m✔ re-evaluates an ALLOW and signs the pinned audit context [90m(50.986759ms)[39m[39m
+  [32m✔ refuses a cap breach even if a compromised caller presents an ALLOW audit [90m(0.456779ms)[39m[39m
+  [32m✔ requires persisted approval for an ESCALATE [90m(0.906101ms)[39m[39m
+[32m✔ trusted execution authorizer [90m(55.386046ms)[39m[39m
 ▶ authorization is backed by committed capacity
-  ✔ binds the signed authorization to a real reservation, not a derived string (1.963986ms)
-  ✔ refuses to issue when the shared budget cannot cover the proposal (0.371375ms)
-  ✔ records a transaction-time velocity race as ESCALATE before refusing authority (0.333046ms)
-  ✔ gives one audit a single executable authorization however often it asks (1.744922ms)
-  ✔ does not reserve capacity for a DENY (0.213239ms)
-✔ authorization is backed by committed capacity (4.915097ms)
+  [32m✔ binds the signed authorization to a real reservation, not a derived string [90m(3.541092ms)[39m[39m
+  [32m✔ refuses to issue when the shared budget cannot cover the proposal [90m(0.654826ms)[39m[39m
+  [32m✔ records a transaction-time velocity race as ESCALATE before refusing authority [90m(0.614046ms)[39m[39m
+  [32m✔ gives one audit a single executable authorization however often it asks [90m(3.002074ms)[39m[39m
+  [32m✔ does not reserve capacity for a DENY [90m(0.392687ms)[39m[39m
+[32m✔ authorization is backed by committed capacity [90m(8.681794ms)[39m[39m
 ▶ current authority is checked, not just historical
-  ✔ uses trusted issuance time for the current time-window check (0.300403ms)
-  ✔ does not let a forged future proposed_at replace trusted issuance time (0.179672ms)
-  ✔ issues when both historical proposal time and trusted now are inside the window (1.522455ms)
-  ✔ preserves the documented inclusive whole-minute boundary at trusted now (1.52766ms)
-  ✔ refuses when the mandate has been superseded since the decision (0.172753ms)
-  ✔ refuses when no mandate authorises the agent any more (0.145229ms)
-  ✔ refuses when limits were tightened in place, without a version bump (0.157508ms)
-  ✔ turns a settled ALLOW into an escalation when the counterparty is removed (0.238548ms)
-✔ current authority is checked, not just historical (4.456184ms)
+  [32m✔ uses trusted issuance time for the current time-window check [90m(0.594905ms)[39m[39m
+  [32m✔ does not let a forged future proposed_at replace trusted issuance time [90m(0.332782ms)[39m[39m
+  [32m✔ issues when both historical proposal time and trusted now are inside the window [90m(2.873366ms)[39m[39m
+  [32m✔ preserves the documented inclusive whole-minute boundary at trusted now [90m(3.512598ms)[39m[39m
+  [32m✔ refuses when the mandate has been superseded since the decision [90m(0.388292ms)[39m[39m
+  [32m✔ refuses when no mandate authorises the agent any more [90m(0.332754ms)[39m[39m
+  [32m✔ refuses when limits were tightened in place, without a version bump [90m(0.377028ms)[39m[39m
+  [32m✔ turns a settled ALLOW into an escalation when the counterparty is removed [90m(0.556552ms)[39m[39m
+[32m✔ current authority is checked, not just historical [90m(9.395628ms)[39m[39m
 ▶ human approval must still cover what is about to happen
-  ✔ issues when the approval binds this proposal under the current version (1.576571ms)
-  ✔ refuses an approval that has aged out (0.389106ms)
-  ✔ refuses an approval bound to a different proposal (0.432494ms)
-  ✔ refuses a denial recorded as a decision (0.374891ms)
-  ✔ refuses an escalation with no recorded decision at all (0.307181ms)
-✔ human approval must still cover what is about to happen (3.207481ms)
+  [32m✔ issues when the approval binds this proposal under the current version [90m(3.560677ms)[39m[39m
+  [32m✔ refuses an approval that has aged out [90m(0.918589ms)[39m[39m
+  [32m✔ refuses an approval bound to a different proposal [90m(0.834123ms)[39m[39m
+  [32m✔ refuses a denial recorded as a decision [90m(0.840706ms)[39m[39m
+  [32m✔ refuses an escalation with no recorded decision at all [90m(0.577597ms)[39m[39m
+[32m✔ human approval must still cover what is about to happen [90m(7.027397ms)[39m[39m
 ▶ suspension is a kill switch at authorization issuance
-  ✔ refuses to issue a capability to a suspended agent (0.211369ms)
-  ✔ refuses an agent with no identity row rather than assuming authority (0.111953ms)
-  ✔ refuses when suspension lands between the identity read and the reservation (0.277336ms)
-  ✔ refuses to reuse a reservation that describes a different payment (0.284702ms)
-✔ suspension is a kill switch at authorization issuance (0.997992ms)
+  [32m✔ refuses to issue a capability to a suspended agent [90m(0.44301ms)[39m[39m
+  [32m✔ refuses an agent with no identity row rather than assuming authority [90m(0.338837ms)[39m[39m
+  [32m✔ refuses when suspension lands between the identity read and the reservation [90m(0.629656ms)[39m[39m
+  [32m✔ refuses to reuse a reservation that describes a different payment [90m(0.6828ms)[39m[39m
+[32m✔ suspension is a kill switch at authorization issuance [90m(2.344727ms)[39m[39m
 ▶ execution capability route authentication and CORS
-  ✔ rejects an unauthenticated evil-origin request before issuance (36.692657ms)
-  ✔ rejects a forged bearer token before issuance (3.598316ms)
-  ✔ accepts the configured service credential (3.555397ms)
-  ✔ allows only the configured dashboard browser origin (2.266359ms)
-✔ execution capability route authentication and CORS (51.248158ms)
+  [32m✔ rejects an unauthenticated evil-origin request before issuance [90m(78.570678ms)[39m[39m
+  [32m✔ rejects a forged bearer token before issuance [90m(9.120454ms)[39m[39m
+  [32m✔ accepts the configured service credential [90m(8.889617ms)[39m[39m
+  [32m✔ allows only the configured dashboard browser origin [90m(5.033802ms)[39m[39m
+[32m✔ execution capability route authentication and CORS [90m(109.892319ms)[39m[39m
 ▶ authenticated reviewer decision endpoint over PostgreSQL
-  ✔ rejects agent-style and forged reviewer requests without creating authority (72.220762ms)
-  ✔ accepts the trusted credential and uses server-controlled reviewer identity (52.236204ms)
-✔ authenticated reviewer decision endpoint over PostgreSQL (139.880432ms)
+  [32m✔ rejects agent-style and forged reviewer requests without creating authority [90m(147.051386ms)[39m[39m
+  [32m✔ accepts the trusted credential and uses server-controlled reviewer identity [90m(94.482078ms)[39m[39m
+[32m✔ authenticated reviewer decision endpoint over PostgreSQL [90m(269.785084ms)[39m[39m
 ▶ pending escalation exposure
-  ✔ refuses an unauthenticated read of pending escalations (38.541591ms)
-  ✔ refuses a forged bearer token (39.389626ms)
-  ✔ refuses an agent-style request with no credential at all (37.881862ms)
-  ✔ serves the list to the authenticated reviewer control plane (41.802012ms)
-✔ pending escalation exposure (157.910327ms)
+  [32m✔ refuses an unauthenticated read of pending escalations [90m(76.749302ms)[39m[39m
+  [32m✔ refuses a forged bearer token [90m(87.085924ms)[39m[39m
+  [32m✔ refuses an agent-style request with no credential at all [90m(78.630297ms)[39m[39m
+  [32m✔ serves the list to the authenticated reviewer control plane [90m(80.322806ms)[39m[39m
+[32m✔ pending escalation exposure [90m(323.56944ms)[39m[39m
 ▶ dashboard reviewer proxy
-  ✔ fails closed without a server-side credential (3.329765ms)
-  ✔ refuses an agent-style call to the trusted dashboard proxy (0.503686ms)
-  ✔ adds the credential server-side and never forwards forged reviewer identity (1.588283ms)
-✔ dashboard reviewer proxy (6.117673ms)
+  [32m✔ fails closed without a server-side credential [90m(8.094003ms)[39m[39m
+  [32m✔ refuses an agent-style call to the trusted dashboard proxy [90m(1.206583ms)[39m[39m
+  [32m✔ adds the credential server-side and never forwards forged reviewer identity [90m(3.402388ms)[39m[39m
+[32m✔ dashboard reviewer proxy [90m(15.697442ms)[39m[39m
 ▶ authenticated dashboard runtime proxy
-  ✔ does not expose its upstream credential to an unauthenticated browser (3.226371ms)
-  ✔ replaces dashboard Basic auth with the server-only upstream bearer token (0.96323ms)
-  ✔ refuses to proxy arbitrary control-plane paths (0.786882ms)
-✔ authenticated dashboard runtime proxy (5.70343ms)
+  [32m✔ does not expose its upstream credential to an unauthenticated browser [90m(5.178893ms)[39m[39m
+  [32m✔ replaces dashboard Basic auth with the server-only upstream bearer token [90m(1.531833ms)[39m[39m
+  [32m✔ refuses to proxy arbitrary control-plane paths [90m(2.562239ms)[39m[39m
+  [32m✔ proxies the read-only health route the sidebar polls from the browser [90m(1.125736ms)[39m[39m
+  [32m✔ still requires dashboard login before health, and never returns the bearer [90m(2.058951ms)[39m[39m
+  [32m✔ allows health only as an exact single segment [90m(1.483736ms)[39m[39m
+[32m✔ authenticated dashboard runtime proxy [90m(15.328787ms)[39m[39m
 ▶ thresholdVsActual — Design §5.2
-  ✔ shows per_transaction_max vs proposed amount for scenario 2 (0.869956ms)
-  ✔ returns null for a clean ALLOW (0.119904ms)
-  ✔ names the unknown counterparty against the allowlist (0.143708ms)
-✔ thresholdVsActual — Design §5.2 (1.676919ms)
+  [32m✔ shows per_transaction_max vs proposed amount for scenario 2 [90m(2.106608ms)[39m[39m
+  [32m✔ returns null for a clean ALLOW [90m(0.296175ms)[39m[39m
+  [32m✔ names the unknown counterparty against the allowlist [90m(0.336025ms)[39m[39m
+[32m✔ thresholdVsActual — Design §5.2 [90m(4.127449ms)[39m[39m
 ▶ isolated executor
-  ✔ uses the signing path exactly once for a valid authorization (35.140938ms)
-  ✔ rejects a forged authorization before the payer exists (5.310539ms)
-  ✔ rejects replay before a second signing attempt (13.827991ms)
-  ✔ refuses a DENY audit before authorization or payer construction (2.146109ms)
-  ✔ rejects a proposal mutated after authorization without touching the key (4.79775ms)
-  ✔ executes an approved escalation only while its bound approval is fresh (7.816157ms)
-  ✔ refuses an approval that expired after signing before the payment key exists (2.211886ms)
-  ✔ refuses when the merchant delays until the authorization expires (8.664744ms)
-  ✔ refuses when the mandate is revoked during the unsigned challenge fetch (4.325951ms)
-  ✔ refuses when human approval expires during the unsigned challenge fetch (4.158654ms)
-  ✔ refuses a suspended agent holding a valid authorization before the payment key exists (1.584033ms)
-  ✔ refuses an agent whose identity row is absent rather than assuming authority (1.452621ms)
-  ✔ refuses an approved escalation once the agent is suspended (1.627884ms)
-  ✔ refuses when the agent is suspended during the unsigned challenge fetch (3.866182ms)
-  ✔ refuses a challenge timeout without consuming authority or reaching the key (3.840699ms)
-✔ isolated executor (102.032656ms)
+  [32m✔ uses the signing path exactly once for a valid authorization [90m(52.010683ms)[39m[39m
+  [32m✔ rejects a forged authorization before the payer exists [90m(8.237062ms)[39m[39m
+  [32m✔ rejects replay before a second signing attempt [90m(20.865219ms)[39m[39m
+  [32m✔ refuses a DENY audit before authorization or payer construction [90m(3.478865ms)[39m[39m
+  [32m✔ rejects a proposal mutated after authorization without touching the key [90m(7.389068ms)[39m[39m
+  [32m✔ executes an approved escalation only while its bound approval is fresh [90m(12.61795ms)[39m[39m
+  [32m✔ refuses an approval that expired after signing before the payment key exists [90m(4.059504ms)[39m[39m
+  [32m✔ refuses when the merchant delays until the authorization expires [90m(17.911771ms)[39m[39m
+  [32m✔ refuses when the mandate is revoked during the unsigned challenge fetch [90m(8.436242ms)[39m[39m
+  [32m✔ refuses when human approval expires during the unsigned challenge fetch [90m(7.257824ms)[39m[39m
+  [32m✔ refuses a suspended agent holding a valid authorization before the payment key exists [90m(3.680805ms)[39m[39m
+  [32m✔ refuses an agent whose identity row is absent rather than assuming authority [90m(2.566225ms)[39m[39m
+  [32m✔ refuses an approved escalation once the agent is suspended [90m(2.596957ms)[39m[39m
+  [32m✔ refuses when the agent is suspended during the unsigned challenge fetch [90m(6.05392ms)[39m[39m
+  [32m✔ refuses a challenge timeout without consuming authority or reaching the key [90m(6.334715ms)[39m[39m
+[32m✔ isolated executor [90m(165.548071ms)[39m[39m
 ▶ exact live x402 challenge binding
-  ✔ rejects amount 5 USDC → 50 USDC before the payment key exists (4.835753ms)
-  ✔ rejects payee Alice → attacker before the payment key exists (3.798072ms)
-  ✔ rejects wrong token before the payment key exists (3.460894ms)
-  ✔ rejects wrong chain before the payment key exists (3.521155ms)
-  ✔ rejects wrong scheme before the payment key exists (3.548689ms)
-  ✔ rejects wrong EIP-712 token domain before the payment key exists (3.470881ms)
-  ✔ rejects transfer-method switch before the payment key exists (3.235541ms)
-  ✔ rejects wrong x402 protocol version before the payment key exists (3.487855ms)
-  ✔ rejects a wrong resource before the payment key exists (3.654342ms)
-  ✔ leaves authority reusable after mismatch because no signature was constructed (8.355277ms)
-✔ exact live x402 challenge binding (41.716917ms)
+  [32m✔ rejects amount 5 USDC → 50 USDC before the payment key exists [90m(6.648458ms)[39m[39m
+  [32m✔ rejects payee Alice → attacker before the payment key exists [90m(6.366739ms)[39m[39m
+  [32m✔ rejects wrong token before the payment key exists [90m(6.528458ms)[39m[39m
+  [32m✔ rejects wrong chain before the payment key exists [90m(6.383134ms)[39m[39m
+  [32m✔ rejects wrong scheme before the payment key exists [90m(7.382998ms)[39m[39m
+  [32m✔ rejects wrong EIP-712 token domain before the payment key exists [90m(6.913608ms)[39m[39m
+  [32m✔ rejects transfer-method switch before the payment key exists [90m(6.907842ms)[39m[39m
+  [32m✔ rejects wrong x402 protocol version before the payment key exists [90m(6.632654ms)[39m[39m
+  [32m✔ rejects a wrong resource before the payment key exists [90m(7.021728ms)[39m[39m
+  [32m✔ leaves authority reusable after mismatch because no signature was constructed [90m(17.06589ms)[39m[39m
+[32m✔ exact live x402 challenge binding [90m(78.469875ms)[39m[39m
 ▶ committed financial state gates execution
-  ✔ refuses an audit with no live reservation before the payer exists (1.291922ms)
-  ✔ refuses an authorization that is not the one bound to the reservation (3.374865ms)
-  ✔ refuses a replay from a SECOND executor process with its own clean memory (9.412763ms)
-  ✔ settles only with the chain-proven transaction, not the merchant-provided hash (5.075661ms)
-  ✔ keeps a fake merchant success and fake transaction OUTCOME_UNKNOWN (5.120308ms)
-  ✔ keeps merchant success with the wrong chain recipient OUTCOME_UNKNOWN (4.817239ms)
-  ✔ keeps merchant success with the wrong chain amount OUTCOME_UNKNOWN (4.605256ms)
-  ✔ keeps merchant success OUTCOME_UNKNOWN while chain RPC is unavailable (4.903126ms)
-  ✔ keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission (5.145122ms)
-  ✔ keeps malformed post-signature responses OUTCOME_UNKNOWN (4.949209ms)
-  ✔ keeps HTTP 500 after signature transmission OUTCOME_UNKNOWN (5.612573ms)
-  ✔ keeps a post-signature timeout OUTCOME_UNKNOWN without retrying (4.902715ms)
-  ✔ refuses to spend under a mandate that has been superseded (1.259095ms)
-  ✔ refuses to spend when no mandate authorises the agent any more (1.144994ms)
-  ✔ holds capacity as OUTCOME_UNKNOWN when settlement throws (4.776618ms)
-✔ committed financial state gates execution (66.819203ms)
+  [32m✔ refuses an audit with no live reservation before the payer exists [90m(2.720087ms)[39m[39m
+  [32m✔ refuses an authorization that is not the one bound to the reservation [90m(6.237613ms)[39m[39m
+  [32m✔ refuses a replay from a SECOND executor process with its own clean memory [90m(17.048363ms)[39m[39m
+  [32m✔ settles only with the chain-proven transaction, not the merchant-provided hash [90m(9.612914ms)[39m[39m
+  [32m✔ keeps a fake merchant success and fake transaction OUTCOME_UNKNOWN [90m(8.705762ms)[39m[39m
+  [32m✔ keeps merchant success with the wrong chain recipient OUTCOME_UNKNOWN [90m(8.467408ms)[39m[39m
+  [32m✔ keeps merchant success with the wrong chain amount OUTCOME_UNKNOWN [90m(8.320171ms)[39m[39m
+  [32m✔ keeps merchant success OUTCOME_UNKNOWN while chain RPC is unavailable [90m(9.177938ms)[39m[39m
+  [32m✔ keeps a hostile merchant-reported failure OUTCOME_UNKNOWN after transmission [90m(8.687466ms)[39m[39m
+  [32m✔ keeps malformed post-signature responses OUTCOME_UNKNOWN [90m(8.604787ms)[39m[39m
+  [32m✔ keeps HTTP 500 after signature transmission OUTCOME_UNKNOWN [90m(10.251242ms)[39m[39m
+  [32m✔ keeps a post-signature timeout OUTCOME_UNKNOWN without retrying [90m(9.341676ms)[39m[39m
+  [32m✔ refuses to spend under a mandate that has been superseded [90m(2.201938ms)[39m[39m
+  [32m✔ refuses to spend when no mandate authorises the agent any more [90m(2.064687ms)[39m[39m
+  [32m✔ holds capacity as OUTCOME_UNKNOWN when settlement throws [90m(8.615228ms)[39m[39m
+[32m✔ committed financial state gates execution [90m(120.866524ms)[39m[39m
 ▶ terminal transition races
-  ✔ reports the committed settlement when it loses the terminal transition (4.658864ms)
-  ✔ never reports success when the terminal transition is lost to a non-settlement (4.862902ms)
-✔ terminal transition races (9.616661ms)
+  [32m✔ reports the committed settlement when it loses the terminal transition [90m(8.752072ms)[39m[39m
+  [32m✔ never reports success when the terminal transition is lost to a non-settlement [90m(8.643849ms)[39m[39m
+[32m✔ terminal transition races [90m(17.58993ms)[39m[39m
 ▶ OUTCOME_UNKNOWN reconciliation worker
-  ✔ has no source or config path to payment or operator authority (0.690689ms)
-  ✔ finds later settlement after a merchant-reported failure without a second payment (1.172766ms)
-  ✔ releases a merchant-reported failure only after expiry proves the nonce unused (0.247258ms)
-  ✔ keeps an unexpired authorization capacity-holding and schedules another read (0.216869ms)
-  ✔ defers on RPC failure instead of guessing non-payment (0.220262ms)
-  ✔ safely fails a pre-transport crash with no persisted attempt (0.136175ms)
-✔ OUTCOME_UNKNOWN reconciliation worker (3.402692ms)
+  [32m✔ has no source or config path to payment or operator authority [90m(1.262615ms)[39m[39m
+  [32m✔ finds later settlement after a merchant-reported failure without a second payment [90m(2.129693ms)[39m[39m
+  [32m✔ releases a merchant-reported failure only after expiry proves the nonce unused [90m(0.449761ms)[39m[39m
+  [32m✔ keeps an unexpired authorization capacity-holding and schedules another read [90m(0.355555ms)[39m[39m
+  [32m✔ defers on RPC failure instead of guessing non-payment [90m(0.417327ms)[39m[39m
+  [32m✔ safely fails a pre-transport crash with no persisted attempt [90m(0.242474ms)[39m[39m
+[32m✔ OUTCOME_UNKNOWN reconciliation worker [90m(6.125076ms)[39m[39m
 ▶ scripted reviewer API client
-  ✔ authenticates both the pending read and decision write (15.996482ms)
-✔ scripted reviewer API client (16.655705ms)
+  [32m✔ authenticates both the pending read and decision write [90m(23.83546ms)[39m[39m
+[32m✔ scripted reviewer API client [90m(24.80188ms)[39m[39m
 ▶ AuditAnchor
-  ✔ compiles without errors (0.617787ms)
-  ✔ produces deployable bytecode (0.234503ms)
-  ✔ compiles deterministically (22.882183ms)
-  ✔ matches the hand-written ABI that consumers import (1.003875ms)
-  ✔ exposes anchor(bytes32) as the write entry point (0.186147ms)
-  ✔ emits an indexed Anchored event so a digest can be looked up by hash (0.153378ms)
-✔ AuditAnchor (25.994061ms)
+  [32m✔ compiles without errors [90m(0.907018ms)[39m[39m
+  [32m✔ produces deployable bytecode [90m(0.354603ms)[39m[39m
+  [32m✔ compiles deterministically [90m(33.842206ms)[39m[39m
+  [32m✔ matches the hand-written ABI that consumers import [90m(1.362621ms)[39m[39m
+  [32m✔ exposes anchor(bytes32) as the write entry point [90m(0.27358ms)[39m[39m
+  [32m✔ emits an indexed Anchored event so a digest can be looked up by hash [90m(0.204475ms)[39m[39m
+[32m✔ AuditAnchor [90m(38.276243ms)[39m[39m
 ▶ canonicalJson
-  ✔ orders object keys lexicographically (0.631545ms)
-  ✔ produces identical output regardless of key insertion order (0.124047ms)
-  ✔ sorts nested keys too (0.109745ms)
-  ✔ preserves array order, which is meaningful (0.104205ms)
-  ✔ emits no insignificant whitespace (0.186858ms)
-  ✔ keeps nulls rather than dropping them (0.09757ms)
-  ✔ rejects values it cannot represent deterministically (0.328825ms)
-  ✔ escapes strings the same way JSON does (0.091336ms)
-✔ canonicalJson (2.382951ms)
+  [32m✔ orders object keys lexicographically [90m(1.11989ms)[39m[39m
+  [32m✔ produces identical output regardless of key insertion order [90m(0.230454ms)[39m[39m
+  [32m✔ sorts nested keys too [90m(0.192309ms)[39m[39m
+  [32m✔ preserves array order, which is meaningful [90m(0.211618ms)[39m[39m
+  [32m✔ emits no insignificant whitespace [90m(0.34102ms)[39m[39m
+  [32m✔ keeps nulls rather than dropping them [90m(0.184002ms)[39m[39m
+  [32m✔ rejects values it cannot represent deterministically [90m(0.582412ms)[39m[39m
+  [32m✔ escapes strings the same way JSON does [90m(0.147956ms)[39m[39m
+[32m✔ canonicalJson [90m(4.279201ms)[39m[39m
 ▶ auditRecordHash
-  ✔ is a 32-byte hex digest (4.113125ms)
-  ✔ is deterministic across repeated calls (4.111067ms)
-  ✔ is independent of key order in the input object (0.48454ms)
-  ✔ survives a JSON round trip, which is what re-verification does (0.95782ms)
-  ✔ changes if any field is tampered with (0.492843ms)
-  ✔ detects a settlement quietly attached to a denied record (0.225268ms)
-  ✔ gives distinct digests to distinct records (0.286862ms)
-  ✔ is exactly keccak256 of the canonical JSON, reproducible by any verifier (0.422013ms)
-  ✔ validates against the Section 7.5 schema before hashing (0.522773ms)
-✔ auditRecordHash (11.911858ms)
+  [32m✔ is a 32-byte hex digest [90m(6.525641ms)[39m[39m
+  [32m✔ is deterministic across repeated calls [90m(5.189244ms)[39m[39m
+  [32m✔ is independent of key order in the input object [90m(0.623475ms)[39m[39m
+  [32m✔ survives a JSON round trip, which is what re-verification does [90m(1.411291ms)[39m[39m
+  [32m✔ changes if any field is tampered with [90m(0.912662ms)[39m[39m
+  [32m✔ detects a settlement quietly attached to a denied record [90m(0.497017ms)[39m[39m
+  [32m✔ gives distinct digests to distinct records [90m(0.479573ms)[39m[39m
+  [32m✔ is exactly keccak256 of the canonical JSON, reproducible by any verifier [90m(0.715897ms)[39m[39m
+  [32m✔ validates against the Section 7.5 schema before hashing [90m(0.850018ms)[39m[39m
+[32m✔ auditRecordHash [90m(17.659024ms)[39m[39m
 ▶ trusted anchor worker
-  ✔ recomputes the digest from the stored record rather than trusting the request (1.54514ms)
-  ✔ recovers and anchors a job left behind by a crashed worker (0.469675ms)
-  ✔ does not mark a job done when the chain write failed (0.49299ms)
-  ✔ stores the digest and completes when anchoring is not configured (0.380263ms)
-  ✔ reports idle when the outbox is empty (0.153386ms)
-  ✔ reports a lost lease instead of claiming the job was completed (0.318103ms)
-✔ trusted anchor worker (4.133298ms)
+  [32m✔ recomputes the digest from the stored record rather than trusting the request [90m(2.48185ms)[39m[39m
+  [32m✔ recovers and anchors a job left behind by a crashed worker [90m(0.787159ms)[39m[39m
+  [32m✔ does not mark a job done when the chain write failed [90m(0.798734ms)[39m[39m
+  [32m✔ stores the digest and completes when anchoring is not configured [90m(0.59114ms)[39m[39m
+  [32m✔ reports idle when the outbox is empty [90m(0.239453ms)[39m[39m
+  [32m✔ reports a lost lease instead of claiming the job was completed [90m(0.645709ms)[39m[39m
+[32m✔ trusted anchor worker [90m(6.891522ms)[39m[39m
 ▶ anchor queue — the happy path
-  ✔ anchors the digest of the record and records the tx hash (5.644995ms)
-  ✔ stores the digest before attempting the network call (0.580015ms)
-  ✔ anchors DENY records too, not just settled ones (0.391133ms)
-✔ anchor queue — the happy path (7.420045ms)
+  [32m✔ anchors the digest of the record and records the tx hash [90m(8.073601ms)[39m[39m
+  [32m✔ stores the digest before attempting the network call [90m(0.975783ms)[39m[39m
+  [32m✔ anchors DENY records too, not just settled ones [90m(0.614669ms)[39m[39m
+[32m✔ anchor queue — the happy path [90m(10.809461ms)[39m[39m
 ▶ anchor queue — non-blocking guarantee (Architecture 6.1)
-  ✔ returns before the chain call completes (0.764829ms)
-  ✔ does not throw when the anchor RPC is broken (0.790479ms)
-  ✔ does not reject when even the failure write fails (0.4587ms)
-  ✔ does not reject when the database is unreachable entirely (0.523697ms)
-  ✔ skips the chain but still stores digests when anchoring is unconfigured (0.4197ms)
-  ✔ tracks concurrent anchors independently (0.59819ms)
-✔ anchor queue — non-blocking guarantee (Architecture 6.1) (3.919919ms)
+  [32m✔ returns before the chain call completes [90m(1.152474ms)[39m[39m
+  [32m✔ does not throw when the anchor RPC is broken [90m(1.024444ms)[39m[39m
+  [32m✔ does not reject when even the failure write fails [90m(0.731512ms)[39m[39m
+  [32m✔ does not reject when the database is unreachable entirely [90m(0.664948ms)[39m[39m
+  [32m✔ skips the chain but still stores digests when anchoring is unconfigured [90m(0.600376ms)[39m[39m
+  [32m✔ tracks concurrent anchors independently [90m(0.804284ms)[39m[39m
+[32m✔ anchor queue — non-blocking guarantee (Architecture 6.1) [90m(5.508805ms)[39m[39m
 ▶ on-chain anchor verification
-  ✔ verifies a record whose digest is genuinely on chain (3.621841ms)
-  ✔ detects a tampered audit record (0.425494ms)
-  ✔ detects a deleted audit record (0.164035ms)
-  ✔ detects a database record_hash changed to match a tampered record (0.970543ms)
-  ✔ detects an anchor_tx_hash swapped for an unrelated successful transaction (0.746295ms)
-  ✔ detects a transaction sent to the wrong contract (0.488156ms)
-  ✔ ignores a look-alike Anchored event emitted by another address (0.462442ms)
-  ✔ detects a failed transaction (0.419888ms)
-  ✔ detects a nonexistent transaction (0.316377ms)
-  ✔ detects verification pointed at the wrong chain (0.509829ms)
-  ✔ reports RPC failure as UNVERIFIED rather than verified (0.305477ms)
-  ✔ reports a record that was never anchored as UNVERIFIED, not verified (0.230554ms)
-  ✔ reports a failed anchor as UNVERIFIED with its recorded reason (0.262068ms)
-  ✔ flags an anchor shallower than the configured confirmation threshold (0.470193ms)
-  ✔ does not flag an anchor that meets the confirmation threshold (0.409264ms)
-✔ on-chain anchor verification (10.960767ms)
+  [32m✔ verifies a record whose digest is genuinely on chain [90m(5.200466ms)[39m[39m
+  [32m✔ detects a tampered audit record [90m(0.569695ms)[39m[39m
+  [32m✔ detects a deleted audit record [90m(0.224038ms)[39m[39m
+  [32m✔ detects a database record_hash changed to match a tampered record [90m(1.431521ms)[39m[39m
+  [32m✔ detects an anchor_tx_hash swapped for an unrelated successful transaction [90m(1.081935ms)[39m[39m
+  [32m✔ detects a transaction sent to the wrong contract [90m(0.711378ms)[39m[39m
+  [32m✔ ignores a look-alike Anchored event emitted by another address [90m(0.667821ms)[39m[39m
+  [32m✔ detects a failed transaction [90m(0.671523ms)[39m[39m
+  [32m✔ detects a nonexistent transaction [90m(0.556624ms)[39m[39m
+  [32m✔ detects verification pointed at the wrong chain [90m(0.681664ms)[39m[39m
+  [32m✔ reports RPC failure as UNVERIFIED rather than verified [90m(0.444562ms)[39m[39m
+  [32m✔ reports a record that was never anchored as UNVERIFIED, not verified [90m(0.332196ms)[39m[39m
+  [32m✔ reports a failed anchor as UNVERIFIED with its recorded reason [90m(0.375285ms)[39m[39m
+  [32m✔ flags an anchor shallower than the configured confirmation threshold [90m(0.66669ms)[39m[39m
+  [32m✔ does not flag an anchor that meets the confirmation threshold [90m(0.595056ms)[39m[39m
+[32m✔ on-chain anchor verification [90m(15.873232ms)[39m[39m
 ▶ trusted service bind address
-  ✔ binds loopback when nothing is configured (0.665189ms)
-  ✔ binds loopback for a blank or whitespace value (0.14331ms)
-  ✔ treats explicit loopback spellings as not exposed (0.115565ms)
-  ✔ reports binding to all interfaces as a deliberate exposure (0.094161ms)
-  ✔ reports a specific external address as exposed (0.087546ms)
-✔ trusted service bind address (1.928737ms)
+  [32m✔ binds loopback when nothing is configured [90m(1.123939ms)[39m[39m
+  [32m✔ binds loopback for a blank or whitespace value [90m(0.214735ms)[39m[39m
+  [32m✔ treats explicit loopback spellings as not exposed [90m(0.202013ms)[39m[39m
+  [32m✔ reports binding to all interfaces as a deliberate exposure [90m(0.147462ms)[39m[39m
+  [32m✔ reports a specific external address as exposed [90m(0.134075ms)[39m[39m
+[32m✔ trusted service bind address [90m(3.092487ms)[39m[39m
 ▶ mandate duration boundaries
-  ✔ refuses a zero-length rolling window (2.420052ms)
-  ✔ accepts supported positive hour and day windows (0.293936ms)
-✔ mandate duration boundaries (3.369662ms)
+  [32m✔ refuses a zero-length rolling window [90m(5.260741ms)[39m[39m
+  [32m✔ accepts supported positive hour and day windows [90m(0.641334ms)[39m[39m
+[32m✔ mandate duration boundaries [90m(7.333686ms)[39m[39m
 ▶ durable authorization consumption
-  ✔ consumes once and refuses every later attempt (71.979065ms)
-  ✔ refuses a replay after the executor process that consumed it is gone (58.738894ms)
-  ✔ lets only one of many concurrent consumers win (77.468178ms)
-  ✔ refuses an authorization whose nonce does not match its record (64.568299ms)
-  ✔ refuses an authorization the control plane never issued (41.102037ms)
-  ✔ refuses consumption at the database after authorization expiry (90.325545ms)
-✔ durable authorization consumption (420.220157ms)
+  [32m✔ consumes once and refuses every later attempt [90m(148.651366ms)[39m[39m
+  [32m✔ refuses a replay after the executor process that consumed it is gone [90m(137.464472ms)[39m[39m
+  [32m✔ lets only one of many concurrent consumers win [90m(143.683599ms)[39m[39m
+  [32m✔ refuses an authorization whose nonce does not match its record [90m(120.880161ms)[39m[39m
+  [32m✔ refuses an authorization the control plane never issued [90m(69.633188ms)[39m[39m
+  [32m✔ refuses consumption at the database after authorization expiry [90m(96.047504ms)[39m[39m
+[32m✔ durable authorization consumption [90m(748.366083ms)[39m[39m
 ▶ human approval binding
-  ✔ binds the decision to the exact proposal, version and expiry (46.030849ms)
-  ✔ keeps the first decision when a second reviewer submits one (52.737461ms)
-  ✔ writes the review and the binding together, and only once (44.794174ms)
-  ✔ leaves no binding behind when the claim loses the race (52.993971ms)
-✔ human approval binding (197.222773ms)
+  [32m✔ binds the decision to the exact proposal, version and expiry [90m(79.498972ms)[39m[39m
+  [32m✔ keeps the first decision when a second reviewer submits one [90m(80.690713ms)[39m[39m
+  [32m✔ writes the review and the binding together, and only once [90m(90.218636ms)[39m[39m
+  [32m✔ leaves no binding behind when the claim loses the race [90m(128.687213ms)[39m[39m
+[32m✔ human approval binding [90m(380.15895ms)[39m[39m
 ▶ approval freshness
-  ✔ accepts an approval that still covers the proposal and the authority (43.171101ms)
-  ✔ refuses an approval given under a superseded mandate version (36.790223ms)
-  ✔ refuses an approval whose proposal was edited afterwards (37.515887ms)
-  ✔ refuses an approval that has aged out (39.733422ms)
-  ✔ refuses a denial and a missing decision (40.071394ms)
-✔ approval freshness (197.658072ms)
+  [32m✔ accepts an approval that still covers the proposal and the authority [90m(71.907255ms)[39m[39m
+  [32m✔ refuses an approval given under a superseded mandate version [90m(71.200272ms)[39m[39m
+  [32m✔ refuses an approval whose proposal was edited afterwards [90m(79.216499ms)[39m[39m
+  [32m✔ refuses an approval that has aged out [90m(72.871671ms)[39m[39m
+  [32m✔ refuses a denial and a missing decision [90m(81.653289ms)[39m[39m
+[32m✔ approval freshness [90m(377.643679ms)[39m[39m
 ▶ human approval expiry boundaries
-  ✔ is usable one millisecond before expiry (42.339754ms)
-  ✔ is refused at exactly the expiry instant (43.330203ms)
-  ✔ is refused one millisecond after expiry (42.111581ms)
-  ✔ is usable at the instant it was decided (47.263793ms)
-  ✔ reports the strongest reason when an approval is both stale and expired (39.79785ms)
-✔ human approval expiry boundaries (215.332604ms)
+  [32m✔ is usable one millisecond before expiry [90m(80.262645ms)[39m[39m
+  [32m✔ is refused at exactly the expiry instant [90m(77.360619ms)[39m[39m
+  [32m✔ is refused one millisecond after expiry [90m(82.322669ms)[39m[39m
+  [32m✔ is usable at the instant it was decided [90m(72.194632ms)[39m[39m
+  [32m✔ reports the strongest reason when an approval is both stale and expired [90m(74.156489ms)[39m[39m
+[32m✔ human approval expiry boundaries [90m(387.304974ms)[39m[39m
 ▶ trusted terminal finalization
-  ✔ commits reservation, audit and anchor request in one transaction (91.174002ms)
-  ✔ leaves consistent state when the process dies immediately after committing (71.6855ms)
-  ✔ refuses a terminal transition from the wrong state and reports the loss (58.283089ms)
-  ✔ fences a reconciliation worker that no longer holds the lease (67.444199ms)
-  ✔ produces one terminal truth when executor and reconciler race (72.941934ms)
-  ✔ never rewrites an audit settlement that is already terminal (74.639559ms)
-✔ trusted terminal finalization (454.779138ms)
+  [32m✔ commits reservation, audit and anchor request in one transaction [90m(173.770352ms)[39m[39m
+  [32m✔ leaves consistent state when the process dies immediately after committing [90m(127.276147ms)[39m[39m
+  [32m✔ refuses a terminal transition from the wrong state and reports the loss [90m(115.129414ms)[39m[39m
+  [32m✔ fences a reconciliation worker that no longer holds the lease [90m(152.803984ms)[39m[39m
+  [32m✔ produces one terminal truth when executor and reconciler race [90m(151.848678ms)[39m[39m
+  [32m✔ never rewrites an audit settlement that is already terminal [90m(139.047492ms)[39m[39m
+[32m✔ trusted terminal finalization [90m(894.509156ms)[39m[39m
 ▶ audit finalization outbox recovers from worker crashes
-  ✔ lets only one of many concurrent workers claim a job (66.288ms)
-  ✔ reclaims a crashed worker's job once its lease expires (65.762127ms)
-  ✔ returns a deferred job to the queue and completes it on retry (78.43672ms)
-  ✔ does not re-claim a completed job (60.889005ms)
-✔ audit finalization outbox recovers from worker crashes (271.843274ms)
+  [32m✔ lets only one of many concurrent workers claim a job [90m(149.963029ms)[39m[39m
+  [32m✔ reclaims a crashed worker's job once its lease expires [90m(130.351832ms)[39m[39m
+  [32m✔ returns a deferred job to the queue and completes it on retry [90m(121.059123ms)[39m[39m
+  [32m✔ does not re-claim a completed job [90m(111.979315ms)[39m[39m
+[32m✔ audit finalization outbox recovers from worker crashes [90m(514.243593ms)[39m[39m
 ▶ AGENT database authority is denied at PostgreSQL
-  ✔ cannot create human approval or execution authority (96.086338ms)
-  ✔ cannot modify mandate policy (61.039338ms)
-  ✔ cannot forge the control plane's transaction-time velocity verdict (71.570135ms)
-  ✔ cannot bind or transition a payment reservation (68.644205ms)
-  ✔ cannot consume an execution authorization (71.699611ms)
-  ✔ leaves all trusted authority state unchanged after the attacks (104.652169ms)
-✔ AGENT database authority is denied at PostgreSQL (540.747237ms)
+  [32m✔ cannot create human approval or execution authority [90m(184.311737ms)[39m[39m
+  [32m✔ cannot modify mandate policy [90m(129.970538ms)[39m[39m
+  [32m✔ cannot forge the control plane's transaction-time velocity verdict [90m(127.44921ms)[39m[39m
+  [32m✔ cannot bind or transition a payment reservation [90m(132.500722ms)[39m[39m
+  [32m✔ cannot consume an execution authorization [90m(92.41635ms)[39m[39m
+  [32m✔ leaves all trusted authority state unchanged after the attacks [90m(93.223525ms)[39m[39m
+[32m✔ AGENT database authority is denied at PostgreSQL [90m(885.100077ms)[39m[39m
 ▶ least-privilege roles preserve the existing execution path
-  ✔ allows proposal/audit, control-plane authority, then executor transitions (100.318277ms)
-✔ least-privilege roles preserve the existing execution path (100.569578ms)
+  [32m✔ allows proposal/audit, control-plane authority, then executor transitions [90m(185.481875ms)[39m[39m
+[32m✔ least-privilege roles preserve the existing execution path [90m(185.923236ms)[39m[39m
 ▶ hostile agent cannot author final audit truth
-  ✔ cannot claim its own payment settled (48.011639ms)
-  ✔ cannot insert an audit anchor (63.486581ms)
-  ✔ cannot mark an anchor as anchored on chain (58.524658ms)
-  ✔ cannot mark its own finalization request complete (78.314594ms)
-  ✔ leaves audit settlement and anchor state untouched after the attacks (50.183671ms)
-✔ hostile agent cannot author final audit truth (298.981032ms)
+  [32m✔ cannot claim its own payment settled [90m(97.938604ms)[39m[39m
+  [32m✔ cannot insert an audit anchor [90m(104.216594ms)[39m[39m
+  [32m✔ cannot mark an anchor as anchored on chain [90m(120.674991ms)[39m[39m
+  [32m✔ cannot mark its own finalization request complete [90m(134.716002ms)[39m[39m
+  [32m✔ leaves audit settlement and anchor state untouched after the attacks [90m(100.628954ms)[39m[39m
+[32m✔ hostile agent cannot author final audit truth [90m(559.045101ms)[39m[39m
 ▶ reconciler role is narrower than the executor role
-  ✔ cannot consume an execution authorization (57.729658ms)
-  ✔ cannot bind an authorization to a reservation (76.339009ms)
-  ✔ cannot create human approval or mutate mandate policy (63.772929ms)
-  ✔ cannot author an audit anchor (62.965196ms)
-  ✔ can still claim, fence and terminalize a reconciliation (66.811988ms)
-✔ reconciler role is narrower than the executor role (327.986542ms)
+  [32m✔ cannot consume an execution authorization [90m(102.027565ms)[39m[39m
+  [32m✔ cannot bind an authorization to a reservation [90m(98.55137ms)[39m[39m
+  [32m✔ cannot create human approval or mutate mandate policy [90m(110.575842ms)[39m[39m
+  [32m✔ cannot author an audit anchor [90m(95.156778ms)[39m[39m
+  [32m✔ can still claim, fence and terminalize a reconciliation [90m(131.713459ms)[39m[39m
+[32m✔ reconciler role is narrower than the executor role [90m(538.690437ms)[39m[39m
 ▶ anchor worker has no financial authority
-  ✔ cannot transition a payment reservation (43.560408ms)
-  ✔ cannot consume an execution authorization (58.604564ms)
-  ✔ cannot rewrite audit settlement (59.808341ms)
-✔ anchor worker has no financial authority (162.236739ms)
+  [32m✔ cannot transition a payment reservation [90m(113.02446ms)[39m[39m
+  [32m✔ cannot consume an execution authorization [90m(100.318398ms)[39m[39m
+  [32m✔ cannot rewrite audit settlement [90m(115.200581ms)[39m[39m
+[32m✔ anchor worker has no financial authority [90m(329.163724ms)[39m[39m
 ▶ atomic budget reservations
-  ✔ parses the mandate rolling window rather than assuming 24h (50.144917ms)
-  ✔ lets only one of two concurrent 80s reserve against a budget of 100 (291.00109ms)
-  ✔ holds the invariant across 20 concurrent requests of 6 against a budget of 100 (207.973098ms)
-  ✔ holds one shared budget when two different agents race the same mandate (219.315523ms)
-  ✔ creates one financial effect when an identical proposal is submitted concurrently (75.042877ms)
-  ✔ gives one audit exactly one executable authorization, however many are requested (55.280608ms)
-  ✔ releases capacity on positively known settlement failure, and only then (58.837895ms)
-  ✔ refuses the final submission transition after reservation expiry (53.540645ms)
-  ✔ never releases capacity for an ambiguous outcome, even past its TTL (55.984255ms)
-  ✔ releases a pre-broadcast reservation once its TTL passes (67.145448ms)
-  ✔ keeps the reservation durable when the process dies before authorization (253.662752ms)
-  ✔ counts settled spend and active reservations against one shared ceiling (68.456962ms)
-✔ atomic budget reservations (1474.792692ms)
+  [32m✔ parses the mandate rolling window rather than assuming 24h [90m(75.913194ms)[39m[39m
+  [32m✔ lets only one of two concurrent 80s reserve against a budget of 100 [90m(526.715429ms)[39m[39m
+  [32m✔ holds the invariant across 20 concurrent requests of 6 against a budget of 100 [90m(463.491972ms)[39m[39m
+  [32m✔ holds one shared budget when two different agents race the same mandate [90m(462.866979ms)[39m[39m
+  [32m✔ creates one financial effect when an identical proposal is submitted concurrently [90m(124.388274ms)[39m[39m
+  [32m✔ gives one audit exactly one executable authorization, however many are requested [90m(123.752017ms)[39m[39m
+  [32m✔ releases capacity on positively known settlement failure, and only then [90m(196.121373ms)[39m[39m
+  [32m✔ refuses the final submission transition after reservation expiry [90m(95.793081ms)[39m[39m
+  [32m✔ never releases capacity for an ambiguous outcome, even past its TTL [90m(113.435889ms)[39m[39m
+  [32m✔ releases a pre-broadcast reservation once its TTL passes [90m(99.313922ms)[39m[39m
+  [32m✔ keeps the reservation durable when the process dies before authorization [90m(442.639041ms)[39m[39m
+  [32m✔ counts settled spend and active reservations against one shared ceiling [90m(144.159804ms)[39m[39m
+[32m✔ atomic budget reservations [90m(2894.936091ms)[39m[39m
 ▶ atomic velocity reservations
-  ✔ allows at most one of two concurrent actions below a limit of one (53.271229ms)
-  ✔ holds the configured transaction count across a concurrent burst (127.910199ms)
-  ✔ serializes one agent's velocity across distinct mandate budget locks (223.467637ms)
-✔ atomic velocity reservations (404.916622ms)
+  [32m✔ allows at most one of two concurrent actions below a limit of one [90m(97.887227ms)[39m[39m
+  [32m✔ holds the configured transaction count across a concurrent burst [90m(270.82065ms)[39m[39m
+  [32m✔ serializes one agent's velocity across distinct mandate budget locks [90m(433.023616ms)[39m[39m
+[32m✔ atomic velocity reservations [90m(802.345075ms)[39m[39m
 ▶ durable outcome reconciliation state
-  ✔ persists chain correlation and never frees UNKNOWN by reservation TTL (56.96809ms)
-  ✔ lets only one of many reconciliation workers claim an ambiguous payment (63.891025ms)
-  ✔ reclaims a crashed worker lease and fences the stale worker (59.469051ms)
-  ✔ recovers a correlated SUBMITTING row after a post-broadcast process crash (49.940746ms)
-  ✔ rejects ordinary and direct FAILED transitions after correlation is persisted (51.395752ms)
-  ✔ keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment (69.100555ms)
-  ✔ can safely release a stale SUBMITTING row with no persisted attempt (68.55106ms)
-✔ durable outcome reconciliation state (419.957563ms)
+  [32m✔ persists chain correlation and never frees UNKNOWN by reservation TTL [90m(103.680904ms)[39m[39m
+  [32m✔ lets only one of many reconciliation workers claim an ambiguous payment [90m(102.478672ms)[39m[39m
+  [32m✔ reclaims a crashed worker lease and fences the stale worker [90m(118.144846ms)[39m[39m
+  [32m✔ recovers a correlated SUBMITTING row after a post-broadcast process crash [90m(114.369846ms)[39m[39m
+  [32m✔ rejects ordinary and direct FAILED transitions after correlation is persisted [90m(101.692843ms)[39m[39m
+  [32m✔ keeps inconclusive evidence UNKNOWN, then safely releases proven non-payment [90m(125.077349ms)[39m[39m
+  [32m✔ can safely release a stale SUBMITTING row with no persisted attempt [90m(116.514158ms)[39m[39m
+[32m✔ durable outcome reconciliation state [90m(782.900462ms)[39m[39m
 ▶ reservation context equality
-  ✔ cannot reuse a smaller reservation for a larger payment (49.369512ms)
-  ✔ refuses reuse when the token, chain, currency, agent or mandate version differs (61.769278ms)
-  ✔ still reuses a reservation whose context matches exactly (61.720241ms)
-  ✔ treats equal amounts written differently as a match, not a mismatch (54.84967ms)
-✔ reservation context equality (228.063029ms)
+  [32m✔ cannot reuse a smaller reservation for a larger payment [90m(115.125277ms)[39m[39m
+  [32m✔ refuses reuse when the token, chain, currency, agent or mandate version differs [90m(207.234379ms)[39m[39m
+  [32m✔ still reuses a reservation whose context matches exactly [90m(81.190628ms)[39m[39m
+  [32m✔ treats equal amounts written differently as a match, not a mismatch [90m(103.271692ms)[39m[39m
+[32m✔ reservation context equality [90m(507.436911ms)[39m[39m
 ▶ suspension blocks capacity commitment
-  ✔ commits no reservation for a suspended agent (42.679449ms)
-  ✔ commits no reservation for an agent with no identity row (47.624908ms)
-  ✔ still reserves normally for an active agent (56.54931ms)
-✔ suspension blocks capacity commitment (147.100313ms)
+  [32m✔ commits no reservation for a suspended agent [90m(86.978004ms)[39m[39m
+  [32m✔ commits no reservation for an agent with no identity row [90m(83.480945ms)[39m[39m
+  [32m✔ still reserves normally for an active agent [90m(95.255349ms)[39m[39m
+[32m✔ suspension blocks capacity commitment [90m(266.253338ms)[39m[39m
 ▶ velocity approval semantics
-  ✔ lets an approved proposal occupy a velocity slot beyond the automatic threshold (49.946823ms)
-  ✔ a human approval never raises the rolling budget ceiling (49.092265ms)
-  ✔ an approval is spent on one proposal, not on a velocity allowance (66.69804ms)
-✔ velocity approval semantics (165.938267ms)
+  [32m✔ lets an approved proposal occupy a velocity slot beyond the automatic threshold [90m(92.67645ms)[39m[39m
+  [32m✔ a human approval never raises the rolling budget ceiling [90m(90.433953ms)[39m[39m
+  [32m✔ an approval is spent on one proposal, not on a velocity allowance [90m(110.918904ms)[39m[39m
+[32m✔ velocity approval semantics [90m(294.41375ms)[39m[39m
 ▶ evaluate() — Bible Section 7.4 branches in order
-  ✔ 1. denies an action type outside scope (1.421399ms)
-  ✔ 1b. denies a currency outside scope (0.190346ms)
-  ✔ 2. denies a payment over the per-transaction cap (0.138555ms)
-  ✔ 2. denies a payment that would breach the rolling 24h cap (0.13471ms)
-  ✔ 2. allows a payment that exactly reaches the rolling cap without exceeding it (0.335308ms)
-  ✔ 3. escalates an unknown counterparty, per the mandate's configured disposition (0.120885ms)
-  ✔ 4. denies a payment outside the allowed time window (0.283798ms)
-  ✔ 4. denies a payment on a day outside allowed_days (0.213472ms)
-  ✔ 5. escalates when the velocity threshold is reached (0.179808ms)
-  ✔ 6. allows a clean in-mandate payment with rule explicitly null (0.270938ms)
-✔ evaluate() — Bible Section 7.4 branches in order (4.351779ms)
+  [32m✔ 1. denies an action type outside scope [90m(1.812188ms)[39m[39m
+  [32m✔ 1b. denies a currency outside scope [90m(0.25205ms)[39m[39m
+  [32m✔ 2. denies a payment over the per-transaction cap [90m(0.189754ms)[39m[39m
+  [32m✔ 2. denies a payment that would breach the rolling 24h cap [90m(0.186963ms)[39m[39m
+  [32m✔ 2. allows a payment that exactly reaches the rolling cap without exceeding it [90m(0.476478ms)[39m[39m
+  [32m✔ 3. escalates an unknown counterparty, per the mandate's configured disposition [90m(0.175319ms)[39m[39m
+  [32m✔ 4. denies a payment outside the allowed time window [90m(0.377577ms)[39m[39m
+  [32m✔ 4. denies a payment on a day outside allowed_days [90m(0.24514ms)[39m[39m
+  [32m✔ 5. escalates when the velocity threshold is reached [90m(0.236068ms)[39m[39m
+  [32m✔ 6. allows a clean in-mandate payment with rule explicitly null [90m(0.332649ms)[39m[39m
+[32m✔ evaluate() — Bible Section 7.4 branches in order [90m(5.6968ms)[39m[39m
 ▶ check ordering — hard boundaries resolve before judgment-based checks
-  ✔ prefers DENY on the cap over ESCALATE on the counterparty (0.141014ms)
-  ✔ prefers DENY on scope over DENY on the cap (0.077238ms)
-  ✔ prefers ESCALATE on the counterparty over ESCALATE on velocity (0.076686ms)
-✔ check ordering — hard boundaries resolve before judgment-based checks (0.401061ms)
+  [32m✔ prefers DENY on the cap over ESCALATE on the counterparty [90m(0.190347ms)[39m[39m
+  [32m✔ prefers DENY on scope over DENY on the cap [90m(0.103621ms)[39m[39m
+  [32m✔ prefers ESCALATE on the counterparty over ESCALATE on velocity [90m(0.103789ms)[39m[39m
+[32m✔ check ordering — hard boundaries resolve before judgment-based checks [90m(0.539157ms)[39m[39m
 ▶ the engine is general, not scripted
-  ✔ scenario 3 follows unknown_counterparty_disposition with NO code change (0.215285ms)
-  ✔ adding a counterparty to the allowlist is data, not code (0.116776ms)
-✔ the engine is general, not scripted (0.407103ms)
+  [32m✔ scenario 3 follows unknown_counterparty_disposition with NO code change [90m(0.279412ms)[39m[39m
+  [32m✔ adding a counterparty to the allowlist is data, not code [90m(0.188394ms)[39m[39m
+[32m✔ the engine is general, not scripted [90m(0.570518ms)[39m[39m
 ▶ every triggered path populates rule (Bible Section 7.4 correction 2)
-  ✔ scope.action_types sets a non-null rule and a non-empty reason (0.118723ms)
-  ✔ scope.currencies sets a non-null rule and a non-empty reason (0.047033ms)
-  ✔ per_transaction_max sets a non-null rule and a non-empty reason (0.047406ms)
-  ✔ rolling_window sets a non-null rule and a non-empty reason (0.045473ms)
-  ✔ counterparty_policy sets a non-null rule and a non-empty reason (0.057858ms)
-  ✔ time_window sets a non-null rule and a non-empty reason (0.098935ms)
-  ✔ velocity sets a non-null rule and a non-empty reason (0.062378ms)
-  ✔ only the clean ALLOW has a null rule (0.053959ms)
-✔ every triggered path populates rule (Bible Section 7.4 correction 2) (0.654287ms)
+  [32m✔ scope.action_types sets a non-null rule and a non-empty reason [90m(0.171605ms)[39m[39m
+  [32m✔ scope.currencies sets a non-null rule and a non-empty reason [90m(0.067541ms)[39m[39m
+  [32m✔ per_transaction_max sets a non-null rule and a non-empty reason [90m(0.058318ms)[39m[39m
+  [32m✔ rolling_window sets a non-null rule and a non-empty reason [90m(0.061004ms)[39m[39m
+  [32m✔ counterparty_policy sets a non-null rule and a non-empty reason [90m(0.081759ms)[39m[39m
+  [32m✔ time_window sets a non-null rule and a non-empty reason [90m(0.145411ms)[39m[39m
+  [32m✔ velocity sets a non-null rule and a non-empty reason [90m(0.09709ms)[39m[39m
+  [32m✔ only the clean ALLOW has a null rule [90m(0.076222ms)[39m[39m
+[32m✔ every triggered path populates rule (Bible Section 7.4 correction 2) [90m(0.931191ms)[39m[39m
 ▶ determinism
-  ✔ returns an identical result for identical inputs (0.096809ms)
-  ✔ does not mutate its inputs (0.17614ms)
-  ✔ depends on proposed_at rather than the wall clock (0.13287ms)
-✔ determinism (0.497158ms)
+  [32m✔ returns an identical result for identical inputs [90m(0.12631ms)[39m[39m
+  [32m✔ does not mutate its inputs [90m(0.250108ms)[39m[39m
+  [32m✔ depends on proposed_at rather than the wall clock [90m(0.171719ms)[39m[39m
+[32m✔ determinism [90m(0.664082ms)[39m[39m
 ▶ the three demo scenarios (Bible Section 9)
-  ✔ scenario 1 — clean transaction to an allowlisted merchant is ALLOW (0.112806ms)
-  ✔ scenario 2 — cap breach is DENY on spend_caps.per_transaction_max (1.092005ms)
-  ✔ scenario 3 — new counterparty under the cap is ESCALATE (0.202885ms)
-✔ the three demo scenarios (Bible Section 9) (1.589538ms)
+  [32m✔ scenario 1 — clean transaction to an allowlisted merchant is ALLOW [90m(0.197628ms)[39m[39m
+  [32m✔ scenario 2 — cap breach is DENY on spend_caps.per_transaction_max [90m(1.246468ms)[39m[39m
+  [32m✔ scenario 3 — new counterparty under the cap is ESCALATE [90m(0.132969ms)[39m[39m
+[32m✔ the three demo scenarios (Bible Section 9) [90m(1.717484ms)[39m[39m
 ▶ Execution Authorization fields
-  ✔ rejects invalid secp256k1 private scalars without constructing a signer (0.75136ms)
-  ✔ binds the proposal, mandate, reservation and exact payment target (38.501312ms)
-  ✔ rejects a signature from an untrusted authorizer (4.92548ms)
-  ✔ rejects at the exact expiry boundary (4.606867ms)
-  ✔ rejects a mutated proposal (4.676434ms)
-✔ Execution Authorization fields (54.359776ms)
+  [32m✔ rejects invalid secp256k1 private scalars without constructing a signer [90m(1.182741ms)[39m[39m
+  [32m✔ binds the proposal, mandate, reservation and exact payment target [90m(54.407974ms)[39m[39m
+  [32m✔ rejects a signature from an untrusted authorizer [90m(8.657354ms)[39m[39m
+  [32m✔ rejects at the exact expiry boundary [90m(8.260238ms)[39m[39m
+  [32m✔ rejects a mutated proposal [90m(10.866028ms)[39m[39m
+[32m✔ Execution Authorization fields [90m(84.841268ms)[39m[39m
 ▶ exact target validation before key use
-  ✔ rejects mutated chain (5.196436ms)
-  ✔ rejects mutated token (4.780786ms)
-  ✔ rejects mutated amount (5.057649ms)
-  ✔ rejects mutated payee (4.793103ms)
-  ✔ rejects mutated resource (6.118642ms)
-  ✔ rejects a different mandate version (4.221899ms)
-  ✔ rejects a different reservation (4.798545ms)
-✔ exact target validation before key use (35.418894ms)
+  [32m✔ rejects mutated chain [90m(6.924309ms)[39m[39m
+  [32m✔ rejects mutated token [90m(6.071369ms)[39m[39m
+  [32m✔ rejects mutated amount [90m(6.28668ms)[39m[39m
+  [32m✔ rejects mutated payee [90m(6.210071ms)[39m[39m
+  [32m✔ rejects mutated resource [90m(7.320216ms)[39m[39m
+  [32m✔ rejects a different mandate version [90m(8.6748ms)[39m[39m
+  [32m✔ rejects a different reservation [90m(7.358512ms)[39m[39m
+[32m✔ exact target validation before key use [90m(49.642782ms)[39m[39m
 ▶ single-use authorization
-  ✔ allows the first use and rejects replay (7.277084ms)
-  ✔ allows only one of two concurrent consumers (6.767674ms)
-✔ single-use authorization (14.184687ms)
+  [32m✔ allows the first use and rejects replay [90m(14.287346ms)[39m[39m
+  [32m✔ allows only one of two concurrent consumers [90m(9.434205ms)[39m[39m
+[32m✔ single-use authorization [90m(23.967776ms)[39m[39m
 ▶ money boundaries
   ▶ amounts that must be refused outright
-    ✔ refuses zero rather than converting it (0.734382ms)
-    ✔ refuses negative rather than converting it (0.114368ms)
-    ✔ refuses negative fraction rather than converting it (0.091764ms)
-    ✔ refuses NaN rather than converting it (0.079065ms)
-    ✔ refuses Infinity rather than converting it (0.082864ms)
-    ✔ refuses -Infinity rather than converting it (0.067506ms)
-    ✔ refuses more precision than USDC can represent (0.378148ms)
-    ✔ refuses exponential notation instead of normalising it (0.226553ms)
-  ✔ amounts that must be refused outright (2.459328ms)
+    [32m✔ refuses zero rather than converting it [90m(1.307264ms)[39m[39m
+    [32m✔ refuses negative rather than converting it [90m(0.235614ms)[39m[39m
+    [32m✔ refuses negative fraction rather than converting it [90m(0.203427ms)[39m[39m
+    [32m✔ refuses NaN rather than converting it [90m(0.172243ms)[39m[39m
+    [32m✔ refuses Infinity rather than converting it [90m(0.155097ms)[39m[39m
+    [32m✔ refuses -Infinity rather than converting it [90m(0.130182ms)[39m[39m
+    [32m✔ refuses more precision than USDC can represent [90m(0.737678ms)[39m[39m
+    [32m✔ refuses exponential notation instead of normalising it [90m(0.354534ms)[39m[39m
+  [32m✔ amounts that must be refused outright [90m(4.616434ms)[39m[39m
   ▶ amounts that must convert exactly
-    ✔ converts the smallest representable unit (0.278905ms)
-    ✔ converts whole and fractional amounts without float drift (0.217489ms)
-    ✔ round-trips every boundary amount exactly (0.166497ms)
-    ✔ keeps a large amount exact rather than approximating it (0.086468ms)
-  ✔ amounts that must convert exactly (0.916023ms)
+    [32m✔ converts the smallest representable unit [90m(0.463925ms)[39m[39m
+    [32m✔ converts whole and fractional amounts without float drift [90m(0.373203ms)[39m[39m
+    [32m✔ round-trips every boundary amount exactly [90m(0.308847ms)[39m[39m
+    [32m✔ keeps a large amount exact rather than approximating it [90m(0.15065ms)[39m[39m
+  [32m✔ amounts that must convert exactly [90m(1.553646ms)[39m[39m
   ▶ atomic amounts
-    ✔ refuses anything that is not a non-negative integer string (0.213072ms)
-    ✔ decodes zero atomic units without inventing a value (0.061886ms)
-  ✔ atomic amounts (0.35347ms)
+    [32m✔ refuses anything that is not a non-negative integer string [90m(0.343151ms)[39m[39m
+    [32m✔ decodes zero atomic units without inventing a value [90m(0.137027ms)[39m[39m
+  [32m✔ atomic amounts [90m(0.580883ms)[39m[39m
   ▶ the schema gate rejects impossible amounts first
-    ✔ refuses zero, negative, NaN and Infinity before any conversion (1.542014ms)
-    ✔ refuses sub-atomic and over-precision amounts before policy evaluation (0.347472ms)
-    ✔ refuses a string amount rather than coercing it (0.123319ms)
-    ✔ accepts a legitimate amount (0.151263ms)
-  ✔ the schema gate rejects impossible amounts first (2.259885ms)
-✔ money boundaries (6.401817ms)
+    [32m✔ refuses zero, negative, NaN and Infinity before any conversion [90m(2.917207ms)[39m[39m
+    [32m✔ refuses sub-atomic and over-precision amounts before policy evaluation [90m(0.655272ms)[39m[39m
+    [32m✔ refuses a string amount rather than coercing it [90m(0.217595ms)[39m[39m
+    [32m✔ accepts a legitimate amount [90m(0.244171ms)[39m[39m
+  [32m✔ the schema gate rejects impossible amounts first [90m(4.21617ms)[39m[39m
+[32m✔ money boundaries [90m(11.677687ms)[39m[39m
 ▶ time boundaries
   ▶ execution authorization expiry
-    ✔ is usable one millisecond before expiry (40.860753ms)
-    ✔ is refused at exactly the expiry instant (5.942144ms)
-    ✔ is refused one millisecond after expiry (5.400447ms)
-    ✔ is usable at the instant it was issued (6.820406ms)
-  ✔ execution authorization expiry (59.787913ms)
+    [32m✔ is usable one millisecond before expiry [90m(63.370786ms)[39m[39m
+    [32m✔ is refused at exactly the expiry instant [90m(7.979287ms)[39m[39m
+    [32m✔ is refused one millisecond after expiry [90m(7.45917ms)[39m[39m
+    [32m✔ is usable at the instant it was issued [90m(7.088479ms)[39m[39m
+  [32m✔ execution authorization expiry [90m(87.090165ms)[39m[39m
   ▶ one-shot consumption is independent of the clock
-    ✔ refuses a replay even one millisecond after a successful first use (7.774078ms)
-  ✔ one-shot consumption is independent of the clock (7.906202ms)
-✔ time boundaries (68.121562ms)
+    [32m✔ refuses a replay even one millisecond after a successful first use [90m(14.749848ms)[39m[39m
+  [32m✔ one-shot consumption is independent of the clock [90m(14.991214ms)[39m[39m
+[32m✔ time boundaries [90m(102.707114ms)[39m[39m
 ▶ unsigned x402 v2.21.0 challenge parsing
-  ✔ performs one unsigned GET and parses the PAYMENT-REQUIRED header (16.771707ms)
-  ✔ rejects a non-402 response (0.800055ms)
-  ✔ times out a merchant that never answers without sending payment authority (7.777062ms)
-✔ unsigned x402 v2.21.0 challenge parsing (26.163915ms)
+  [32m✔ performs one unsigned GET and parses the PAYMENT-REQUIRED header [90m(25.564751ms)[39m[39m
+  [32m✔ rejects a non-402 response [90m(1.48266ms)[39m[39m
+  [32m✔ times out a merchant that never answers without sending payment authority [90m(11.45305ms)[39m[39m
+[32m✔ unsigned x402 v2.21.0 challenge parsing [90m(39.800682ms)[39m[39m
 ▶ exact live challenge binding
-  ✔ pins the one exact matching requirement even when a malicious offer is first (1.190328ms)
-  ✔ rejects a mutated atomic amount (0.200514ms)
-  ✔ rejects a mutated payee (0.286ms)
-  ✔ rejects a mutated token (0.190469ms)
-  ✔ rejects a mutated chain (0.139391ms)
-  ✔ rejects a mutated resource (0.139154ms)
-  ✔ rejects a different payment scheme (0.141613ms)
-  ✔ rejects a different x402 protocol version (0.123139ms)
-  ✔ rejects a mutated EIP-712 token identity (0.127695ms)
-  ✔ rejects a transfer-method switch (0.140672ms)
-✔ exact live challenge binding (3.017851ms)
+  [32m✔ pins the one exact matching requirement even when a malicious offer is first [90m(1.96305ms)[39m[39m
+  [32m✔ rejects a mutated atomic amount [90m(0.300319ms)[39m[39m
+  [32m✔ rejects a mutated payee [90m(0.501832ms)[39m[39m
+  [32m✔ rejects a mutated token [90m(0.252127ms)[39m[39m
+  [32m✔ rejects a mutated chain [90m(0.211697ms)[39m[39m
+  [32m✔ rejects a mutated resource [90m(0.289749ms)[39m[39m
+  [32m✔ rejects a different payment scheme [90m(0.266869ms)[39m[39m
+  [32m✔ rejects a different x402 protocol version [90m(0.205149ms)[39m[39m
+  [32m✔ rejects a mutated EIP-712 token identity [90m(0.206547ms)[39m[39m
+  [32m✔ rejects a transfer-method switch [90m(0.224335ms)[39m[39m
+[32m✔ exact live challenge binding [90m(5.003075ms)[39m[39m
 ▶ paid retry uses only the pinned challenge
-  ✔ aborts a hung paid request after a finite timeout (33.200308ms)
-  ✔ constructs one signature and submits directly without fetching another 402 (3.928693ms)
-  ✔ does not send when durable correlation persistence refuses (2.175743ms)
-  ✔ exposes a valid merchant-reported settlement failure only after transmission (2.681703ms)
-  ✔ treats HTTP 500 as a post-signature non-settled result (2.709594ms)
-  ✔ throws on malformed JSON only after the signed request was transmitted (2.364646ms)
-✔ paid retry uses only the pinned challenge (47.327019ms)
+  [32m✔ aborts a hung paid request after a finite timeout [90m(48.111967ms)[39m[39m
+  [32m✔ constructs one signature and submits directly without fetching another 402 [90m(5.20325ms)[39m[39m
+  [32m✔ does not send when durable correlation persistence refuses [90m(2.8214ms)[39m[39m
+  [32m✔ exposes a valid merchant-reported settlement failure only after transmission [90m(3.940012ms)[39m[39m
+  [32m✔ treats HTTP 500 as a post-signature non-settled result [90m(3.458274ms)[39m[39m
+  [32m✔ throws on malformed JSON only after the signed request was transmitted [90m(3.379296ms)[39m[39m
+[32m✔ paid retry uses only the pinned challenge [90m(67.277394ms)[39m[39m
 ▶ redirects never carry payment authority
-  ✔ refuses a redirected unsigned challenge before anything is signed (0.421541ms)
-  ✔ classifies a fetch-level redirect rejection as a redirect, not a transport fault (0.28337ms)
-  ✔ never forwards a signed payment authorization to a redirect target (2.024214ms)
-✔ redirects never carry payment authority (2.836283ms)
+  [32m✔ refuses a redirected unsigned challenge before anything is signed [90m(0.598098ms)[39m[39m
+  [32m✔ classifies a fetch-level redirect rejection as a redirect, not a transport fault [90m(0.376137ms)[39m[39m
+  [32m✔ never forwards a signed payment authorization to a redirect target [90m(2.993948ms)[39m[39m
+[32m✔ redirects never carry payment authority [90m(4.123482ms)[39m[39m
 ▶ EIP-3009 chain reconciliation
-  ✔ proves settlement only from a used nonce and the exact successful transfer (1.649197ms)
-  ✔ proves safe non-payment only after an unused authorization expires on chain (0.256332ms)
-  ✔ keeps an unused but unexpired authorization pending (0.133583ms)
-  ✔ does not confuse nonce cancellation or mismatched transfer evidence with payment (0.137332ms)
-✔ EIP-3009 chain reconciliation (2.937031ms)
-ℹ tests 381
-ℹ suites 78
-ℹ pass 381
-ℹ fail 0
-ℹ cancelled 0
-ℹ skipped 0
-ℹ todo 0
-ℹ duration_ms 17004.288165
+  [32m✔ proves settlement only from a used nonce and the exact successful transfer [90m(2.55848ms)[39m[39m
+  [32m✔ proves safe non-payment only after an unused authorization expires on chain [90m(0.407796ms)[39m[39m
+  [32m✔ keeps an unused but unexpired authorization pending [90m(0.217113ms)[39m[39m
+  [32m✔ does not confuse nonce cancellation or mismatched transfer evidence with payment [90m(0.227286ms)[39m[39m
+[32m✔ EIP-3009 chain reconciliation [90m(4.617508ms)[39m[39m
+[34mℹ tests 384[39m
+[34mℹ suites 78[39m
+[34mℹ pass 384[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 30708.359809[39m
 
 Restoring canonical demo seed after integration tests...
 
@@ -567,4 +570,4 @@ Restoring canonical demo seed after integration tests...
                   max_transactions_per_hour 10
 
 # ------------------------------------------------------------------------
-# exit 0 after 17364ms
+# exit 0 after 31322ms

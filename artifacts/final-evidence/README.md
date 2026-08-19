@@ -1,6 +1,6 @@
 # Cerberus — Final Evidence
 
-Generated from the artifacts in this directory at commit `cd75049`.
+Generated from the artifacts in this directory at commit `98e735c`.
 Every number below is read out of a captured log or a machine-written report; none
 is restated by hand.
 
@@ -8,7 +8,7 @@ is restated by hand.
 
 | Gate | Result |
 | --- | --- |
-| Tests | 381 passed, 0 failed, 78 suites |
+| Tests | 384 passed, 0 failed, 78 suites |
 | Adversarial suite | 12/12 classes, 80 assertions |
 | Security red team | 12/12 classes, 70 assertions |
 | Mutation matrix | 12/12 guards proven detectable |
@@ -40,8 +40,8 @@ is restated by hand.
 
 | Seed | Agents | Actions | Concurrency | ALLOW/DENY/ESCALATE | Throughput | Violations | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1337 | 50 | 1000 | 25 | 863/70/67 | 512.69/s | 0 | PASS |
-| 42 | 50 | 1000 | 25 | 884/52/64 | 398.15/s | 0 | PASS |
+| 1337 | 50 | 1000 | 25 | 863/70/67 | 339.12/s | 0 | PASS |
+| 42 | 50 | 1000 | 25 | 884/52/64 | 269.03/s | 0 | PASS |
 
 ## Live payment evidence
 

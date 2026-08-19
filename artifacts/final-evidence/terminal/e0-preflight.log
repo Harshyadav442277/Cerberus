@@ -1,5 +1,5 @@
 # npm run preflight
-# started 2026-08-19T18:04:11.847Z
+# started 2026-08-19T20:35:09.678Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -10,7 +10,7 @@ npm warn Unknown project config "store-dir". This will stop working in the next 
 
 CERBERUS LIVE PREFLIGHT — Base Sepolia
 
-  OK    Base Sepolia RPC reachable                              chain 84532, head block 45697182, via https://sepolia.base.org
+  OK    Base Sepolia RPC reachable                              chain 84532, head block 45701712, via https://sepolia.base.org
   FAIL  Executor payment signer configured                      EXECUTOR_EVM_PRIVATE_KEY missing or invalid in .env.executor
   OK    Merchant payee address configured                       payTo 0xf56e3F3134879156e11EAff78978a270726B661b
   FAIL  Execution Authorization signer configured               EXECUTION_AUTH_PRIVATE_KEY missing in .env.authorizer
@@ -18,13 +18,13 @@ CERBERUS LIVE PREFLIGHT — Base Sepolia
   FAIL  Audit anchor signer configured                          AUDIT_ANCHOR_PRIVATE_KEY missing in .env.anchor
   FAIL  Payment, authorization and anchor signers are distinct  only 0/3 signers configured — separation cannot be established
   FAIL  AuditAnchor contract deployed                           AUDIT_ANCHOR_ADDRESS not set or invalid
-  FAIL  Merchant reachable                                      http://localhost:4021 — not responding (start: npm run merchant)
-  FAIL  Control plane reachable                                 http://localhost:4050 — not responding (start: npm run api)
+  OK    Merchant reachable                                      http://localhost:4021 — HTTP 200
+  OK    Control plane reachable                                 http://localhost:4050 — HTTP 200
   FAIL  Isolated executor reachable                             http://localhost:4060 — not responding (start: npm run executor)
   OK    Reviewer credential configured                          present (value not shown)
   OK    Database initialised                                    10 tables in public schema
 
-  4/13 preflight checks passed
+  6/13 preflight checks passed
 
   LIVE RUN BLOCKED. Unmet preconditions:
 
@@ -34,9 +34,7 @@ CERBERUS LIVE PREFLIGHT — Base Sepolia
     - Audit anchor signer configured: AUDIT_ANCHOR_PRIVATE_KEY missing in .env.anchor
     - Payment, authorization and anchor signers are distinct: only 0/3 signers configured — separation cannot be established
     - AuditAnchor contract deployed: AUDIT_ANCHOR_ADDRESS not set or invalid
-    - Merchant reachable: http://localhost:4021 — not responding (start: npm run merchant)
-    - Control plane reachable: http://localhost:4050 — not responding (start: npm run api)
     - Isolated executor reachable: http://localhost:4060 — not responding (start: npm run executor)
 
 # ------------------------------------------------------------------------
-# exit 1 after 1640ms
+# exit 1 after 3030ms

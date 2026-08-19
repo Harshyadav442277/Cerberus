@@ -1,5 +1,5 @@
 # npm run demo -- new_counterparty
-# started 2026-08-19T18:05:21.023Z
+# started 2026-08-19T20:44:02.701Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -14,11 +14,11 @@ Scenario 3 — new counterparty   [new_counterparty]
   reason        counterparty_not_on_allowlist
   rule          counterparty_policy
   human review  approved by reviewer:local
-  x402 reached  yes
-  audit_id      audit_239cd0b5
+  x402 reached  NO — never constructed
+  audit_id      audit_760a4543
 
 Audit anchors
-  audit_239cd0b5  no anchor row
+  audit_760a4543  no anchor row
 
   Verify with: npm run audit:verify
 
@@ -27,4 +27,4 @@ are both expected until the payer wallet is funded (Memory.md blocker B1). Neith
 affects the disposition path above.
 
 # ------------------------------------------------------------------------
-# exit 0 after 21009ms
+# exit 0 after 16932ms

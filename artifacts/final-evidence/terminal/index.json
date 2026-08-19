@@ -4,21 +4,21 @@
     "command": "npm run preflight",
     "exitCode": 1,
     "signal": null,
-    "durationMs": 1640,
-    "startedAt": "2026-08-19T18:04:11.847Z",
+    "durationMs": 3030,
+    "startedAt": "2026-08-19T20:35:09.678Z",
     "log": "terminal/e0-preflight.log",
-    "logSha256": "4353bcddd1daad37d8d56a633c73a9da2816a12e966aae6133b12ec56d3c134c",
-    "logBytes": 3088
+    "logSha256": "64da32d00eb6119abd4ab4aed41bda3265886942b730b9d64516b75fe63d6fab",
+    "logBytes": 2843
   },
   {
     "name": "gate-adversarial",
     "command": "npm run adversarial",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 17964,
-    "startedAt": "2026-08-19T18:02:26.254Z",
+    "durationMs": 27634,
+    "startedAt": "2026-08-19T20:36:45.036Z",
     "log": "terminal/gate-adversarial.log",
-    "logSha256": "9e7760cb82dc2bf1dd1e5c57cab897f48fc41aa576ebc730ff8baed53401bb10",
+    "logSha256": "deda08bdb9c0ea6cb4ba36a53e67bb10a74845e1bbaa2218a801c7c7cf85869b",
     "logBytes": 2042
   },
   {
@@ -26,32 +26,32 @@
     "command": "npm run contracts:compile",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 775,
-    "startedAt": "2026-08-19T18:04:01.893Z",
+    "durationMs": 1204,
+    "startedAt": "2026-08-19T20:35:06.416Z",
     "log": "terminal/gate-contracts.log",
-    "logSha256": "6feee0501d475c25862033cec791dd3a4ad07ab0b73fe01039d8ace44270b4c4",
-    "logBytes": 627
+    "logSha256": "3c95745dde6f58f15c95fca8ab302c9eaec3a764b7046e8ae015999864b65fb4",
+    "logBytes": 628
   },
   {
     "name": "gate-dashboard-build",
     "command": "npm run build --prefix apps/dashboard",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 15899,
-    "startedAt": "2026-08-19T18:03:41.571Z",
+    "durationMs": 20595,
+    "startedAt": "2026-08-19T20:37:37.469Z",
     "log": "terminal/gate-dashboard-build.log",
-    "logSha256": "770e745d8cef0c25b8d67bb9106bf9674e301c820e05da17151174987c8e77e4",
-    "logBytes": 1841
+    "logSha256": "05874c4c7b5c0644e7cb563dab586a0379b5a7fdd5e3632cb2beeeb2234581ae",
+    "logBytes": 2369
   },
   {
     "name": "gate-db-verify",
     "command": "npm run db:verify",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 326,
-    "startedAt": "2026-08-19T18:02:21.793Z",
+    "durationMs": 504,
+    "startedAt": "2026-08-19T20:35:05.569Z",
     "log": "terminal/gate-db-verify.log",
-    "logSha256": "c08211ea2a686581819bbb37afc1e377e15c126e553f9a1d4f0eff5ed2544223",
+    "logSha256": "3c1096107cb92681b4add7f30bbdb70a3c292ae2f43b0bdf2f98b725a2a90817",
     "logBytes": 1579
   },
   {
@@ -59,21 +59,21 @@
     "command": "npm run demo -- clean",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 16054,
-    "startedAt": "2026-08-19T18:04:39.641Z",
+    "durationMs": 16648,
+    "startedAt": "2026-08-19T20:42:22.147Z",
     "log": "terminal/gate-demo-clean.log",
-    "logSha256": "2d89d56899bec3e41d6792a14aadea4e8af688234feb41d896ee51c1a5a657b5",
-    "logBytes": 1042
+    "logSha256": "cdaa73f45b6e60fda7310b2882e54379d6a29f00a6770397449097c40022cc20",
+    "logBytes": 1063
   },
   {
     "name": "gate-demo-deny",
     "command": "npm run demo -- cap_breach",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 15824,
-    "startedAt": "2026-08-19T18:05:00.806Z",
+    "durationMs": 16624,
+    "startedAt": "2026-08-19T20:42:39.271Z",
     "log": "terminal/gate-demo-deny.log",
-    "logSha256": "de29f7fc794e6c19ea0c24fd1b72ffaf3d74f314e34a6f7c310da2f0574a9f5c",
+    "logSha256": "d65e5596dde2cb132295f530c1a86a5300f7eabe6240a8683ca42b50d0ada18b",
     "logBytes": 1091
   },
   {
@@ -81,21 +81,21 @@
     "command": "npm run demo -- new_counterparty",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 21009,
-    "startedAt": "2026-08-19T18:05:21.023Z",
+    "durationMs": 16932,
+    "startedAt": "2026-08-19T20:44:02.701Z",
     "log": "terminal/gate-demo-escalate.log",
-    "logSha256": "0f080e35da82f954326221b7efbedb9424da401b1e175ff0ffd23af05168b3be",
-    "logBytes": 1134
+    "logSha256": "da73ce0f4642028bff149d7747acdec467512f0be33dc04683cea2b4fee1e77e",
+    "logBytes": 1155
   },
   {
     "name": "gate-demo-reset",
     "command": "npm run demo:reset",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 422,
-    "startedAt": "2026-08-19T18:04:27.571Z",
+    "durationMs": 596,
+    "startedAt": "2026-08-19T20:42:21.118Z",
     "log": "terminal/gate-demo-reset.log",
-    "logSha256": "bfdaac5be46f7b50649bafee1dc71e7efca178d95d85456b10fa14135dce288b",
+    "logSha256": "9f56e94b113297517fcc220aad1f36a845f44215f382720f427dde518fe47c31",
     "logBytes": 648
   },
   {
@@ -103,32 +103,32 @@
     "command": "corepack pnpm audit",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 964,
-    "startedAt": "2026-08-19T18:04:06.204Z",
+    "durationMs": 1296,
+    "startedAt": "2026-08-19T20:35:08.001Z",
     "log": "terminal/gate-dependency-audit.log",
-    "logSha256": "77b3f57679245b8e76bc80433170d632eea58ec5e83255733e7a4fe162814634",
-    "logBytes": 259
+    "logSha256": "ae1edadaf933f33d16b4895fe2054c2b4c4999fea73fe0a17e1ea8b986e950b2",
+    "logBytes": 260
   },
   {
     "name": "gate-mutation",
     "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run mutation",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 9611,
-    "startedAt": "2026-08-19T18:03:10.888Z",
+    "durationMs": 13806,
+    "startedAt": "2026-08-19T20:39:18.541Z",
     "log": "terminal/gate-mutation.log",
-    "logSha256": "ac07d071076951bf595da1af8b6486aaf670fb75b5c3c21215b96bdb5f19c886",
-    "logBytes": 2602
+    "logSha256": "b0ad7a4c226f6f8927fc05b28e2c458af3e37d4b82e86151c65cb4796f7fa364",
+    "logBytes": 2603
   },
   {
     "name": "gate-redteam",
     "command": "npm run redteam",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 17668,
-    "startedAt": "2026-08-19T18:02:48.417Z",
+    "durationMs": 23997,
+    "startedAt": "2026-08-19T20:37:13.054Z",
     "log": "terminal/gate-redteam.log",
-    "logSha256": "4170a257fd4d276d3a896499ddbed4f6551459e7aa300bec9995a8c476698416",
+    "logSha256": "0e936bf246fac9dc0b1131967337e8b526019ff698c782b6db1d0b3b9d68e278",
     "logBytes": 3408
   },
   {
@@ -136,54 +136,54 @@
     "command": "npm run reviewer:auto -- --decision=approved",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 333,
-    "startedAt": "2026-08-19T18:05:26.354Z",
+    "durationMs": 6445,
+    "startedAt": "2026-08-19T20:43:57.761Z",
     "log": "terminal/gate-reviewer-auto.log",
-    "logSha256": "9dc2ed4ec0457c15aa02451be98cb4e0b830440baaff6548eda088179ed9f863",
-    "logBytes": 613
+    "logSha256": "a5ca1d94e617a813e4f3c1b2f350123788eb1a591ceb63ee15bbcee46f88f302",
+    "logBytes": 614
   },
   {
     "name": "gate-sandbox-1337",
     "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 2627,
-    "startedAt": "2026-08-19T18:03:33.608Z",
+    "durationMs": 3992,
+    "startedAt": "2026-08-19T20:39:37.877Z",
     "log": "terminal/gate-sandbox-1337.log",
-    "logSha256": "f59fa7cc99fd9e502443d21571f2d1b0b7fb17298d3b7fde9031cb21459d20dd",
-    "logBytes": 2338
+    "logSha256": "ba3045cda09a89a23a3bce29bba8a4f6c055012f8c00f325bced3573192a7e62",
+    "logBytes": 2340
   },
   {
     "name": "gate-sandbox-42",
     "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 3269,
-    "startedAt": "2026-08-19T18:03:25.223Z",
+    "durationMs": 4750,
+    "startedAt": "2026-08-19T20:39:32.733Z",
     "log": "terminal/gate-sandbox-42.log",
-    "logSha256": "454b01f7c36f4b496c244591212f77f6ed590ece3d525f95c45c54dec9bc5e70",
-    "logBytes": 2331
+    "logSha256": "75a1150502d97d2c7c85b76ee66e8fc68966e9eacfd96337d7ac584921d1d1a8",
+    "logBytes": 2332
   },
   {
     "name": "gate-tests",
     "command": "npm test",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 17364,
-    "startedAt": "2026-08-19T18:02:00.518Z",
+    "durationMs": 31322,
+    "startedAt": "2026-08-19T20:35:23.507Z",
     "log": "terminal/gate-tests.log",
-    "logSha256": "182801161db4e20e5eca07fce0dab7d4ccc1192f589f1ade7424b8d1370857db",
-    "logBytes": 37621
+    "logSha256": "3ff534c775fa770b1ca610bb4802247c1fcdd787241adf3ed469cba6054b62f4",
+    "logBytes": 47259
   },
   {
     "name": "gate-typecheck",
     "command": "npm run typecheck",
     "exitCode": 0,
     "signal": null,
-    "durationMs": 2951,
-    "startedAt": "2026-08-19T18:01:53.277Z",
+    "durationMs": 5325,
+    "startedAt": "2026-08-19T20:34:59.827Z",
     "log": "terminal/gate-typecheck.log",
-    "logSha256": "851330ad4754988e6ec7752c066b2f8c6e6ad613832b2666324d0d36d0fd5490",
+    "logSha256": "eb56348445f730304e47121d8084a3d47e0fe49d5c795791a05aab3f72cdd1c3",
     "logBytes": 492
   }
 ]

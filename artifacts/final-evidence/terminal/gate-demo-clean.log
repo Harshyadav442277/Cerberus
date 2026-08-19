@@ -1,5 +1,5 @@
 # npm run demo -- clean
-# started 2026-08-19T18:04:39.641Z
+# started 2026-08-19T20:42:22.147Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -13,11 +13,11 @@ Scenario 1 — clean transaction   [clean]
   disposition   ALLOW
   reason        within_mandate
   rule          (none — clean pass)
-  x402 reached  yes
-  audit_id      audit_31258d43
+  x402 reached  NO — never constructed
+  audit_id      audit_6ae4a692
 
 Audit anchors
-  audit_31258d43  no anchor row
+  audit_6ae4a692  no anchor row
 
   Verify with: npm run audit:verify
 
@@ -26,4 +26,4 @@ are both expected until the payer wallet is funded (Memory.md blocker B1). Neith
 affects the disposition path above.
 
 # ------------------------------------------------------------------------
-# exit 0 after 16054ms
+# exit 0 after 16648ms

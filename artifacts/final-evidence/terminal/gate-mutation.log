@@ -1,5 +1,5 @@
 # env CERBERUS_EVIDENCE_OUTPUT=1 npm run mutation
-# started 2026-08-19T18:03:10.888Z
+# started 2026-08-19T20:39:18.541Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -48,4 +48,4 @@ Guards proven detectable: 12/12
 
 RESULT: PASS
 # ------------------------------------------------------------------------
-# exit 0 after 9611ms
+# exit 0 after 13806ms

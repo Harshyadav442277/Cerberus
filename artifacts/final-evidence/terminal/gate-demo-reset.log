@@ -1,5 +1,5 @@
 # npm run demo:reset
-# started 2026-08-19T18:04:27.571Z
+# started 2026-08-19T20:42:21.118Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -14,4 +14,4 @@ npm warn Unknown project config "store-dir". This will stop working in the next 
   audit_log 0 rows (expected 0)
 
 # ------------------------------------------------------------------------
-# exit 0 after 422ms
+# exit 0 after 596ms

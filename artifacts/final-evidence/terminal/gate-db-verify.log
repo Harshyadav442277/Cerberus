@@ -1,5 +1,5 @@
 # npm run db:verify
-# started 2026-08-19T18:02:21.793Z
+# started 2026-08-19T20:35:05.569Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -28,4 +28,4 @@ All checks passed. Phase 2 Definition of Done met, and the stored mandate
 drives the three Bible Section 9 demo outcomes through the real engine.
 
 # ------------------------------------------------------------------------
-# exit 0 after 326ms
+# exit 0 after 504ms

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-19T18:08:38.529Z",
+  "generatedAt": "2026-08-19T20:53:23.195Z",
   "repository": {
-    "sha": "cd75049c0ade2f8e1ec03227079cb2bcf5c77b50",
+    "sha": "98e735ccce49b0d22124cfb4316260870317d89a",
     "branch": "main",
     "sourceTreeClean": true
   },
@@ -11,7 +11,7 @@
     "auditAnchorContract": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
   },
   "verification": {
-    "tests": "381",
+    "tests": "384",
     "testsFailed": "0",
     "suites": "78",
     "adversarialClasses": "12/12",
@@ -26,137 +26,137 @@
       "name": "e0-preflight",
       "command": "npm run preflight",
       "exitCode": 1,
-      "durationMs": 1640,
+      "durationMs": 3030,
       "log": "terminal/e0-preflight.log",
-      "sha256": "4353bcddd1daad37d8d56a633c73a9da2816a12e966aae6133b12ec56d3c134c"
+      "sha256": "64da32d00eb6119abd4ab4aed41bda3265886942b730b9d64516b75fe63d6fab"
     },
     {
       "name": "gate-adversarial",
       "command": "npm run adversarial",
       "exitCode": 0,
-      "durationMs": 17964,
+      "durationMs": 27634,
       "log": "terminal/gate-adversarial.log",
-      "sha256": "9e7760cb82dc2bf1dd1e5c57cab897f48fc41aa576ebc730ff8baed53401bb10"
+      "sha256": "deda08bdb9c0ea6cb4ba36a53e67bb10a74845e1bbaa2218a801c7c7cf85869b"
     },
     {
       "name": "gate-contracts",
       "command": "npm run contracts:compile",
       "exitCode": 0,
-      "durationMs": 775,
+      "durationMs": 1204,
       "log": "terminal/gate-contracts.log",
-      "sha256": "6feee0501d475c25862033cec791dd3a4ad07ab0b73fe01039d8ace44270b4c4"
+      "sha256": "3c95745dde6f58f15c95fca8ab302c9eaec3a764b7046e8ae015999864b65fb4"
     },
     {
       "name": "gate-dashboard-build",
       "command": "npm run build --prefix apps/dashboard",
       "exitCode": 0,
-      "durationMs": 15899,
+      "durationMs": 20595,
       "log": "terminal/gate-dashboard-build.log",
-      "sha256": "770e745d8cef0c25b8d67bb9106bf9674e301c820e05da17151174987c8e77e4"
+      "sha256": "05874c4c7b5c0644e7cb563dab586a0379b5a7fdd5e3632cb2beeeb2234581ae"
     },
     {
       "name": "gate-db-verify",
       "command": "npm run db:verify",
       "exitCode": 0,
-      "durationMs": 326,
+      "durationMs": 504,
       "log": "terminal/gate-db-verify.log",
-      "sha256": "c08211ea2a686581819bbb37afc1e377e15c126e553f9a1d4f0eff5ed2544223"
+      "sha256": "3c1096107cb92681b4add7f30bbdb70a3c292ae2f43b0bdf2f98b725a2a90817"
     },
     {
       "name": "gate-demo-clean",
       "command": "npm run demo -- clean",
       "exitCode": 0,
-      "durationMs": 16054,
+      "durationMs": 16648,
       "log": "terminal/gate-demo-clean.log",
-      "sha256": "2d89d56899bec3e41d6792a14aadea4e8af688234feb41d896ee51c1a5a657b5"
+      "sha256": "cdaa73f45b6e60fda7310b2882e54379d6a29f00a6770397449097c40022cc20"
     },
     {
       "name": "gate-demo-deny",
       "command": "npm run demo -- cap_breach",
       "exitCode": 0,
-      "durationMs": 15824,
+      "durationMs": 16624,
       "log": "terminal/gate-demo-deny.log",
-      "sha256": "de29f7fc794e6c19ea0c24fd1b72ffaf3d74f314e34a6f7c310da2f0574a9f5c"
+      "sha256": "d65e5596dde2cb132295f530c1a86a5300f7eabe6240a8683ca42b50d0ada18b"
     },
     {
       "name": "gate-demo-escalate",
       "command": "npm run demo -- new_counterparty",
       "exitCode": 0,
-      "durationMs": 21009,
+      "durationMs": 16932,
       "log": "terminal/gate-demo-escalate.log",
-      "sha256": "0f080e35da82f954326221b7efbedb9424da401b1e175ff0ffd23af05168b3be"
+      "sha256": "da73ce0f4642028bff149d7747acdec467512f0be33dc04683cea2b4fee1e77e"
     },
     {
       "name": "gate-demo-reset",
       "command": "npm run demo:reset",
       "exitCode": 0,
-      "durationMs": 422,
+      "durationMs": 596,
       "log": "terminal/gate-demo-reset.log",
-      "sha256": "bfdaac5be46f7b50649bafee1dc71e7efca178d95d85456b10fa14135dce288b"
+      "sha256": "9f56e94b113297517fcc220aad1f36a845f44215f382720f427dde518fe47c31"
     },
     {
       "name": "gate-dependency-audit",
       "command": "corepack pnpm audit",
       "exitCode": 0,
-      "durationMs": 964,
+      "durationMs": 1296,
       "log": "terminal/gate-dependency-audit.log",
-      "sha256": "77b3f57679245b8e76bc80433170d632eea58ec5e83255733e7a4fe162814634"
+      "sha256": "ae1edadaf933f33d16b4895fe2054c2b4c4999fea73fe0a17e1ea8b986e950b2"
     },
     {
       "name": "gate-mutation",
       "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run mutation",
       "exitCode": 0,
-      "durationMs": 9611,
+      "durationMs": 13806,
       "log": "terminal/gate-mutation.log",
-      "sha256": "ac07d071076951bf595da1af8b6486aaf670fb75b5c3c21215b96bdb5f19c886"
+      "sha256": "b0ad7a4c226f6f8927fc05b28e2c458af3e37d4b82e86151c65cb4796f7fa364"
     },
     {
       "name": "gate-redteam",
       "command": "npm run redteam",
       "exitCode": 0,
-      "durationMs": 17668,
+      "durationMs": 23997,
       "log": "terminal/gate-redteam.log",
-      "sha256": "4170a257fd4d276d3a896499ddbed4f6551459e7aa300bec9995a8c476698416"
+      "sha256": "0e936bf246fac9dc0b1131967337e8b526019ff698c782b6db1d0b3b9d68e278"
     },
     {
       "name": "gate-reviewer-auto",
       "command": "npm run reviewer:auto -- --decision=approved",
       "exitCode": 0,
-      "durationMs": 333,
+      "durationMs": 6445,
       "log": "terminal/gate-reviewer-auto.log",
-      "sha256": "9dc2ed4ec0457c15aa02451be98cb4e0b830440baaff6548eda088179ed9f863"
+      "sha256": "a5ca1d94e617a813e4f3c1b2f350123788eb1a591ceb63ee15bbcee46f88f302"
     },
     {
       "name": "gate-sandbox-1337",
       "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25",
       "exitCode": 0,
-      "durationMs": 2627,
+      "durationMs": 3992,
       "log": "terminal/gate-sandbox-1337.log",
-      "sha256": "f59fa7cc99fd9e502443d21571f2d1b0b7fb17298d3b7fde9031cb21459d20dd"
+      "sha256": "ba3045cda09a89a23a3bce29bba8a4f6c055012f8c00f325bced3573192a7e62"
     },
     {
       "name": "gate-sandbox-42",
       "command": "env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25",
       "exitCode": 0,
-      "durationMs": 3269,
+      "durationMs": 4750,
       "log": "terminal/gate-sandbox-42.log",
-      "sha256": "454b01f7c36f4b496c244591212f77f6ed590ece3d525f95c45c54dec9bc5e70"
+      "sha256": "75a1150502d97d2c7c85b76ee66e8fc68966e9eacfd96337d7ac584921d1d1a8"
     },
     {
       "name": "gate-tests",
       "command": "npm test",
       "exitCode": 0,
-      "durationMs": 17364,
+      "durationMs": 31322,
       "log": "terminal/gate-tests.log",
-      "sha256": "182801161db4e20e5eca07fce0dab7d4ccc1192f589f1ade7424b8d1370857db"
+      "sha256": "3ff534c775fa770b1ca610bb4802247c1fcdd787241adf3ed469cba6054b62f4"
     },
     {
       "name": "gate-typecheck",
       "command": "npm run typecheck",
       "exitCode": 0,
-      "durationMs": 2951,
+      "durationMs": 5325,
       "log": "terminal/gate-typecheck.log",
-      "sha256": "851330ad4754988e6ec7752c066b2f8c6e6ad613832b2666324d0d36d0fd5490"
+      "sha256": "eb56348445f730304e47121d8084a3d47e0fe49d5c795791a05aab3f72cdd1c3"
     }
   ],
   "sandbox": [
@@ -171,11 +171,11 @@
         "ESCALATE": 67,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 512.69,
+      "throughputPerSecond": 339.12,
       "policyLatencyMs": {
-        "p50": 8.336,
-        "p95": 15.93,
-        "p99": 21.63
+        "p50": 12.327,
+        "p95": 24.654,
+        "p99": 41.437
       },
       "violations": 0,
       "result": "PASS"
@@ -191,11 +191,11 @@
         "ESCALATE": 64,
         "OBSERVE": 0
       },
-      "throughputPerSecond": 398.15,
+      "throughputPerSecond": 269.03,
       "policyLatencyMs": {
-        "p50": 10.759,
-        "p95": 19.843,
-        "p99": 24.831
+        "p50": 15.894,
+        "p95": 31.025,
+        "p99": 38.471
       },
       "violations": 0,
       "result": "PASS"
@@ -364,17 +364,17 @@
     {
       "path": "redteam/mutation-matrix.json",
       "bytes": 5051,
-      "sha256": "bb9c5d2028c58b1a01939cec871d44b8cfbda76eed10bbd028f5324671e7e7fa"
+      "sha256": "75c06dc89bf84a4b63f6a3807425a8d2530af4df15867f229a2cdbdb56c94e9c"
     },
     {
       "path": "sandbox/seed-1337.json",
-      "bytes": 1817,
-      "sha256": "da62b946c0dd352b4187181d312590a73d7c46fa7a52f19e37d694eb68a5ce95"
+      "bytes": 1821,
+      "sha256": "e7a2fe15a19dd81baf4e72a0e6081110105346cb57f12bd91f720439d0b973a3"
     },
     {
       "path": "sandbox/seed-42.json",
-      "bytes": 1815,
-      "sha256": "9534b7ff5abe0554be9b8e14850d4661aead9b103fc1aacfb75acf0d8f4f7378"
+      "bytes": 1818,
+      "sha256": "972088833cfca381986499948328bb7e240e50e4622de5fb3132c8b203277c0d"
     },
     {
       "path": "terminal/baseline-adversarial.log",
@@ -418,93 +418,93 @@
     },
     {
       "path": "terminal/e0-preflight.log",
-      "bytes": 3088,
-      "sha256": "4353bcddd1daad37d8d56a633c73a9da2816a12e966aae6133b12ec56d3c134c"
+      "bytes": 2843,
+      "sha256": "64da32d00eb6119abd4ab4aed41bda3265886942b730b9d64516b75fe63d6fab"
     },
     {
       "path": "terminal/gate-adversarial.log",
       "bytes": 2042,
-      "sha256": "9e7760cb82dc2bf1dd1e5c57cab897f48fc41aa576ebc730ff8baed53401bb10"
+      "sha256": "deda08bdb9c0ea6cb4ba36a53e67bb10a74845e1bbaa2218a801c7c7cf85869b"
     },
     {
       "path": "terminal/gate-contracts.log",
-      "bytes": 627,
-      "sha256": "6feee0501d475c25862033cec791dd3a4ad07ab0b73fe01039d8ace44270b4c4"
+      "bytes": 628,
+      "sha256": "3c95745dde6f58f15c95fca8ab302c9eaec3a764b7046e8ae015999864b65fb4"
     },
     {
       "path": "terminal/gate-dashboard-build.log",
-      "bytes": 1841,
-      "sha256": "770e745d8cef0c25b8d67bb9106bf9674e301c820e05da17151174987c8e77e4"
+      "bytes": 2369,
+      "sha256": "05874c4c7b5c0644e7cb563dab586a0379b5a7fdd5e3632cb2beeeb2234581ae"
     },
     {
       "path": "terminal/gate-db-verify.log",
       "bytes": 1579,
-      "sha256": "c08211ea2a686581819bbb37afc1e377e15c126e553f9a1d4f0eff5ed2544223"
+      "sha256": "3c1096107cb92681b4add7f30bbdb70a3c292ae2f43b0bdf2f98b725a2a90817"
     },
     {
       "path": "terminal/gate-demo-clean.log",
-      "bytes": 1042,
-      "sha256": "2d89d56899bec3e41d6792a14aadea4e8af688234feb41d896ee51c1a5a657b5"
+      "bytes": 1063,
+      "sha256": "cdaa73f45b6e60fda7310b2882e54379d6a29f00a6770397449097c40022cc20"
     },
     {
       "path": "terminal/gate-demo-deny.log",
       "bytes": 1091,
-      "sha256": "de29f7fc794e6c19ea0c24fd1b72ffaf3d74f314e34a6f7c310da2f0574a9f5c"
+      "sha256": "d65e5596dde2cb132295f530c1a86a5300f7eabe6240a8683ca42b50d0ada18b"
     },
     {
       "path": "terminal/gate-demo-escalate.log",
-      "bytes": 1134,
-      "sha256": "0f080e35da82f954326221b7efbedb9424da401b1e175ff0ffd23af05168b3be"
+      "bytes": 1155,
+      "sha256": "da73ce0f4642028bff149d7747acdec467512f0be33dc04683cea2b4fee1e77e"
     },
     {
       "path": "terminal/gate-demo-reset.log",
       "bytes": 648,
-      "sha256": "bfdaac5be46f7b50649bafee1dc71e7efca178d95d85456b10fa14135dce288b"
+      "sha256": "9f56e94b113297517fcc220aad1f36a845f44215f382720f427dde518fe47c31"
     },
     {
       "path": "terminal/gate-dependency-audit.log",
-      "bytes": 259,
-      "sha256": "77b3f57679245b8e76bc80433170d632eea58ec5e83255733e7a4fe162814634"
+      "bytes": 260,
+      "sha256": "ae1edadaf933f33d16b4895fe2054c2b4c4999fea73fe0a17e1ea8b986e950b2"
     },
     {
       "path": "terminal/gate-mutation.log",
-      "bytes": 2602,
-      "sha256": "ac07d071076951bf595da1af8b6486aaf670fb75b5c3c21215b96bdb5f19c886"
+      "bytes": 2603,
+      "sha256": "b0ad7a4c226f6f8927fc05b28e2c458af3e37d4b82e86151c65cb4796f7fa364"
     },
     {
       "path": "terminal/gate-redteam.log",
       "bytes": 3408,
-      "sha256": "4170a257fd4d276d3a896499ddbed4f6551459e7aa300bec9995a8c476698416"
+      "sha256": "0e936bf246fac9dc0b1131967337e8b526019ff698c782b6db1d0b3b9d68e278"
     },
     {
       "path": "terminal/gate-reviewer-auto.log",
-      "bytes": 613,
-      "sha256": "9dc2ed4ec0457c15aa02451be98cb4e0b830440baaff6548eda088179ed9f863"
+      "bytes": 614,
+      "sha256": "a5ca1d94e617a813e4f3c1b2f350123788eb1a591ceb63ee15bbcee46f88f302"
     },
     {
       "path": "terminal/gate-sandbox-1337.log",
-      "bytes": 2338,
-      "sha256": "f59fa7cc99fd9e502443d21571f2d1b0b7fb17298d3b7fde9031cb21459d20dd"
+      "bytes": 2340,
+      "sha256": "ba3045cda09a89a23a3bce29bba8a4f6c055012f8c00f325bced3573192a7e62"
     },
     {
       "path": "terminal/gate-sandbox-42.log",
-      "bytes": 2331,
-      "sha256": "454b01f7c36f4b496c244591212f77f6ed590ece3d525f95c45c54dec9bc5e70"
+      "bytes": 2332,
+      "sha256": "75a1150502d97d2c7c85b76ee66e8fc68966e9eacfd96337d7ac584921d1d1a8"
     },
     {
       "path": "terminal/gate-tests.log",
-      "bytes": 37621,
-      "sha256": "182801161db4e20e5eca07fce0dab7d4ccc1192f589f1ade7424b8d1370857db"
+      "bytes": 47259,
+      "sha256": "3ff534c775fa770b1ca610bb4802247c1fcdd787241adf3ed469cba6054b62f4"
     },
     {
       "path": "terminal/gate-typecheck.log",
       "bytes": 492,
-      "sha256": "851330ad4754988e6ec7752c066b2f8c6e6ad613832b2666324d0d36d0fd5490"
+      "sha256": "eb56348445f730304e47121d8084a3d47e0fe49d5c795791a05aab3f72cdd1c3"
     },
     {
       "path": "terminal/index.json",
-      "bytes": 5949,
-      "sha256": "d7601721163f936b028d664b46867db7d12582ff16312ef7ebbebb2274e68bd0"
+      "bytes": 5953,
+      "sha256": "3241086bc4c47a72b000d893e9eaf6a10ab1971ba4808f9ebd7211730adc6981"
     }
   ],
   "knownLimitations": [

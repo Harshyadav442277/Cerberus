@@ -1,5 +1,5 @@
 # npm run demo -- cap_breach
-# started 2026-08-19T18:05:00.806Z
+# started 2026-08-19T20:42:39.271Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -14,10 +14,10 @@ Scenario 2 — cap breach   [cap_breach]
   reason        per_transaction_cap_exceeded
   rule          spend_caps.per_transaction_max
   x402 reached  NO — never constructed
-  audit_id      audit_6d3aa2af
+  audit_id      audit_62e4ae97
 
 Audit anchors
-  audit_6d3aa2af  no anchor row
+  audit_62e4ae97  no anchor row
 
   Verify with: npm run audit:verify
 
@@ -26,4 +26,4 @@ are both expected until the payer wallet is funded (Memory.md blocker B1). Neith
 affects the disposition path above.
 
 # ------------------------------------------------------------------------
-# exit 0 after 15824ms
+# exit 0 after 16624ms

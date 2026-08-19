@@ -14,17 +14,17 @@
     "OBSERVE": 0
   },
   "policyLatencyMs": {
-    "p50": 10.759,
-    "p95": 19.843,
-    "p99": 24.831
+    "p50": 15.894,
+    "p95": 31.025,
+    "p99": 38.471
   },
   "reservationLatencyMs": {
-    "p50": 23.295,
-    "p95": 60.91,
-    "p99": 80.2
+    "p50": 35.843,
+    "p95": 91.81,
+    "p99": 131.263
   },
-  "durationSeconds": 2.512,
-  "throughputPerSecond": 398.15,
+  "durationSeconds": 3.717,
+  "throughputPerSecond": 269.03,
   "hostileSubmitted": 139,
   "reservationsCreated": 271,
   "budgetRefusals": 318,

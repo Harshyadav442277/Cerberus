@@ -1,5 +1,5 @@
 # env CERBERUS_EVIDENCE_OUTPUT=1 npm run sandbox -- --seed 1337 --agents 50 --actions 1000 --concurrency 25
-# started 2026-08-19T18:03:33.608Z
+# started 2026-08-19T20:39:37.877Z
 # ------------------------------------------------------------------------
 npm warn Unknown env config "store-dir". This will stop working in the next major version of npm.
 npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
@@ -21,17 +21,17 @@ DENY                    70
 ESCALATE                67
 
 Policy latency (ms)
-  p50                   8.34
-  p95                   15.93
-  p99                   21.63
+  p50                   12.33
+  p95                   24.65
+  p99                   41.44
 
 Reservation latency (ms)
-  p50                   18.50
-  p95                   42.53
-  p99                   85.18
+  p50                   27.49
+  p95                   69.67
+  p99                   155.65
 
-Total duration          1.95 s
-Throughput              512.7 actions/s
+Total duration          2.95 s
+Throughput              339.1 actions/s
 
 Hostile proposals       158
 Reservations created    283
@@ -61,4 +61,4 @@ RESULT                  PASS
   report  artifacts/final-evidence/sandbox/seed-1337.json
 
 # ------------------------------------------------------------------------
-# exit 0 after 2627ms
+# exit 0 after 3992ms
