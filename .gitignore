@@ -10,6 +10,8 @@ out/
 .env.executor
 .env.authorizer
 .env.reviewer
+.env.reconciler
+.env.anchor
 .env.local
 .env.*.local
 
