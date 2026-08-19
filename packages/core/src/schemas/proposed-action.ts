@@ -13,7 +13,12 @@ import { z } from "zod";
  */
 export const ProposedActionPayloadSchema = z.object({
   counterparty: z.string().min(1),
-  amount: z.number().positive(),
+  // `.finite()` matters: z.number().positive() accepts Infinity, because Infinity is
+  // a number and is greater than zero. The spend-cap checks deny it (Infinity exceeds
+  // every finite ceiling), so it was never spendable -- but an amount that cannot be
+  // represented has no business parsing as a valid proposal in the first place, and
+  // relying on a downstream check to catch it makes the safety accidental.
+  amount: z.number().positive().finite(),
   currency: z.string().min(1),
   purpose: z.string().min(1),
   reference: z.string().min(1),
