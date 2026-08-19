@@ -55,11 +55,15 @@ export interface AuditPort {
     mandate: import("@safr/core").Mandate,
     disposition: Disposition,
   ): Promise<AuditLogRecord>;
-  recordSettlement(auditId: string, settlement: import("@safr/core").Settlement): Promise<void>;
   /**
-   * Anchors the record once it can no longer change. Called at every terminal point,
-   * so a DENY is anchored just as an ALLOW is. Must never throw — anchoring cannot be
-   * allowed to affect a disposition (Architecture 6.1).
+   * Asks for the record to be anchored once it can no longer change. Called at every
+   * terminal point the agent itself reaches, so a DENY is finalized just as an ALLOW
+   * is. Must never throw — anchoring cannot be allowed to affect a disposition
+   * (Architecture 6.1).
+   *
+   * There is deliberately no `recordSettlement` here. Settlement is financial truth,
+   * and the process that proved it on chain writes it; the agent is never asked, and
+   * has no database privilege, to say whether its own payment succeeded.
    */
-  finalize(auditId: string): Promise<`0x${string}` | null>;
+  finalize(auditId: string): Promise<void>;
 }

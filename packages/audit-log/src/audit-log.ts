@@ -1,19 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type {
-  AuditLogRecord,
-  Disposition,
-  Mandate,
-  ProposedAction,
-  Settlement,
-} from "@safr/core";
+import type { AuditLogRecord, Disposition, Mandate, ProposedAction } from "@safr/core";
 import {
-  getAuditLogRecord,
+  enqueueAuditFinalization,
   insertAuditLogRecord,
   insertProposedAction,
-  updateAuditSettlement,
 } from "@safr/db";
-import { createAnchorClient, readAnchorConfig } from "./anchor.js";
-import { createAnchorQueue, type AnchorQueue } from "./queue.js";
 
 /**
  * The audit write path.
@@ -28,58 +19,47 @@ export interface AuditLog {
     mandate: Mandate,
     disposition: Disposition,
   ): Promise<AuditLogRecord>;
-  recordSettlement(auditId: string, settlement: Settlement): Promise<void>;
   /**
-   * Anchors the record once it has reached its terminal state.
+   * Requests that this record be anchored once it has reached its terminal state.
+   *
+   * This is a REQUEST, not an anchoring. Remediation 3: the untrusted agent no
+   * longer computes the digest, no longer holds the anchor signer, and has no
+   * database privilege to write `audit_anchor` at all. All it can do is name a row
+   * it was already allowed to write and ask for it to be finalized; the trusted
+   * anchor worker re-reads that row from Postgres, computes the digest itself, and
+   * authors the proof. A hostile agent therefore cannot choose what gets anchored,
+   * cannot forge a digest, and cannot mark anything anchored.
    *
    * Deliberately separate from `record()`. A record is mutated after creation —
    * `human_review` on an escalation, `settlement` once a payment resolves — so
-   * anchoring at creation would anchor a digest that the stored record no longer
-   * matches, and re-hashing it later would fail to reproduce the anchored value.
-   * Anchoring the terminal state keeps "re-hash the stored record and compare" true,
-   * which is the entire point of the anchor.
+   * anchoring at creation would anchor a digest the stored record no longer matches.
    *
-   * The record is re-read from Postgres and hashed as stored, rather than hashed from
-   * an in-memory copy, so the digest is over exactly the bytes a verifier will see.
+   * Must never throw: anchoring cannot be allowed to affect a disposition
+   * (Architecture 6.1).
    */
-  finalize(auditId: string): Promise<`0x${string}` | null>;
-  /** Exposed so the demo CLI can wait for anchors before printing results. */
-  anchors: AnchorQueue;
+  finalize(auditId: string): Promise<void>;
 }
 
 export interface AuditLogOptions {
-  anchors?: AnchorQueue;
   now?: () => string;
   newAuditId?: () => string;
+  /** Injectable so the agent suite can assert enqueueing without a database. */
+  enqueue?: (auditId: string) => Promise<void>;
 }
 
 /**
- * Builds the audit log, wiring anchoring from the environment.
+ * Builds the untrusted agent's audit writer.
  *
- * If `AUDIT_ANCHOR_ADDRESS` and `AUDIT_ANCHOR_PRIVATE_KEY` are absent the queue still computes
- * and stores digests — it just skips the chain. Records are never lost because
- * anchoring is unavailable.
+ * Note what is absent: no anchor client, no signer, no digest computation, and no
+ * settlement write. This process reads no chain credential and holds no authority
+ * over final audit state.
  */
 export function createAuditLog(options: AuditLogOptions = {}): AuditLog {
   const now = options.now ?? (() => new Date().toISOString());
   const newAuditId = options.newAuditId ?? (() => `audit_${randomUUID().slice(0, 8)}`);
-
-  const anchors =
-    options.anchors ??
-    createAnchorQueue({
-      client: (() => {
-        const config = readAnchorConfig();
-        return config === null ? null : createAnchorClient(config);
-      })(),
-      onError(auditId, error) {
-        // Logged, never thrown: this must not reach the disposition path.
-        console.warn(`  [anchor] ${auditId} not anchored — ${error.message}`);
-      },
-    });
+  const enqueue = options.enqueue ?? enqueueAuditFinalization;
 
   return {
-    anchors,
-
     async record(action, mandate, disposition): Promise<AuditLogRecord> {
       // The attempt is stored alongside the refusal, so a DENY is auditable.
       await insertProposedAction(action);
@@ -104,15 +84,17 @@ export function createAuditLog(options: AuditLogOptions = {}): AuditLog {
       return record;
     },
 
-    async recordSettlement(auditId, settlement): Promise<void> {
-      await updateAuditSettlement(auditId, settlement);
-    },
-
-    async finalize(auditId): Promise<`0x${string}` | null> {
-      const stored = await getAuditLogRecord(auditId);
-      if (stored === null) return null;
-      // Fire-and-forget by design: does not await the chain and cannot throw.
-      return anchors.enqueue(stored);
+    async finalize(auditId): Promise<void> {
+      // One durable row saying "this record is terminal, please anchor it". The
+      // trusted worker does everything else. Swallowing the error keeps Architecture
+      // 6.1's promise that anchoring can never fail a disposition; the record itself
+      // is already committed, and an un-enqueued record is re-enqueued by the
+      // sweeper rather than lost.
+      await enqueue(auditId).catch((error: unknown) => {
+        console.warn(
+          `  [anchor] ${auditId} not enqueued — ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
     },
   };
 }

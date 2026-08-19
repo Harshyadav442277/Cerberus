@@ -216,13 +216,12 @@ export async function runAction(
     };
   }
 
-  try {
-    await deps.audit.recordSettlement(audit.audit_id, settlement);
-  } finally {
-    // finalize even if the settlement write itself fails — the disposition already
-    // happened and the digest must still be computable from the stored row.
-    await deps.audit.finalize(audit.audit_id);
-  }
+  // The executor already committed the terminal audit settlement and the anchor
+  // request in the same transaction that settled the reservation, because it — not
+  // this process — proved the payment on chain. Finalizing again here is a harmless
+  // idempotent nudge that makes the record's anchoring independent of whether the
+  // executor's enqueue was the one that landed.
+  await deps.audit.finalize(audit.audit_id);
 
   return {
     ...base,
