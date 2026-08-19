@@ -5,7 +5,7 @@
  * invoked. Observing that a payment "failed" would not satisfy this, so the spy also
  * tracks whether the settlement port was ever even constructed.
  */
-import { deepStrictEqual, strictEqual } from "node:assert/strict";
+import { deepStrictEqual, ok, strictEqual } from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createEscalationRegistry } from "../escalations.js";
 import { runAction } from "../orchestrator.js";
@@ -56,7 +56,6 @@ describe("DENY — the payment is never constructed", () => {
     strictEqual(audit.records.length, 1);
     strictEqual(audit.records[0]?.disposition, "DENY");
     strictEqual(audit.records[0]?.rule_triggered, "spend_caps.per_transaction_max");
-    strictEqual(audit.settlements.length, 0);
   });
 
   it("refuses when no mandate is in force, without reaching settlement", async () => {
@@ -247,8 +246,19 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(spy.callCount, 1);
     strictEqual(spy.calls[0]?.audit_id, "audit_1");
     strictEqual(spy.calls[0]?.envelope.authorization.authorizationId, "auth_test");
-    strictEqual(audit.settlements.length, 1);
-    strictEqual(audit.settlements[0]?.settlement.tx_hash, "0xdeadbeef");
+    // The agent reports the settlement it was told about, but does not AUTHOR it.
+    // The executor proved this payment on chain and committed the terminal audit
+    // settlement in the same transaction that settled the reservation, so there is
+    // no longer a code path — and no longer a database privilege — by which this
+    // process could write financial truth about its own payment.
+    strictEqual(outcome.settlement?.tx_hash, "0xdeadbeef");
+    ok(
+      !("recordSettlement" in audit),
+      "the agent's audit port exposes no way to write settlement",
+    );
+    // It still asks for the terminal record to be anchored, which is a request the
+    // trusted anchor worker satisfies rather than an anchor the agent authors.
+    strictEqual(audit.finalized.length, 1);
     // No human is involved in a clean ALLOW.
     strictEqual(outcome.humanReview, null);
   });
@@ -267,7 +277,6 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(outcome.status, "settlement_unknown");
     strictEqual(outcome.settlementAttempted, true);
     strictEqual(outcome.settlement, null);
-    strictEqual(audit.settlements.length, 0);
     strictEqual(audit.finalized.length, 0);
   });
 
@@ -295,7 +304,6 @@ describe("ALLOW — settlement proceeds", () => {
     strictEqual(outcome.status, "settlement_unknown");
     strictEqual(outcome.settlementAttempted, true);
     strictEqual(outcome.settlement, null);
-    strictEqual(audit.settlements.length, 0, "UNKNOWN is not a failed settlement");
     strictEqual(audit.finalized.length, 0, "UNKNOWN is not terminal and must not be anchored");
   });
 });

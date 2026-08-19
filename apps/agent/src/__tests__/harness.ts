@@ -164,14 +164,12 @@ export function authorizationSpy(options: {
 
 export interface AuditSpy extends AuditPort {
   records: AuditLogRecord[];
-  settlements: Array<{ auditId: string; settlement: Settlement }>;
   finalized: string[];
 }
 
 export function auditSpy(): AuditSpy {
   const spy: AuditSpy = {
     records: [],
-    settlements: [],
     finalized: [],
     async record(
       proposedAction: ProposedAction,
@@ -194,12 +192,8 @@ export function auditSpy(): AuditSpy {
       spy.records.push(record);
       return record;
     },
-    async recordSettlement(auditId: string, settlement: Settlement): Promise<void> {
-      spy.settlements.push({ auditId, settlement });
-    },
-    async finalize(auditId: string): Promise<`0x${string}` | null> {
+    async finalize(auditId: string): Promise<void> {
       spy.finalized.push(auditId);
-      return "0xabc";
     },
   };
   return spy;
