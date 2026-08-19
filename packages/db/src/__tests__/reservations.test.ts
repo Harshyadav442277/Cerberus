@@ -21,11 +21,13 @@ import {
   recordPaymentAttempt,
   reserveBudget,
   windowHours,
+  type ReserveBudgetInput,
   type ReserveBudgetResult,
 } from "../reservations.js";
 import { updateAuditSettlement } from "../repository.js";
 import {
   AT,
+  atomic,
   insertMandate,
   mandateFixture,
   race,
@@ -655,5 +657,204 @@ describe("durable outcome reconciliation state", () => {
       true,
     );
     strictEqual((await getReservation(id))!.status, "FAILED");
+  });
+});
+
+/**
+ * Reservation reuse must verify its own invariants.
+ *
+ * `reserveBudget` returns an existing live reservation so that one proposal produces
+ * one financial effect however many times it is submitted. That idempotency is only
+ * safe while the held capacity actually describes the payment now being requested.
+ *
+ * The original Stage-1 exploit was exactly this: reserve 1 USDC, overwrite the
+ * action, then authorize 5 USDC against capacity committed for the smaller amount.
+ * Proposal immutability and the exact authorization/executor checks closed that
+ * route, but a layer that depends on its neighbours to hold its invariant has not
+ * got an invariant. These tests attack the reservation layer directly, at the lowest
+ * level the exploit can be expressed, with every higher-level guard bypassed.
+ */
+describe("reservation context equality", () => {
+  it("cannot reuse a smaller reservation for a larger payment", async () => {
+    await seedAgent("agent_ctx");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ctx", agentId: "agent_ctx", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ctx1",
+      agentId: "agent_ctx",
+      mandateId: "mandate_ctx",
+      amount: 1,
+    });
+
+    const first = await reserveBudget(reserveInput(proposal, 100));
+    ok(first.outcome === "created");
+
+    // The attack: same audit and action, five times the money.
+    const escalated = await reserveBudget(
+      reserveInput(proposal, 100, { amountDecimal: "5", amountAtomic: atomic(5) }),
+    );
+
+    strictEqual(
+      escalated.outcome,
+      "context_mismatch",
+      "a 1 USDC reservation must never back a 5 USDC payment",
+    );
+    ok(escalated.outcome === "context_mismatch");
+    ok(escalated.mismatched.includes("amount_decimal"), "the amount is reported as mismatched");
+    ok(escalated.mismatched.includes("amount_atomic"));
+
+    // The original reservation is neither replaced nor mutated.
+    const stored = await getReservation(first.reservation.reservation_id);
+    strictEqual(stored?.status, "RESERVED", "the held reservation is untouched");
+    strictEqual(Number(stored?.amount_decimal), 1, "still holding exactly the original amount");
+    strictEqual(await activeAmounts("mandate_ctx"), 1, "no extra capacity was committed");
+  });
+
+  it("refuses reuse when the token, chain, currency, agent or mandate version differs", async () => {
+    await seedAgent("agent_ctx");
+    await seedAgent("agent_other");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ctx", agentId: "agent_ctx", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ctx2",
+      agentId: "agent_ctx",
+      mandateId: "mandate_ctx",
+      amount: 1,
+    });
+    const first = await reserveBudget(reserveInput(proposal, 100));
+    strictEqual(first.outcome, "created");
+
+    const attacks: Array<[string, Partial<ReserveBudgetInput>, string]> = [
+      ["token", { token: "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" }, "token"],
+      ["chain", { chainId: 1 }, "chain_id"],
+      ["currency", { currency: "EURC" }, "currency"],
+      ["agent", { agentId: "agent_other" }, "agent_id"],
+      ["mandate version", { mandateVersion: 2 }, "mandate_version"],
+      ["mandate", { mandateId: "mandate_elsewhere" }, "mandate_id"],
+    ];
+
+    for (const [label, override, expectedField] of attacks) {
+      const result = await reserveBudget(reserveInput(proposal, 100, override));
+      strictEqual(result.outcome, "context_mismatch", `${label} mismatch must be refused`);
+      ok(result.outcome === "context_mismatch");
+      ok(
+        result.mismatched.includes(expectedField),
+        `${label} mismatch reports ${expectedField}, got ${result.mismatched.join(",")}`,
+      );
+    }
+
+    strictEqual(await activeAmounts("mandate_ctx"), 1, "no attack committed extra capacity");
+  });
+
+  it("still reuses a reservation whose context matches exactly", async () => {
+    // The refusal above must not have been bought by breaking idempotency: an honest
+    // resubmission of the same proposal still gets the same single financial effect.
+    await seedAgent("agent_ctx");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ctx", agentId: "agent_ctx", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ctx3",
+      agentId: "agent_ctx",
+      mandateId: "mandate_ctx",
+      amount: 2,
+    });
+
+    const first = await reserveBudget(reserveInput(proposal, 100));
+    ok(first.outcome === "created");
+
+    const again = await reserveBudget(reserveInput(proposal, 100));
+    strictEqual(again.outcome, "existing", "an identical resubmission is still idempotent");
+    ok(again.outcome === "existing");
+    strictEqual(again.reservation.reservation_id, first.reservation.reservation_id);
+    strictEqual(await activeAmounts("mandate_ctx"), 2, "one proposal, one financial effect");
+  });
+
+  it("treats equal amounts written differently as a match, not a mismatch", async () => {
+    // "2" and "2.000000" are the same money. Comparing money as text would refuse a
+    // legitimate retry, so the equality check goes through NUMERIC.
+    await seedAgent("agent_ctx");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ctx", agentId: "agent_ctx", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ctx4",
+      agentId: "agent_ctx",
+      mandateId: "mandate_ctx",
+      amount: 2,
+    });
+    await reserveBudget(reserveInput(proposal, 100));
+
+    const again = await reserveBudget(reserveInput(proposal, 100, { amountDecimal: "2.000000" }));
+    strictEqual(again.outcome, "existing", "2 and 2.000000 are the same amount");
+  });
+});
+
+/**
+ * Suspension enforced by the reservation transaction itself.
+ *
+ * The control plane also refuses earlier, on a separate read of agent_identity. This
+ * is the check that makes the guarantee atomic: whatever raced with the suspension,
+ * no capacity is committed for an agent that is not active at COMMIT time.
+ */
+describe("suspension blocks capacity commitment", () => {
+  it("commits no reservation for a suspended agent", async () => {
+    await seedAgent("agent_susp");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_susp", agentId: "agent_susp", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "susp1",
+      agentId: "agent_susp",
+      mandateId: "mandate_susp",
+      amount: 1,
+    });
+
+    await getPool().query("UPDATE agent_identity SET status = 'suspended' WHERE agent_id = $1", [
+      "agent_susp",
+    ]);
+
+    const result = await reserveBudget(reserveInput(proposal, 100));
+    strictEqual(result.outcome, "agent_suspended");
+    strictEqual(await activeAmounts("mandate_susp"), 0, "no budget was consumed");
+    const { rows } = await getPool().query("SELECT 1 FROM payment_reservation");
+    strictEqual(rows.length, 0, "no reservation row exists");
+  });
+
+  it("commits no reservation for an agent with no identity row", async () => {
+    await seedAgent("agent_ghost");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ghost", agentId: "agent_ghost", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ghost1",
+      agentId: "agent_ghost",
+      mandateId: "mandate_ghost",
+      amount: 1,
+    });
+    // Reserving under an agent that was never registered must not be an open door.
+    const result = await reserveBudget(
+      reserveInput(proposal, 100, { agentId: "agent_never_registered" }),
+    );
+    strictEqual(result.outcome, "agent_suspended");
+    strictEqual(await activeAmounts("mandate_ghost"), 0);
+  });
+
+  it("still reserves normally for an active agent", async () => {
+    await seedAgent("agent_ok");
+    await insertMandate(
+      mandateFixture({ mandateId: "mandate_ok", agentId: "agent_ok", maxTotal: 100 }),
+    );
+    const proposal = await seedProposal({
+      id: "ok1",
+      agentId: "agent_ok",
+      mandateId: "mandate_ok",
+      amount: 3,
+    });
+    const result = await reserveBudget(reserveInput(proposal, 100));
+    strictEqual(result.outcome, "created", "suspension checks must not break the normal path");
+    strictEqual(await activeAmounts("mandate_ok"), 3);
   });
 });
