@@ -9,6 +9,8 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 
 ## Current state at a glance
 
+- **FEATURE FROZEN** at `ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`. Bug fixes, demo reliability, wording and evidence recapture only.
+
 - **Project name:** **CERBERUS** (corrected spelling locked by the project owner on Aug 13), named for the three-headed guardian of Hades. The three heads map to ALLOW, DENY, and ESCALATE; SAFR Runtime remains the technical description.
 - **Phase 0:** **complete.** Funded-wallet and network checks pass.
 - **Phase 1:** **complete.** Bare x402 settlement succeeded on Base Sepolia (`0xed51af70…efab9`).
@@ -121,6 +123,38 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
 Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
+
+---
+
+## CERBERUS FEATURE FREEZE
+
+**Frozen at:** `ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`
+
+Declared after the finalist completion build passed its release gate. From this point
+only the following are permitted:
+
+- critical bug fixes
+- demo reliability fixes
+- wording corrections
+- evidence recapture (including the blocked live run and the screen recordings)
+- presentation rehearsal
+
+**No new features.**
+
+State at freeze:
+
+| | |
+|---|---|
+| Tests | 363 passed / 363, 72 suites |
+| Adversarial | 12/12 classes, 80 assertions |
+| Security red team | 9/9 classes, 60 assertions |
+| Mutation matrix | 12/12 guards proven detectable |
+| Seeded sandbox | 0 budget violations, 0 duplicate effects, 0 replay violations (seeds 42 and 1337) |
+| Dependency audit | no known vulnerabilities |
+| Typecheck / dashboard build / contract compile / db:verify | all clean |
+| Evidence manifest | validates, 0 failures |
+| Fresh funded live evidence | **BLOCKED** — not captured, not fabricated |
+| Screen recordings | **not captured** — automated capture unavailable |
 
 ---
 

@@ -1,5 +1,7 @@
 # Cerberus — evidence manifest
 
+**Feature frozen at `ba5c853` (`ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`).**
+
 > **Read this first.** This file contains evidence from two different builds, and the
 > distinction matters.
 >

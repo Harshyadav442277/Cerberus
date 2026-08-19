@@ -1,5 +1,9 @@
 # Cerberus — operator runbook, cold start to judged demo
 
+**Feature frozen at `ba5c853` (`ba5c85309be54363ff31ecf9ecc9f6364bdcc29d`).** Bug fixes, demo reliability, wording
+and evidence recapture only — no new features.
+
+
 Everything needed to take this machine from powered-off to a running demo, and the
 recovery steps for the failures actually hit during setup.
 
