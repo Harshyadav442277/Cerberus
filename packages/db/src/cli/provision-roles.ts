@@ -29,10 +29,20 @@ const roles: RuntimeRole[] = [
     groupRole: "cerberus_executor_role",
   },
   {
+    // Remediation 7: previously inherited cerberus_executor_role wholesale, which
+    // carried execution-authorization consumption that reconciliation never needs.
     label: "reconciler",
     envFile: ".env.reconciler",
     urlName: "RECONCILER_DATABASE_URL",
-    groupRole: "cerberus_executor_role",
+    groupRole: "cerberus_reconciler_role",
+  },
+  {
+    // The only role that may author final audit proof. It holds the anchor signer and
+    // has no payment authority whatsoever.
+    label: "anchor",
+    envFile: ".env.anchor",
+    urlName: "ANCHOR_DATABASE_URL",
+    groupRole: "cerberus_anchor_role",
   },
 ];
 
