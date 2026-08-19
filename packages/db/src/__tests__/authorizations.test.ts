@@ -298,3 +298,78 @@ describe("approval freshness", () => {
     ok(!missing.usable && missing.reason === "MISSING");
   });
 });
+
+/**
+ * D6 — human approval expiry, to the millisecond.
+ *
+ * The suite above covers whether an approval still binds the right proposal and the
+ * right mandate version. This covers only WHEN it stops binding at all, at exactly
+ * -1ms, the boundary instant, and +1ms — because both `<` and `<=` pass every test
+ * written a whole minute away from the boundary.
+ *
+ * The convention, matching execution-authorization expiry: expiry is EXCLUSIVE. An
+ * approval is usable strictly before its expiry instant and unusable at it. When the
+ * question is "may money move", the boundary instant resolves to no.
+ */
+describe("human approval expiry boundaries", () => {
+  const EXPIRES_AT = Date.parse("2026-08-18T12:30:00.000Z");
+  const boundaryBinding = {
+    audit_id: "audit_boundary",
+    action_id: "action_boundary",
+    agent_id: "agent_boundary",
+    proposal_hash: PROPOSAL_HASH,
+    mandate_id: "m_auth",
+    mandate_version: 17,
+    reviewer_id: "compliance_officer_01",
+    decision: "approved" as const,
+    decided_at: "2026-08-18T12:00:00.000Z",
+    expires_at: "2026-08-18T12:30:00.000Z",
+  };
+  const context = {
+    proposalHash: PROPOSAL_HASH,
+    currentMandateId: "m_auth",
+    currentMandateVersion: 17,
+  };
+
+  it("is usable one millisecond before expiry", () => {
+    const verdict = evaluateApprovalFreshness(boundaryBinding, {
+      ...context,
+      nowMs: EXPIRES_AT - 1,
+    });
+    strictEqual(verdict.usable, true);
+  });
+
+  it("is refused at exactly the expiry instant", () => {
+    const verdict = evaluateApprovalFreshness(boundaryBinding, { ...context, nowMs: EXPIRES_AT });
+    ok(!verdict.usable && verdict.reason === "EXPIRED");
+  });
+
+  it("is refused one millisecond after expiry", () => {
+    const verdict = evaluateApprovalFreshness(boundaryBinding, {
+      ...context,
+      nowMs: EXPIRES_AT + 1,
+    });
+    ok(!verdict.usable && verdict.reason === "EXPIRED");
+  });
+
+  it("is usable at the instant it was decided", () => {
+    // The lower bound matters too: an approval not yet valid at its own decision
+    // instant would be unusable for its entire life.
+    const verdict = evaluateApprovalFreshness(boundaryBinding, {
+      ...context,
+      nowMs: Date.parse(boundaryBinding.decided_at),
+    });
+    strictEqual(verdict.usable, true);
+  });
+
+  it("reports the strongest reason when an approval is both stale and expired", () => {
+    // An expired approval for a superseded mandate must not report EXPIRED and let a
+    // caller conclude that re-approving on the same authority would be enough.
+    const verdict = evaluateApprovalFreshness(boundaryBinding, {
+      ...context,
+      currentMandateVersion: 18,
+      nowMs: EXPIRES_AT + 1,
+    });
+    ok(!verdict.usable && verdict.reason === "STALE_MANDATE");
+  });
+});
