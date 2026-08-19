@@ -1,0 +1,90 @@
+[
+  {
+    "name": "baseline-adversarial",
+    "command": "npm run adversarial",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 37120,
+    "startedAt": "2026-08-19T06:12:55.151Z",
+    "log": "terminal/baseline-adversarial.log",
+    "logSha256": "ad643652a9f169bb1e317f14049ac76dee6151e2db68d7b853b6f5b734f3a5c9",
+    "logBytes": 2144
+  },
+  {
+    "name": "baseline-contracts",
+    "command": "npm run contracts:compile",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 1164,
+    "startedAt": "2026-08-19T06:14:22.843Z",
+    "log": "terminal/baseline-contracts.log",
+    "logSha256": "b87d338db2d01c34356fe7ec25a97d11cc59d69a5d4ae253d1bcffb3ac3388c4",
+    "logBytes": 730
+  },
+  {
+    "name": "baseline-dashboard-build",
+    "command": "npm run build --prefix apps/dashboard",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 20079,
+    "startedAt": "2026-08-19T06:14:01.860Z",
+    "log": "terminal/baseline-dashboard-build.log",
+    "logSha256": "54dad1ba8a27632ba992484e281408098e87199c17844e2cf7d6a0fea579bbab",
+    "logBytes": 1827
+  },
+  {
+    "name": "baseline-db-verify",
+    "command": "npm run db:verify",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 923,
+    "startedAt": "2026-08-19T06:14:34.427Z",
+    "log": "terminal/baseline-db-verify.log",
+    "logSha256": "3cd32c91059f1294c6d2d4fc34bca4a95b6e13ec2398463b02168be91950a7ad",
+    "logBytes": 1681
+  },
+  {
+    "name": "baseline-dependency-audit",
+    "command": "corepack pnpm audit",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 864,
+    "startedAt": "2026-08-19T06:14:36.348Z",
+    "log": "terminal/baseline-dependency-audit.log",
+    "logSha256": "825a802c7b08f73b2ef7d71239e8737598e7aeb1542ce8715200ebe7a9397a64",
+    "logBytes": 259
+  },
+  {
+    "name": "baseline-redteam",
+    "command": "npm run redteam",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 19306,
+    "startedAt": "2026-08-19T06:13:41.645Z",
+    "log": "terminal/baseline-redteam.log",
+    "logSha256": "e637fabe8f79dfe13e22406e54383e3526cb77336dd42c17a34df6a695b3d78a",
+    "logBytes": 2758
+  },
+  {
+    "name": "baseline-tests",
+    "command": "npm test",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 34641,
+    "startedAt": "2026-08-19T06:12:19.604Z",
+    "log": "terminal/baseline-tests.log",
+    "logSha256": "8d82294f4a2097a27875bc0ba659c5d5c0f618061d6a38f557b4b2fd92d476ee",
+    "logBytes": 31473
+  },
+  {
+    "name": "baseline-typecheck",
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 3931,
+    "startedAt": "2026-08-19T06:12:07.083Z",
+    "log": "terminal/baseline-typecheck.log",
+    "logSha256": "18a8523cbfa6c2c3cd3a50b970c7111885803836fe24c4f5d50abf8564d2010c",
+    "logBytes": 594
+  }
+]
