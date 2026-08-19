@@ -1,0 +1,35 @@
+AUDIT FEED  (GET /audit)
+  counts: {"ALLOW":1,"DENY":1,"ESCALATE":1,"OBSERVE":0}
+  spend:  {"agent_id":"agent_treasury_01","rolling_total_24h":0,"max_total":3,"currency":"USDC"}
+
+  ESCALATE audit_evidence_new_counterparty   counterparty_policy               settlement=null
+  DENY     audit_evidence_cap_breach         spend_caps.per_transaction_max    settlement=null
+  ALLOW    audit_evidence_clean              (no rule)                         settlement=null
+
+RECORD audit_evidence_new_counterparty
+  disposition   ESCALATE  (counterparty_not_on_allowlist)
+  rule          counterparty_policy
+  counterparty  merchant_new  0.75 USDC
+  mandate       mandate_001 v1
+  human_review  null
+  settlement    null
+  anchor        0xc8f2b5dfc5e0926becb10963f96851945e26474b20cf675ccce891221477c63f  status=pending
+
+RECORD audit_evidence_cap_breach
+  disposition   DENY  (per_transaction_cap_exceeded)
+  rule          spend_caps.per_transaction_max
+  counterparty  merchant_abc  4 USDC
+  mandate       mandate_001 v1
+  human_review  null
+  settlement    null
+  anchor        0xfa6785319ff7f65206eb2f1b7bef45bd487872a53dfe3ea4c6d7867a84971852  status=pending
+
+RECORD audit_evidence_clean
+  disposition   ALLOW  (within_mandate)
+  rule          none
+  counterparty  merchant_xyz  0.5 USDC
+  mandate       mandate_001 v1
+  human_review  null
+  settlement    null
+  anchor        0x3f6ef845f3fc7ebaf670e0de3b7f610796dd2742e4861dc5007e25ee3a7bebb4  status=pending
+
