@@ -9,3 +9,20 @@ onlyBuiltDependencies:
 
 # Never block on an interactive "purge node_modules?" prompt in a non-TTY shell.
 confirmModulesPurge: false
+
+# Transitive security upgrades (Remediation 9). Each is a build-time or optional
+# dependency pulled in by Next.js, Tailwind or solc — none is on the payment path —
+# but a known-vulnerable version stays fixed if it can be raised without breaking the
+# build. Every override below is verified by `npm test`, the dashboard build and
+# `npm run contracts:compile`; see docs/submission/DEPENDENCY_AUDIT.md.
+overrides:
+  # GHSA-6g55-p6wh-862q / GHSA-fxqj-rqcc-2cmp — arbitrary file read via
+  # attacker-controlled sourceMappingURL. Build-time CSS processing only.
+  postcss: ">=8.5.23"
+  # GHSA — predictable id generation. Reached only through postcss.
+  nanoid: ">=3.3.18"
+  # GHSA-ph9p-34f9-6g65 — path traversal. Dev-only, via solc during contract compile.
+  tmp: ">=0.2.6"
+  # GHSA-f88m-g3jw-g9cj — inherited libvips CVEs. Optional Next.js image optimization,
+  # which this dashboard does not use.
+  sharp: ">=0.35.0"
