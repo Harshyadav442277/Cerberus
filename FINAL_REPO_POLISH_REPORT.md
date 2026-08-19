@@ -6,7 +6,7 @@
 |---|---|
 | **START SHA** | `ec52e325be385493d57b57cf99c9a9dbb34b4a3c` |
 | **FINAL RELEASE PAYLOAD SHA** | `6d40e85bef71d2dfa51edff34a99c7a6b8eebad1` |
-| **FINAL ATTESTATION SHA** | the documentation-only commit carrying this report |
+| **FINAL ATTESTATION SHA** | `da41212ca54040aa2ae13dfa34416d49ce6319b2` |
 
 Intermediate commits, in order:
 
