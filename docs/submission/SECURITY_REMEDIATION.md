@@ -3,7 +3,9 @@
 **Baseline inspected:** `6159474` (`origin/main`, "Record Phase 6 adversarial proof")
 **Baseline verification:** 260 tests / 48 suites; adversarial 12/12 classes, 78/78 assertions
 
-**After remediation:** 330 tests / 61 suites; adversarial 12/12 classes, 80 assertions;
+**After remediation** (figures as at the close of this pass; the later finalist
+completion build raised them to 363 / 72 — see the README's current-build section):
+330 tests / 61 suites; adversarial 12/12 classes, 80 assertions;
 red team 9/9 classes, 60 assertions; dependency audit clean.
 
 This pass did **not** reopen the financial-authority work that earlier phases already

@@ -104,9 +104,11 @@ RESERVED -> AUTHORIZED -> SUBMITTING -> SETTLED
 
 Phases 1, 2, 3, 3.5A, 3.5B, 3.5C, 3.5D, 4, 5 including review hardening through
 Phase 5.2, and Phase 6 are complete, followed by the finalist security remediation
-pass. The release gate passed the full **330/330-test suite across 61 suites**
+pass. The release gate passed the full **363/363-test suite across 72 suites**
 against real PostgreSQL, plus **12/12 adversarial classes** and **9/9 red-team
-classes**. See [submission/SECURITY_REMEDIATION.md](submission/SECURITY_REMEDIATION.md).
+classes**, with **12/12 security guards proven detectable** by the mutation matrix.
+See [submission/SECURITY_REMEDIATION.md](submission/SECURITY_REMEDIATION.md) and
+[submission/REDTEAM_REPORT.md](submission/REDTEAM_REPORT.md).
 
 Phase 1 introduced a trusted API/control-plane authorizer and an isolated executor.
 Phase 2 replaced the placeholder `phase1_unreserved:<audit_id>` marker with committed

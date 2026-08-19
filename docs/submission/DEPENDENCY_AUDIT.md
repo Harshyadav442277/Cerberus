@@ -73,6 +73,9 @@ outcome that had to be avoided this close to a demo.
 
 ### Verification after the upgrade
 
+Figures below are as at the dependency upgrade. The later finalist completion build
+raised the suite to 363 tests across 72 suites; the audit result is unchanged.
+
 Raising a transitive dependency is only safe if the build still works, so each of
 these was re-run against the overridden tree:
 

@@ -52,15 +52,18 @@ labelled as such.
 
 | | |
 |---|---|
-| **Commit** | `6159474` + uncommitted finalist security remediation (see below) |
-| **Automated tests** | **330 passed / 330**, 61 suites, 0 failed |
+| **Commit** | `5a0f367` |
+| **Automated tests** | **363 passed / 363**, 72 suites, 0 failed |
 | **Adversarial suite** (`npm run adversarial`) | **12/12 attack classes**, 80 assertions |
 | **Security red team** (`npm run redteam`) | **9/9 attack classes**, 60 assertions |
+| **Mutation matrix** (`npm run mutation`) | **12/12 security guards proven detectable** |
+| **Seeded sandbox** (`npm run sandbox`) | 1000 actions / 50 agents / 25 concurrent — **0 budget violations, 0 duplicate effects, 0 replay violations** |
 | **Dependency audit** (`corepack pnpm audit`) | **no known vulnerabilities** |
 | **Typecheck / dashboard build / contract compile** | all clean |
 | **Database verification** (`npm run db:verify`) | all checks pass |
-| **Fresh live evidence** | **Not yet captured on the hardened path.** No funded payment has been made since the finalist signer-isolation boundary landed. |
-| **Phase 7** | **Not started.** |
+| **Fresh live evidence** | **BLOCKED — not captured.** The three signers are not provisioned on this machine and no funded payment has been made on the hardened path. Nothing has been fabricated; see [LIVE_EVIDENCE_BLOCKED.md](docs/submission/LIVE_EVIDENCE_BLOCKED.md). |
+| **Phase 7 (seeded sandbox)** | **Complete.** `npm run sandbox` |
+| **Screen recordings** | **Not captured.** Automated capture was unavailable in the build environment; see [MANUAL_RECORDING_GUIDE.md](docs/submission/MANUAL_RECORDING_GUIDE.md). |
 
 ### Security posture
 
@@ -88,7 +91,12 @@ by design intent:
   recomputed and the stored one.
 
 Full detail, including every attack test and every residual limitation, is in
-[submission/SECURITY_REMEDIATION.md](docs/submission/SECURITY_REMEDIATION.md).
+[submission/SECURITY_REMEDIATION.md](docs/submission/SECURITY_REMEDIATION.md) and
+[submission/REDTEAM_REPORT.md](docs/submission/REDTEAM_REPORT.md).
+
+The red-team pass found and fixed two real vulnerabilities — a signed EIP-3009
+authorization that could be forwarded across a cross-origin redirect, and an infinite
+amount that parsed as a valid proposal — and one security test that could not fail.
 
 ### Current limitations
 
@@ -109,6 +117,11 @@ Stated plainly, because a security claim is only worth what its exceptions admit
   records report as pending — never as anchored.
 - **Testnet prototype.** Base Sepolia, hackathon scope. Not a production payment
   system.
+- **Same-host compromise.** Process isolation is by operating-system boundary and
+  database role. An attacker with root on the host defeats it, as they would defeat
+  any single-machine deployment.
+- **No fresh funded evidence on the hardened path.** Blocked on operator key
+  provisioning and funding, and stated as blocked rather than papered over.
 
 ### Historical Stage-1 evidence
 
@@ -261,7 +274,7 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **330 tests, 61 suites, 330 passed, 0 failed**.
+- The test runner reports **363 tests, 72 suites, 363 passed, 0 failed**.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
@@ -270,6 +283,13 @@ Expected result:
   It validates named TAP evidence and fails if a class matches no tests.
 - The security red-team gate (`npm run redteam`) reports **9/9 attack classes** and
   **60 assertions** passed, covering the finalist hardening round.
+- The mutation matrix (`npm run mutation`) reports **12/12 security guards proven
+  detectable** and leaves the working tree clean. It removes each guard in turn and
+  requires the tests that claim to catch it to fail, because a security suite that
+  cannot fail is indistinguishable from one that checks nothing.
+- The seeded sandbox (`npm run sandbox -- --seed 42 --agents 50 --actions 1000
+  --concurrency 25`) reports **0 budget violations, 0 duplicate effects, 0 replay
+  violations**, each queried from PostgreSQL after the run.
 - The Next.js production build completes and lists eight application routes, including
   the two server-only reviewer proxies.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.

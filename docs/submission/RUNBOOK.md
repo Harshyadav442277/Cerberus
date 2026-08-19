@@ -53,6 +53,12 @@ rows; use the public transaction manifest in `EVIDENCE.md` as the durable proof:
   across 48 suites, with typecheck and dashboard production build clean.
 - `npm run adversarial` — 12/12 attack classes, 80 selected assertions
 - `npm run redteam` — 9/9 attack classes, 60 assertions (finalist security remediation)
+- `npm run mutation` — 12/12 security guards proven detectable
+- `npm run sandbox -- --seed 42 --agents 50 --actions 1000 --concurrency 25` — 0 violations
+- `npm run preflight` — gates any funded live run; exits non-zero until every
+  precondition is met
+- `npm run evidence:manifest` then `npm run evidence:verify` — regenerate and validate
+  the evidence manifest
 - `corepack pnpm audit` — no known vulnerabilities
 - Stage-1 evidence used merchant (`:4021`), API (`:4050`), and dashboard (`:3000`).
   Current runs also require the isolated executor (`:4060`) and keyless reconciler.

@@ -61,17 +61,21 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
 - **Deadline (authoritative, from the organizer's published rules):** **Fri Aug 14, 2026, 11:59 PM SGT = 21:29 IST.** Self-imposed submission target Aug 14, 12:00 IST. Earlier notes in this file and in the Bible said 21:15 IST / 11:45 PM SGT, taken from the schedule banner; the rules text is the controlling source and gives 11:59 PM SGT. Do not plan to the last 14 minutes either way.
-- **Test count:** **330/330 across 61 suites**, Aug 19 after the finalist security
-  remediation pass (was 260/48 after Stage-2 Phase 6), against real PostgreSQL on
-  `5544`. Adversarial: 12/12 classes, 80 assertions. Red team (`npm run redteam`):
-  9/9 classes, 60 assertions. Dependency audit: clean. The reservation, finalization
+- **Test count:** **363/363 across 72 suites**, Aug 19 after the finalist completion
+  build (330/61 after the security remediation pass; 260/48 after Stage-2 Phase 6),
+  against real PostgreSQL on `5544`. Adversarial: 12/12 classes, 80 assertions. Red
+  team (`npm run redteam`): 9/9 classes, 60 assertions. Mutation matrix
+  (`npm run mutation`): 12/12 guards proven detectable. Sandbox: 0 violations on two
+  seeds. Dependency audit: clean. The reservation, finalization
   and privilege suites test database properties and are worthless against stubs.
   Test files run with `--test-concurrency=1` because the database suites share one
   database. Historical entries below preserve the counts correct when written.
-- **Next concrete step:** the security remediation gate is green, so the block on the
-  funded run is lifted. Capture a fresh funded ALLOW plus dashboard-approved ESCALATE
-  through the hardened path before presenting it as live evidence. Phase 7 has not
-  started.
+- **Next concrete step:** provision the three signers and fund them, then capture a
+  fresh funded ALLOW plus dashboard-approved ESCALATE through the hardened path. The
+  exact procedure is in `docs/submission/LIVE_EVIDENCE_BLOCKED.md`; `npm run preflight`
+  reports what is still missing and exits non-zero until it is all present. After that,
+  record the demo using `docs/submission/MANUAL_RECORDING_GUIDE.md`. Phase 7 (seeded
+  sandbox) is complete.
 - **New operational requirement:** `npm run anchor` must run alongside the other
   services. The agent no longer anchors its own records — it holds no anchor signer
   and no `audit_anchor` privilege — so without the worker, digests are stored
@@ -117,6 +121,85 @@ Install is the one thing that needs pnpm: `npx --yes pnpm@10.34.5 install`.
 workspaces, user-local Postgres 18.6 on host port **5544**, x402 TS SDK **v2.21.0**,
 Base Sepolia `eip155:84532`, testnet facilitator `https://x402.org/facilitator`.
 
+
+---
+
+## Aug 19 — Finalist completion build (red-team, sandbox, evidence)
+
+Ran straight after the security remediation pass, on top of `cc2d66e`.
+
+**Two real vulnerabilities found and fixed.**
+
+1. **Signed payment authority could cross a redirect.** Both x402 request paths used
+   fetch's default `redirect: "follow"`. The paid request carries a live signed
+   EIP-3009 authorization in a custom `PAYMENT-SIGNATURE` header, and the fetch spec
+   strips only `Authorization`, `Cookie` and `Proxy-Authorization` across a
+   cross-origin redirect — custom headers are forwarded intact. A merchant could
+   therefore bounce Cerberus's signed payment authority to an unapproved host.
+   Severity is bounded because EIP-3009 binds the recipient, so funds cannot be
+   redirected; but a live payload reaching a third party still breaks the
+   exact-resource threat model. Both paths now use `redirect: "error"`.
+2. **`z.number().positive()` accepts `Infinity`.** An infinite amount parsed as a
+   valid proposal. It was never spendable — the cap denies it and the atomic
+   conversion refuses it — but that made the safety a property of two downstream
+   checks rather than of the type. Now `.finite()`.
+
+**One test found to be incapable of failing.** The mutation matrix, not review, caught
+it: flipping `redirect:"error"` to `"follow"` left the redirect test green. The
+assertion lived inside the fetch stub, and its own AssertionError message contained
+the word "redirect", which the rejection matcher accepted as evidence the guard had
+fired. The test passed whether the guard existed or not.
+
+**New tooling, all wired into package.json.**
+
+- `npm run mutation` — removes one security guard at a time and requires the tests
+  claiming to detect it to fail. **12/12 guards proven detectable.** Refuses to run on
+  a dirty tree and asserts the tree is clean again before reporting PASS, so a
+  vulnerable mutation cannot escape into a commit.
+- `npm run sandbox` — Phase 7. Deterministic hostile workload through the real engine
+  and reservation layer; six invariants queried from PostgreSQL **after** the run
+  rather than from application counters. 1000 actions / 50 agents / 25 concurrent:
+  zero budget violations, zero duplicate effects, zero replay violations, on two
+  seeds, ~1050 actions/s, policy p50 4.3 ms / p99 17.7 ms.
+- `npm run preflight` — gates any funded run; exits non-zero until every precondition
+  is met. Prints public data only.
+- `npm run capture` / `evidence:manifest` / `evidence:verify` — terminal capture with
+  recorded exit codes, a manifest generated FROM the artifacts, and a validator that
+  checks digests, JSON, hash shapes and that no credential value appears in evidence.
+
+**Three harness bugs worth remembering**, each of which would have produced a *false*
+result: mutation anchors written with LF against a CRLF checkout silently failed to
+match every multi-line guard; the velocity-lock pattern omitted the one test that
+isolates it (same-mandate racers serialise on the *budget* lock); and the sandbox
+called `pick()` inside a `find()` predicate, redrawing a different id per element and
+destroying determinism.
+
+**Phase E is BLOCKED and stays blocked.** The three signers are not provisioned on
+this machine and the anchor signer would start with zero ETH. Nothing was fabricated;
+`docs/submission/LIVE_EVIDENCE_BLOCKED.md` has the exact provisioning and funding
+procedure. Known balances: Stage-1 payer `0x8cD059…34e7` has 13.72 USDC but only
+0.000097 ETH; payee `0x3EE24C…08c2` has 6.28 USDC and 0 ETH.
+
+**Screen capture was unavailable** — the browser pane does not composite frames
+headlessly. The dashboard was still driven and verified programmatically (its rendered
+output is in `artifacts/final-evidence/database/audit-state.txt`, showing real
+ALLOW/DENY/ESCALATE from the real engine, and the DENY drill-down reading
+"settlement: null — no payment request constructed"). `MANUAL_RECORDING_GUIDE.md`
+covers the gap step by step.
+
+**Attack H was also proven live**, not only in tests: against the running control
+plane, unauthenticated `GET /escalations` returned 401 and the reviewer token returned
+200, and the API bound `127.0.0.1` rather than `0.0.0.0`.
+
+**Verified.** typecheck clean; `npm test` **363/363 across 72 suites**;
+`npm run adversarial` 12/12 classes / 80 assertions; `npm run redteam` 9/9 / 60;
+`npm run mutation` 12/12; sandbox PASS on seeds 42 and 1337; dashboard build clean;
+contracts compile; `db:verify` all pass; `corepack pnpm audit` clean;
+`evidence:verify` PASS.
+
+Full detail: `docs/submission/REDTEAM_REPORT.md`,
+`docs/submission/LIVE_EVIDENCE_BLOCKED.md`, `docs/submission/JUDGE_SCRIPT.md`,
+`artifacts/final-evidence/`.
 
 ---
 

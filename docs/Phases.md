@@ -83,10 +83,21 @@ until the current phase passes its Definition of Done.
    dependency audit is clean. Residual limitations — inclusion rather than finality on
    the settlement path, and loopback scoping rather than service authentication — are
    documented in `docs/submission/SECURITY_REMEDIATION.md`.
-7. **Seeded judge-facing sandbox — not started.** Demonstrate shared-mandate and
-   adversarial cases without broadening the product.
-8. **Demo hardening and freeze — not started.** Run the complete hardened path,
-   capture evidence, then freeze.
+7. **Seeded judge-facing sandbox — complete and verified.** `npm run sandbox`
+   drives a deterministic hostile workload through the real engine and the real
+   reservation layer against real PostgreSQL, then checks six financial invariants by
+   querying the database afterwards rather than trusting application counters. At
+   1000 actions across 50 agents at concurrency 25 it reports zero budget violations,
+   zero duplicate financial effects and zero replay violations, on two independent
+   seeds. Same seed reproduces the workload exactly; different seeds diverge.
+8. **Demo hardening and freeze — evidence partially blocked.** The deep red-team
+   (`npm run redteam`, `npm run mutation`) is complete and found two real
+   vulnerabilities, both fixed. Terminal evidence, the machine-generated manifest and
+   its validator are in `artifacts/final-evidence/`. The fresh funded live run and
+   screen recordings could not be produced in this environment and are blocked on the
+   operator — see `docs/submission/LIVE_EVIDENCE_BLOCKED.md` and
+   `docs/submission/MANUAL_RECORDING_GUIDE.md`. Nothing has been fabricated in their
+   place.
 
 **Stage-2 Phase 1 Definition of Done:** the agent cannot access the x402 payment key
 or import the payer; DENY reaches neither authorizer nor executor; forged, expired,

@@ -1,5 +1,21 @@
 # Cerberus — evidence manifest
 
+> **Read this first.** This file contains evidence from two different builds, and the
+> distinction matters.
+>
+> - **HISTORICAL STAGE-1 EVIDENCE** — the public Base Sepolia transactions below are
+>   real, and they prove the x402 rail and the governance flow. They **predate** signer
+>   isolation, exact x402 challenge binding, chain-proven settlement and the trusted
+>   audit finalizer. They do not demonstrate the finalist-hardened architecture.
+> - **CURRENT FINALIST-HARDENED EVIDENCE** — **not yet captured.** No funded payment
+>   has run on the hardened path, and no hash has been moved into this category to
+>   stand in for one. The blocker and the exact procedure to clear it are in
+>   [LIVE_EVIDENCE_BLOCKED.md](./LIVE_EVIDENCE_BLOCKED.md).
+>
+> Everything that could be verified without a funded wallet — 363 tests, 12/12
+> adversarial classes, 9/9 red-team classes, 12/12 mutation guards, and the seeded
+> sandbox — is captured in [`artifacts/final-evidence/`](../../artifacts/final-evidence/).
+
 What has actually been produced, what it proves, and the known prototype limitations.
 Local evidence was captured on 13 August 2026; live Base Sepolia evidence was
 completed and independently re-verified on 14 August 2026.
@@ -68,7 +84,7 @@ reproducible on demand. It proves the gate is cross-process, not an in-memory pa
 
 ---
 
-## Completed — live settlement and on-chain anchoring
+## HISTORICAL STAGE-1 EVIDENCE — live settlement and on-chain anchoring
 
 **Network:** Base Sepolia (`eip155:84532`)
 
