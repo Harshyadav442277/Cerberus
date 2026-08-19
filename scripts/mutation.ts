@@ -75,7 +75,7 @@ const GUARDS: Guard[] = [
     },
     testFiles: ["packages/db/src/__tests__/reservations.test.ts"],
     testPattern:
-      "allows at most one of two concurrent actions below a limit of one|holds the configured transaction count across a concurrent burst",
+      "allows at most one of two concurrent actions below a limit of one|holds the configured transaction count across a concurrent burst|serializes one agent's velocity across distinct mandate budget locks",
   },
   {
     id: "post-402-recheck",
@@ -279,7 +279,16 @@ async function mutate(guard: Guard): Promise<Outcome> {
   if (guard.mutation.kind === "source") {
     const path = resolve(ROOT, guard.mutation.file);
     const original = readFileSync(path, "utf8");
-    if (!original.includes(guard.mutation.find)) {
+    // This checkout uses CRLF, and the anchors above are written with LF only.
+    // Matching therefore happens on a normalised copy, and the original line-ending
+    // style is restored on write. Without this every MULTI-line anchor silently fails
+    // to match while single-line ones succeed, so a guard gets misreported as
+    // UNDETECTED — a false finding about the suite rather than about the code.
+    const usesCrlf = original.includes("\r\n");
+    const normalised = usesCrlf ? original.replaceAll("\r\n", "\n") : original;
+    const toDisk = (text: string) =>
+      usesCrlf ? text.replaceAll("\n", "\r\n") : text;
+    if (!normalised.includes(guard.mutation.find)) {
       process.stdout.write("SKIP (anchor text not found — guard may have been refactored)\n");
       return {
         id: guard.id,
@@ -290,7 +299,11 @@ async function mutate(guard: Guard): Promise<Outcome> {
         note: "mutation anchor text not found; matrix entry is stale",
       };
     }
-    writeFileSync(path, original.replace(guard.mutation.find, guard.mutation.replace), "utf8");
+    writeFileSync(
+      path,
+      toDisk(normalised.replace(guard.mutation.find, guard.mutation.replace)),
+      "utf8",
+    );
     restore = async () => writeFileSync(path, original, "utf8");
   } else {
     const { disable, restore: put } = guard.mutation;
