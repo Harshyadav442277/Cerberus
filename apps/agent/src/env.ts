@@ -28,6 +28,11 @@ export function loadAgentProcessEnv(options: { requireDatabase?: boolean } = {})
   delete process.env.DATABASE_URL;
   delete process.env.CONTROL_PLANE_DATABASE_URL;
   delete process.env.EXECUTOR_DATABASE_URL;
+  // The audit-anchor signer authors final audit proof. An agent that could load it
+  // could manufacture its own evidence of having behaved, so the untrusted process
+  // genuinely lacks the credential rather than merely declining to use it.
+  delete process.env.AUDIT_ANCHOR_PRIVATE_KEY;
+  delete process.env.ANCHOR_DATABASE_URL;
 
   const databaseUrl =
     process.env.AGENT_DATABASE_URL?.trim() || agent["AGENT_DATABASE_URL"]?.trim();
@@ -44,8 +49,10 @@ export function loadAgentProcessEnv(options: { requireDatabase?: boolean } = {})
     const found = optional(name);
     if (found) process.env[name] = found;
   }
-  const anchorKey = optional("AUDIT_ANCHOR_PRIVATE_KEY");
-  if (anchorKey) process.env.AUDIT_ANCHOR_PRIVATE_KEY = anchorKey;
+  // AUDIT_ANCHOR_ADDRESS above is a public contract address, kept so the agent can
+  // display anchor state. The signing key is deliberately not read here, is not
+  // present in .env.agent.example, and is deleted above even if an operator exported
+  // it before launch. Anchoring is performed by the trusted anchor worker.
 }
 
 export const agentEnv = {
