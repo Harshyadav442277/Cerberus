@@ -1,27 +1,61 @@
 /**
- * Re-verifies every anchored audit record against its stored digest.
- *
- * This is the tamper-evidence demonstration in executable form, and it is the
- * Phase 5 DoD check: read each record back out of Postgres, hash it again, and
- * confirm the result reproduces the digest that was anchored. If anyone edited a
- * record after the fact, its hash no longer matches and this reports MISMATCH.
+ * Re-verifies every anchored audit record against Base Sepolia.
  *
  * Run: npm run audit:verify
+ *
+ * This does not trust the database about whether a record is on chain. For each
+ * anchored row it recomputes the digest from the stored record, fetches the anchor
+ * transaction's receipt from the RPC, checks the transaction succeeded and was sent
+ * to the expected AuditAnchor contract, decodes the Anchored event, and requires the
+ * digest read FROM THE CHAIN to equal both the recomputed digest and the one the
+ * database recorded.
+ *
+ * Exit codes:
+ *   0  every anchored record was proven on chain
+ *   1  at least one record MISMATCHED, or could not be verified
+ *
+ * An RPC that cannot answer produces UNVERIFIED and a non-zero exit — never a pass.
  */
 import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
-import { getAuditLogRecord, closePool, getPool } from "@safr/db";
-import { auditRecordHash } from "../canonical.js";
+import { closePool, getAuditLogRecord, getPool } from "@safr/db";
 import type { AuditAnchorRow } from "../repository.js";
+import {
+  createAnchorChainReader,
+  verifyAnchorOnChain,
+  type AnchorVerification,
+} from "../verify-chain.js";
 
 loadEnv({ path: resolve(import.meta.dirname, "../../../../.env"), quiet: true });
 
-let failures = 0;
+const BASE_SEPOLIA_CHAIN_ID = 84532;
+const contractAddress = process.env.AUDIT_ANCHOR_ADDRESS?.trim() ?? "";
+const rpcUrl = process.env.EVM_RPC_URL?.trim() || "https://sepolia.base.org";
+const minConfirmations = BigInt(process.env.AUDIT_MIN_CONFIRMATIONS?.trim() || "0");
 
-function report(status: "OK" | "MISMATCH" | "WARN", auditId: string, detail: string): void {
-  if (status === "MISMATCH") failures++;
-  const label = status.padEnd(8);
-  console.log(`  ${label} ${auditId.padEnd(20)} ${detail}`);
+let mismatches = 0;
+let unverified = 0;
+let verified = 0;
+let shallow = 0;
+
+function report(result: AnchorVerification): void {
+  if (result.status === "verified") {
+    verified += 1;
+    const depth = `${result.confirmations} conf`;
+    const flag = result.belowConfirmationThreshold ? "  BELOW THRESHOLD" : "";
+    console.log(
+      `  VERIFIED ${result.auditId.padEnd(20)} ${result.digest.slice(0, 18)}…  ${result.txHash}  ${depth}${flag}`,
+    );
+    if (result.belowConfirmationThreshold) shallow += 1;
+    return;
+  }
+  if (result.status === "mismatch") {
+    mismatches += 1;
+    console.log(`  MISMATCH ${result.auditId.padEnd(20)} ${result.reason} — ${result.detail}`);
+    return;
+  }
+  unverified += 1;
+  console.log(`  UNVERIF. ${result.auditId.padEnd(20)} ${result.reason} — ${result.detail}`);
 }
 
 async function main(): Promise<void> {
@@ -30,48 +64,52 @@ async function main(): Promise<void> {
        FROM audit_anchor ORDER BY created_at`,
   );
 
-  console.log(`\n  Verifying ${anchors.length} anchored record(s)\n`);
+  console.log(`\n  Verifying ${anchors.length} anchored record(s) against Base Sepolia`);
+  console.log(`  contract  ${contractAddress || "(AUDIT_ANCHOR_ADDRESS not set)"}`);
+  console.log(`  rpc       ${rpcUrl}\n`);
 
   if (anchors.length === 0) {
     console.log("  Nothing to verify. Run `npm run demo` first.\n");
     return;
   }
 
-  for (const anchor of anchors) {
-    const record = await getAuditLogRecord(anchor.audit_id);
-
-    if (record === null) {
-      // An anchor without a record means a record was deleted — exactly the kind
-      // of tampering the anchor exists to expose.
-      report("MISMATCH", anchor.audit_id, "anchored record no longer exists in audit_log");
-      continue;
-    }
-
-    const recomputed = auditRecordHash(record);
-
-    if (recomputed !== anchor.record_hash) {
-      report("MISMATCH", anchor.audit_id, `stored ${anchor.record_hash} != recomputed ${recomputed}`);
-      continue;
-    }
-
-    if (anchor.status === "anchored" && anchor.anchor_tx_hash) {
-      report("OK", anchor.audit_id, `${recomputed.slice(0, 18)}… on chain ${anchor.anchor_tx_hash}`);
-    } else if (anchor.status === "failed") {
-      report("WARN", anchor.audit_id, `hash verified; not on chain — ${anchor.error ?? "unknown"}`);
-    } else {
-      report("WARN", anchor.audit_id, `hash verified; anchoring ${anchor.status}`);
-    }
+  if (!contractAddress) {
+    // Without the contract address there is no way to tell a real anchor from a
+    // transaction that merely exists, so this refuses rather than degrading to the
+    // old database-only check.
+    console.log("  AUDIT_ANCHOR_ADDRESS is not set — on-chain verification is impossible.\n");
+    process.exitCode = 1;
+    return;
   }
 
-  const onChain = anchors.filter((a) => a.status === "anchored").length;
-  console.log(`\n  ${anchors.length - failures}/${anchors.length} records reproduce their digest`);
-  console.log(`  ${onChain}/${anchors.length} anchored on Base Sepolia`);
+  const chain = createAnchorChainReader(rpcUrl);
+  for (const anchor of anchors) {
+    const record = await getAuditLogRecord(anchor.audit_id);
+    report(
+      await verifyAnchorOnChain(record, anchor, {
+        contractAddress,
+        expectedChainId: BASE_SEPOLIA_CHAIN_ID,
+        chain,
+        minConfirmations,
+      }),
+    );
+  }
 
-  if (failures > 0) {
-    console.log(`\n  ${failures} record(s) FAILED verification — audit log has been tampered with\n`);
+  console.log(`\n  ${verified}/${anchors.length} proven on chain`);
+  if (unverified > 0) console.log(`  ${unverified} could not be verified`);
+  if (mismatches > 0) console.log(`  ${mismatches} MISMATCHED`);
+  if (shallow > 0) {
+    console.log(`  ${shallow} below the ${minConfirmations}-confirmation threshold`);
+  }
+
+  if (mismatches > 0) {
+    console.log(`\n  ${mismatches} record(s) FAILED verification — the audit log does not match the chain\n`);
+    process.exitCode = 1;
+  } else if (unverified > 0) {
+    console.log("\n  Not all records could be proven. UNVERIFIED is not a pass.\n");
     process.exitCode = 1;
   } else {
-    console.log("\n  No tampering detected.\n");
+    console.log("\n  Every anchored record is proven by its own on-chain transaction.\n");
   }
 }
 
