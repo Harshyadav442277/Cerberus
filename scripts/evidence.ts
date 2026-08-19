@@ -20,6 +20,7 @@ import { extname, join, relative, resolve } from "node:path";
 const ROOT = resolve(import.meta.dirname, "..");
 const EVIDENCE = resolve(ROOT, "artifacts/final-evidence");
 const MANIFEST = resolve(EVIDENCE, "manifest.json");
+const CAPTURE_INDEX = resolve(EVIDENCE, "terminal/index.json");
 
 type Mode = "manifest" | "verify";
 const mode = (process.argv[2] ?? "manifest") as Mode;
@@ -99,7 +100,17 @@ function fromLog(suffix: string, pattern: RegExp): string | null {
 }
 
 function buildManifest(): Record<string, unknown> {
-  const captures = readJson<CaptureRecord[]>(resolve(EVIDENCE, "terminal/index.json")) ?? [];
+  const captureIndex = readJson<CaptureRecord[]>(CAPTURE_INDEX) ?? [];
+  // A historical index entry is not evidence when its log was never committed. Only
+  // describe captures whose bytes are actually present and still match the recorded
+  // digest; the validator independently checks the same facts on read-back.
+  const captures = captureIndex.filter((capture) => {
+    const path = resolve(EVIDENCE, capture.log);
+    return existsSync(path) && sha256(path) === capture.logSha256;
+  });
+  // Keep the public index as portable as the manifest instead of retaining stale
+  // machine-local records that point at absent or changed logs.
+  writeFileSync(CAPTURE_INDEX, `${JSON.stringify(captures, null, 2)}\n`, "utf8");
   const mutation = readJson<Record<string, unknown>>(
     resolve(EVIDENCE, "redteam/mutation-matrix.json"),
   );
@@ -120,8 +131,17 @@ function buildManifest(): Record<string, unknown> {
     repository: {
       sha: git(["rev-parse", "HEAD"]),
       branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
-      // Any tracked modification means the evidence does not describe the commit.
-      workingTreeClean: git(["status", "--porcelain", "--untracked-files=no"]) === "",
+      // Evidence generation necessarily changes the evidence directory. What matters
+      // is that the source/configuration under test still matches the named commit.
+      sourceTreeClean:
+        git([
+          "status",
+          "--porcelain",
+          "--untracked-files=no",
+          "--",
+          ".",
+          ":!artifacts/final-evidence",
+        ]) === "",
     },
     network: {
       name: "Base Sepolia",
@@ -187,9 +207,9 @@ function buildManifest(): Record<string, unknown> {
     files: collectFiles(),
     knownLimitations: [
       "No fresh funded live payment on the hardened path. Phase E is blocked on operator key provisioning and funding.",
-      "Automated screen capture was unavailable in the build environment; see docs/submission/MANUAL_RECORDING_GUIDE.md.",
+      "A baseline adversarial recording is present; no fresh funded live-payment recording is claimed.",
       "Settlement proves exact successful chain inclusion, not finality. No confirmation threshold gates the settlement path.",
-      "Trusted services are loopback scoped. This is a deployment boundary, not service-to-service authentication.",
+      "Sensitive control-plane routes use bearer authentication and restricted browser CORS; loopback binding remains defense in depth. TLS and credential rotation are deployment responsibilities.",
       "Process isolation is by OS boundary and database role; host-level compromise defeats it.",
     ],
   };
@@ -332,6 +352,15 @@ function validate(): Problem[] {
   };
   for (const capture of manifest.captures as Array<Record<string, unknown>>) {
     const name = String(capture.name);
+    const log = String(capture.log);
+    const logPath = resolve(EVIDENCE, log);
+    if (!existsSync(logPath)) {
+      problems.push({ severity: "FAIL", detail: `capture names a missing log: ${name} -> ${log}` });
+      continue;
+    }
+    if (sha256(logPath) !== capture.sha256) {
+      problems.push({ severity: "FAIL", detail: `capture log digest mismatch: ${name} -> ${log}` });
+    }
     if (capture.exitCode === null || capture.exitCode === undefined) {
       problems.push({ severity: "FAIL", detail: `capture has no exit code: ${name}` });
     } else if (capture.exitCode !== 0) {
@@ -363,13 +392,14 @@ function validate(): Problem[] {
     "EVM_PRIVATE_KEY",
     "EXECUTOR_EVM_PRIVATE_KEY",
     "EXECUTION_AUTH_PRIVATE_KEY",
+    "EXECUTION_API_TOKEN",
     "AUDIT_ANCHOR_PRIVATE_KEY",
     "REVIEWER_API_TOKEN",
     "REVIEWER_DASHBOARD_PASSWORD",
     "ANTHROPIC_API_KEY",
   ];
   const secretValues = new Set<string>();
-  for (const file of [".env", ".env.agent", ".env.authorizer", ".env.executor", ".env.anchor", ".env.reconciler"]) {
+  for (const file of [".env", ".env.agent", ".env.authorizer", ".env.executor", ".env.anchor", ".env.reconciler", ".env.reviewer"]) {
     const path = resolve(ROOT, file);
     if (!existsSync(path)) continue;
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -402,6 +432,18 @@ function validate(): Problem[] {
       severity: "FAIL",
       detail: "manifest claims live evidence is not blocked but records no ALLOW run",
     });
+  }
+
+  // Portability means a fresh clone contains every byte in the manifest. Files that
+  // only happen to exist in one developer's ignored working tree are not evidence.
+  for (const entry of manifest.files as FileEntry[]) {
+    const tracked = spawnSync("git", ["ls-files", "--error-unmatch", `artifacts/final-evidence/${entry.path}`], {
+      cwd: ROOT,
+      stdio: "ignore",
+    });
+    if (tracked.status !== 0) {
+      problems.push({ severity: "FAIL", detail: `evidence file is not tracked by git: ${entry.path}` });
+    }
   }
 
   return problems;

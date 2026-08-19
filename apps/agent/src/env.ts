@@ -57,6 +57,7 @@ export function loadAgentProcessEnv(options: { requireDatabase?: boolean } = {})
 
 export const agentEnv = {
   apiBaseUrl: optional("NEXT_PUBLIC_API_URL", "http://localhost:4050"),
+  executionApiToken: optional("EXECUTION_API_TOKEN"),
   executorBaseUrl: optional("EXECUTOR_URL", "http://localhost:4060"),
   merchantBaseUrl: optional("MERCHANT_BASE_URL", "http://localhost:4021"),
 };

@@ -288,9 +288,10 @@ Stated plainly. None of these is claimed as fixed anywhere in this repository.
   and can threshold confirmation depth; the settlement path deliberately does not gate
   on it, because doing so would make every demo ALLOW report `OUTCOME_UNKNOWN` for
   several blocks.
-- **Loopback scoping, not service authentication.** Trusted services bind `127.0.0.1`.
-  This is the private-network deployment boundary, not service-to-service auth. No
-  public-internet safety is claimed.
+- **Authentication is not a complete internet perimeter.** Trusted services bind
+  `127.0.0.1`; capability issuance and sensitive control-plane routes also require
+  separate bearer credentials and browser CORS is allowlisted. A public deployment
+  still needs TLS, rotation, rate limiting, monitoring and perimeter controls.
 - **Same-host compromise.** Process isolation is by operating-system boundary and
   database role. An attacker with root on the host defeats it, as they would defeat
   any single-machine deployment.

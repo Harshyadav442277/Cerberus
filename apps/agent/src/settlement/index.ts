@@ -16,12 +16,18 @@ async function errorCode(response: Response): Promise<string> {
   return typeof body?.error === "string" ? body.error : `HTTP ${response.status}`;
 }
 
-export function createAuthorizationPort(baseUrl = agentEnv.apiBaseUrl): AuthorizationPort {
+export function createAuthorizationPort(
+  baseUrl = agentEnv.apiBaseUrl,
+  token = agentEnv.executionApiToken,
+): AuthorizationPort {
   return {
     async issue(auditId: string): Promise<SignedExecutionAuthorization> {
       const response = await fetch(`${baseUrl}/execution-authorizations`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({ audit_id: auditId }),
         signal: AbortSignal.timeout(10_000),
       });

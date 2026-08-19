@@ -119,7 +119,11 @@ export function windowHours(window: string): number {
   const match = /^(\d+)\s*([hd])$/i.exec(window.trim());
   if (!match) throw new Error(`unsupported rolling window: ${window}`);
   const value = Number(match[1]);
-  return match[2]!.toLowerCase() === "d" ? value * 24 : value;
+  const hours = match[2]!.toLowerCase() === "d" ? value * 24 : value;
+  if (!Number.isSafeInteger(hours) || hours <= 0) {
+    throw new Error(`rolling window must be a positive safe duration: ${window}`);
+  }
+  return hours;
 }
 
 export interface ReserveBudgetInput {
@@ -390,7 +394,6 @@ async function findLive(
  * called, so no database transaction is ever open across a network round trip.
  */
 export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveBudgetResult> {
-  const at = input.at ?? new Date().toISOString();
   const ttlSeconds = input.ttlSeconds ?? 120;
   if (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0 || ttlSeconds > 3600) {
     throw new Error("reservation TTL must be between 1 and 3600 seconds");
@@ -411,6 +414,15 @@ export async function reserveBudget(input: ReserveBudgetInput): Promise<ReserveB
     // different agents still converge on one shared budget lock without deadlock.
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [velocityKey]);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [budgetKey]);
+
+    // Capture the default clock only after this request owns both serialization
+    // locks. If two callers timestamp before waiting, the later lock winner can carry
+    // an instant microscopically earlier than the first winner's counts_at and fail
+    // to see the reservation that just committed. Explicit `input.at` remains for
+    // deterministic historical/boundary tests.
+    const at = input.at ?? (
+      await client.query<{ at: string }>("SELECT clock_timestamp() AS at")
+    ).rows[0]!.at;
 
     // Suspension is enforced inside the same transaction that commits capacity, so
     // there is no window in which an agent suspended before this point can still

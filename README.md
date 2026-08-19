@@ -42,7 +42,7 @@ Cerberus places that missing control point before execution. Clear violations ar
   one corporate mandate — cannot overspend a rolling window.
 - The dashboard provides a live audit feed, drill-down, threshold-versus-actual evidence, and one-click review.
 - Terminal audit records are canonically hashed and anchored asynchronously to Base Sepolia.
-- **330 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
+- **381 automated tests**, TypeScript validation, database verification, and the Next.js production build pass.
 
 ## Current finalist build
 
@@ -52,19 +52,19 @@ labelled as such.
 
 | | |
 |---|---|
-| **Commit** | `5a0f367` |
-| **Automated tests** | **363 passed / 363**, 72 suites, 0 failed |
+| **Source identity** | Recorded by SHA in the generated final-evidence manifest; no hand-maintained “current commit” value |
+| **Automated tests** | **381 passed / 381**, 78 suites, 0 failed |
 | **Adversarial suite** (`npm run adversarial`) | **12/12 attack classes**, 80 assertions |
-| **Security red team** (`npm run redteam`) | **9/9 attack classes**, 60 assertions |
+| **Security red team** (`npm run redteam`) | **12/12 attack classes**, 70 assertions |
 | **Mutation matrix** (`npm run mutation`) | **12/12 security guards proven detectable** |
 | **Seeded sandbox** (`npm run sandbox`) | 1000 actions / 50 agents / 25 concurrent — **0 budget violations, 0 duplicate effects, 0 replay violations** |
 | **Dependency audit** (`corepack pnpm audit`) | **no known vulnerabilities** |
 | **Typecheck / dashboard build / contract compile** | all clean |
-| **Continuous integration** | **green** — GitHub Actions reproduces the full gate on a clean Linux runner with no wallet secrets |
+| **Continuous integration** | GitHub Actions reproduces the full gate on a clean Linux runner with no wallet secrets; verify the status for the commit being deployed |
 | **Database verification** (`npm run db:verify`) | all checks pass |
 | **Fresh live evidence** | **BLOCKED — not captured.** The three signers are not provisioned on this machine and no funded payment has been made on the hardened path. Nothing has been fabricated; see [LIVE_EVIDENCE_BLOCKED.md](docs/submission/LIVE_EVIDENCE_BLOCKED.md). |
 | **Phase 7 (seeded sandbox)** | **Complete.** `npm run sandbox` |
-| **Screen recordings** | **Not captured.** Automated capture was unavailable in the build environment; see [MANUAL_RECORDING_GUIDE.md](docs/submission/MANUAL_RECORDING_GUIDE.md). |
+| **Screen recordings** | A baseline adversarial recording is indexed in final evidence; no fresh funded live-payment recording is claimed |
 
 ### Security posture
 
@@ -103,10 +103,11 @@ amount that parsed as a valid proposal — and one security test that could not 
 
 Stated plainly, because a security claim is only worth what its exceptions admit:
 
-- **Loopback-scoped, not internet-safe.** The control plane and executor bind
-  `127.0.0.1` by default. This prototype implements the private-network deployment
-  boundary, not service-to-service authentication. No public-internet safety is
-  claimed.
+- **Authenticated but not a complete internet perimeter.** Capability issuance uses
+  its own service bearer credential; reviewer and sensitive dashboard reads use a
+  separate reviewer bearer credential; browser CORS is allowlisted; and both trusted
+  services bind `127.0.0.1` by default. A public deployment still needs TLS,
+  credential rotation, rate limiting, monitoring and network-level controls.
 - **Inclusion, not finality.** Settlement proof requires an exact successful on-chain
   transfer. It does **not** wait for a confirmation threshold. A production deployment
   should wait for a configurable confirmation/finality depth before treating
@@ -181,11 +182,12 @@ the compliance decision.
 ```bash
 git clone https://github.com/Harshyadav442277/Cerberus.git
 cd Cerberus
-npx --yes pnpm@10.34.5 install
+corepack enable
+pnpm install --frozen-lockfile
 ```
 
-The install uses pnpm workspaces through the npx cache; pnpm is not installed into
-the repository. All remaining commands are plain `npm run` commands.
+Corepack selects the exact pnpm version pinned in `package.json`. All remaining
+commands are plain `npm run` commands.
 
 ### 2. Create the local environment
 
@@ -275,15 +277,17 @@ npm run contracts:compile
 Expected result:
 
 - TypeScript exits without errors.
-- The test runner reports **363 tests, 72 suites, 363 passed, 0 failed**.
+- The test runner reports **381 tests, 78 suites, 381 passed, 0 failed**, then restores
+  the canonical demo seed before returning.
   `npm test` requires the Postgres from step 3 to be running: the atomic-reservation
   concurrency and database-privilege tests assert PostgreSQL properties and would
   prove nothing against a stub. The agent-role attacks must return permission denied.
 - The judge-facing adversarial verifier reports **12/12 attack classes** and **80
   selected assertions** passed, with zero failed, skipped, or cancelled assertions.
   It validates named TAP evidence and fails if a class matches no tests.
-- The security red-team gate (`npm run redteam`) reports **9/9 attack classes** and
-  **60 assertions** passed, covering the finalist hardening round.
+- The security red-team gate (`npm run redteam`) reports **12/12 attack classes** and
+  **70 assertions** passed, covering the finalist hardening round, capability/read
+  authentication, trusted issuance time, paid-request timeout, and the real agent role.
 - The mutation matrix (`npm run mutation`) reports **12/12 security guards proven
   detectable** and leaves the working tree clean. It removes each guard in turn and
   requires the tests that claim to catch it to fail, because a security suite that
@@ -291,8 +295,8 @@ Expected result:
 - The seeded sandbox (`npm run sandbox -- --seed 42 --agents 50 --actions 1000
   --concurrency 25`) reports **0 budget violations, 0 duplicate effects, 0 replay
   violations**, each queried from PostgreSQL after the run.
-- The Next.js production build completes and lists eight application routes, including
-  the two server-only reviewer proxies.
+- The Next.js production build completes and includes server-only authenticated
+  reviewer/runtime proxies.
 - `AuditAnchor` compiles successfully and reports 263 bytes of deployable bytecode.
 
 The tests include the structural guarantee that `DENY` reaches neither authorization

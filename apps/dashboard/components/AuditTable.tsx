@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  API_URL,
+  AUDIT_STREAM_URL,
   explorerTx,
   fetchFeed,
   formatTime,
@@ -45,7 +45,7 @@ export function AuditTable({ initial }: { initial: FeedItem[] }) {
 
   // SSE with 1s polling fallback (Design §9 / Phases.md descope ladder).
   useEffect(() => {
-    const es = new EventSource(`${API_URL}/audit/stream`);
+    const es = new EventSource(AUDIT_STREAM_URL);
     es.addEventListener("open", () => setLive(true));
     es.addEventListener("error", () => setLive(false));
     es.addEventListener("audit", (ev) => {

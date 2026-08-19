@@ -297,7 +297,9 @@ async function runAction(planned: PlannedAction): Promise<ActionOutcome> {
 
   // A duplicate re-proposes an existing action_id. insertProposedAction is idempotent
   // on conflict, so this models a genuine resubmission rather than a new proposal.
-  await insertProposedAction(action).catch(() => undefined);
+  // The repository insert is already idempotent on action_id. Any rejection here is
+  // therefore a real setup/data failure, not a duplicate to suppress.
+  await insertProposedAction(action);
 
   const policyStart = performance.now();
   const [mandate, counters] = await Promise.all([
@@ -308,20 +310,30 @@ async function runAction(planned: PlannedAction): Promise<ActionOutcome> {
   const disposition = evaluate(action, mandate, counters);
   const policyLatencyMs = performance.now() - policyStart;
 
-  const auditId = `${RUN}_audit_${action.action_id.split("_").pop()}${duplicateOf ? "_dup" : ""}`;
-  await insertAuditLogRecord({
-    audit_id: auditId,
-    action_id: action.action_id,
-    agent_id: action.agent_id,
-    mandate_id: mandate.mandate_id,
-    mandate_version: mandate.version,
-    disposition: disposition.disposition,
-    reason: disposition.reason,
-    rule_triggered: disposition.rule,
-    evaluated_at: new Date().toISOString(),
-    human_review: null,
-    settlement: null,
-  }).catch(() => undefined);
+  // A resubmission is the same proposal and therefore the same audit decision. Using
+  // a new audit ID for each arrival lets concurrent duplicates race into different
+  // audit rows while only one action exists, and swallowing every insert error can
+  // then send a reservation toward a nonexistent audit. The stable ID makes retry
+  // identity explicit. Only the expected primary-key race is idempotent; every other
+  // database error must fail the sandbox loudly.
+  const auditId = `${RUN}_audit_${action.action_id.split("_").pop()}`;
+  try {
+    await insertAuditLogRecord({
+      audit_id: auditId,
+      action_id: action.action_id,
+      agent_id: action.agent_id,
+      mandate_id: mandate.mandate_id,
+      mandate_version: mandate.version,
+      disposition: disposition.disposition,
+      reason: disposition.reason,
+      rule_triggered: disposition.rule,
+      evaluated_at: new Date().toISOString(),
+      human_review: null,
+      settlement: null,
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "23505") throw error;
+  }
 
   // Only a permissive disposition reaches the financial layer. DENY and ESCALATE stop
   // here, which is the whole point: no capacity is committed for a refused proposal.
@@ -548,10 +560,10 @@ async function main(): Promise<void> {
 
   // A resubmitted proposal can be stopped at either of two layers, and both count as
   // correctly handled. Policy may refuse it outright (DENY/ESCALATE, so it never
-  // reaches the financial layer at all), or the reservation layer may recognise it —
-  // as "existing" for a literal retry, or "context_mismatch" when a second audit
-  // record points at capacity committed for the first. The only wrong answer is a
-  // duplicate that creates a SECOND reservation.
+  // reaches the financial layer at all), or the reservation layer may recognise the
+  // stable action/audit identity as "existing". A context mismatch is also a safe
+  // fail-closed outcome. The only wrong answer is a duplicate that creates a SECOND
+  // reservation.
   const duplicates = outcomes.filter((o) => o.duplicate);
   const duplicatesSubmitted = duplicates.length;
   const duplicatesRefusedByPolicy = duplicates.filter((o) => o.reserveOutcome === null).length;
@@ -619,14 +631,15 @@ async function main(): Promise<void> {
     );
   }
 
-  invariants.push({
+  const replayInvariant = {
     label: "no proposal reserved twice across the run",
     violations: replayViolations.length,
     detail:
       replayViolations.length === 0
         ? `${duplicatesSubmitted} duplicate(s) submitted; no action_id reserved more than once`
         : replayViolations.map(([id, n]) => `${id} reserved ${n} times`).join("; "),
-  });
+  };
+  invariants.push(replayInvariant);
   console.log(
     `  ${replayViolations.length === 0 ? "PASS" : "FAIL"}  ${"no proposal reserved twice across the run".padEnd(46)} ${invariants.at(-1)!.detail}`,
   );
@@ -635,7 +648,7 @@ async function main(): Promise<void> {
   console.log("");
   console.log(pad("Budget violations", invariants[0]!.violations));
   console.log(pad("Duplicate effects", invariants[1]!.violations));
-  console.log(pad("Replay violations", invariants[2]!.violations));
+  console.log(pad("Replay violations", replayInvariant.violations));
   console.log("");
   console.log(`RESULT                  ${violations === 0 ? "PASS" : "FAIL"}`);
   console.log("");
@@ -680,16 +693,18 @@ async function main(): Promise<void> {
     result: violations === 0 ? "PASS" : "FAIL",
   };
 
-  const { writeFileSync, mkdirSync } = await import("node:fs");
-  const { resolve } = await import("node:path");
-  const dir = resolve(import.meta.dirname, "../artifacts/final-evidence/sandbox");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    resolve(dir, `seed-${CONFIG.seed}.json`),
-    `${JSON.stringify(report, null, 2)}\n`,
-    "utf8",
-  );
-  console.log(`  report  artifacts/final-evidence/sandbox/seed-${CONFIG.seed}.json\n`);
+  if (process.env.CERBERUS_EVIDENCE_OUTPUT === "1") {
+    const { writeFileSync, mkdirSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const dir = resolve(import.meta.dirname, "../artifacts/final-evidence/sandbox");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      resolve(dir, `seed-${CONFIG.seed}.json`),
+      `${JSON.stringify(report, null, 2)}\n`,
+      "utf8",
+    );
+    console.log(`  report  artifacts/final-evidence/sandbox/seed-${CONFIG.seed}.json\n`);
+  }
 
   // Sandbox rows are namespaced and removed by default so a run cannot pollute the
   // demo database. --keep leaves them for inspection.

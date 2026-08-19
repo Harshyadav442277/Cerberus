@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Trusted scripted reviewer control plane for deterministic Cerberus demos.",
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "test": "node --import tsx --test src/*.test.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.7"

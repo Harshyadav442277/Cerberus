@@ -1,4 +1,5 @@
 export { closePool, getDatabaseUrl, getPool } from "./pool.js";
+export type { DatabaseReader } from "./pool.js";
 export {
   countByDisposition,
   getActiveMandate,

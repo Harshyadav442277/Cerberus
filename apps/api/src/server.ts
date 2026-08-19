@@ -22,12 +22,13 @@ import { escalationsRouter } from "./routes/escalations.js";
 import { healthRouter } from "./routes/health.js";
 import { executionAuthorizationsRouter } from "./routes/execution-authorizations.js";
 import { apiEnv, configureControlPlaneDatabase } from "./env.js";
+import { createCorsOptions } from "./cors-policy.js";
 
 const PORT = apiEnv.port;
 configureControlPlaneDatabase();
 
 const app = express();
-app.use(cors({ origin: true }));
+app.use(cors(createCorsOptions(apiEnv.corsOrigins)));
 app.use(express.json({ limit: "32kb" }));
 
 app.use("/health", healthRouter);
@@ -57,14 +58,13 @@ app.use(
  * Loopback by default — Remediation 6B.
  *
  * `app.listen(PORT)` binds 0.0.0.0, which publishes this control plane to every
- * interface on the host. A signed Execution Authorization stops an external caller
- * mutating an amount, but it does not stop one who guesses an audit ID from
- * triggering authorization issuance or execution timing, and that is authority
- * triggering nobody asked for.
+ * interface on the host. All authority-bearing and sensitive read routes require
+ * bearer credentials, and browser CORS is allowlisted. Loopback remains an
+ * independent defense-in-depth boundary rather than the authentication mechanism.
  *
- * This prototype's trusted service interfaces are therefore loopback-scoped. Binding
- * elsewhere is possible but deliberately explicit: an operator who sets
- * API_BIND_HOST has chosen to expose it and is responsible for what sits in front.
+ * Binding elsewhere is possible but deliberately explicit: an operator who sets
+ * API_BIND_HOST has chosen to expose it and remains responsible for TLS, credential
+ * rotation and perimeter controls.
  */
 const { host: HOST, exposed } = resolveBindHost(process.env.API_BIND_HOST);
 

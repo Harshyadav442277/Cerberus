@@ -81,7 +81,7 @@ until the current phase passes its Definition of Done.
    passes 330/330 tests across 61 suites; adversarial holds at 12/12 classes with 80
    assertions; the new `npm run redteam` gate passes 9/9 classes with 60 assertions;
    dependency audit is clean. Residual limitations — inclusion rather than finality on
-   the settlement path, and loopback scoping rather than service authentication — are
+   the settlement path, and deployment hardening beyond bearer auth plus loopback — are
    documented in `docs/submission/SECURITY_REMEDIATION.md`.
 7. **Seeded judge-facing sandbox — complete and verified.** `npm run sandbox`
    drives a deterministic hostile workload through the real engine and the real

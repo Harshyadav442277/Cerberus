@@ -11,8 +11,13 @@ import {
   listAuditFeed,
 } from "@safr/db";
 import { liveHub } from "../live.js";
+import { apiEnv } from "../env.js";
+import { createReviewerAuth } from "../reviewer-auth.js";
 
 export const auditRouter = Router();
+auditRouter.use(
+  createReviewerAuth({ token: apiEnv.reviewerApiToken, reviewerId: apiEnv.reviewerId }),
+);
 
 const DEFAULT_AGENT = "agent_treasury_01";
 

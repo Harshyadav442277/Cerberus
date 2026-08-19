@@ -15,5 +15,5 @@ export function middleware(request: NextRequest): Response {
 }
 
 export const config = {
-  matcher: ["/escalations/:path*", "/api/escalations/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

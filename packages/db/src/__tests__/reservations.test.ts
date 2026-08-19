@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { deepStrictEqual, ok, rejects, strictEqual } from "node:assert/strict";
+import { deepStrictEqual, ok, rejects, strictEqual, throws } from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { closePool, getPool } from "../pool.js";
 import {
@@ -98,6 +98,7 @@ describe("atomic budget reservations", () => {
   it("parses the mandate rolling window rather than assuming 24h", () => {
     strictEqual(windowHours("24h"), 24);
     strictEqual(windowHours("7d"), 168);
+    throws(() => windowHours("0h"), /positive/);
   });
 
   // ── 1 ─────────────────────────────────────────────────────────────────────────

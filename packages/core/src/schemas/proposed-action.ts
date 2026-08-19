@@ -18,7 +18,16 @@ export const ProposedActionPayloadSchema = z.object({
   // every finite ceiling), so it was never spendable -- but an amount that cannot be
   // represented has no business parsing as a valid proposal in the first place, and
   // relying on a downstream check to catch it makes the safety accidental.
-  amount: z.number().positive().finite(),
+  amount: z
+    .number()
+    .finite()
+    .min(0.000001, "amount must be at least one USDC atomic unit")
+    .refine(
+      (value) =>
+        Number(value.toFixed(6)) === value &&
+        Number.isSafeInteger(Math.round(value * 1_000_000)),
+      "amount must be exactly representable with at most 6 decimal places",
+    ),
   currency: z.string().min(1),
   purpose: z.string().min(1),
   reference: z.string().min(1),

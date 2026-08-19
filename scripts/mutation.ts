@@ -206,10 +206,8 @@ const GUARDS: Guard[] = [
     mutation: {
       kind: "source",
       file: "packages/x402-client/src/pay.ts",
-      find: `            redirect: "error",
-          }));`,
-      replace: `            redirect: "follow", // MUTATED
-          }));`,
+      find: `              redirect: "error",`,
+      replace: `              redirect: "follow", // MUTATED`,
     },
     testFiles: ["packages/x402-client/src/__tests__/challenge.test.ts"],
     testPattern: "never forwards a signed payment authorization to a redirect target",
@@ -244,23 +242,7 @@ function git(args: string[]): string {
   return spawnSync("git", args, { cwd: ROOT, encoding: "utf8" }).stdout.trim();
 }
 
-/**
- * Uncommitted changes to SOURCE, ignoring the evidence directory.
- *
- * The dirty-tree guard exists so a mutation that failed to revert cannot be mistaken
- * for a deliberate edit. That reasoning applies to source; it does not apply to
- * artifacts/, which nothing here mutates and which the capture harness necessarily
- * writes to while recording this very run. Scoping the check keeps the guard strict
- * where it matters instead of making it refuse to run under `npm run capture`.
- */
-function dirtySource(): string {
-  return git(["status", "--porcelain", "--untracked-files=no"])
-    .split(/\r?\n/)
-    .filter((line) => line.trim() !== "" && !line.includes("artifacts/final-evidence/"))
-    .join("\n");
-}
-
-function runTests(guard: Guard): { failed: number; names: string[]; ok: boolean } {
+function runTests(guard: Guard): { failed: number; names: string[]; expectedFailures: string[] } {
   const child = spawnSync(
     process.execPath,
     [
@@ -279,8 +261,12 @@ function runTests(guard: Guard): { failed: number; names: string[]; ok: boolean 
   const output = `${child.stdout ?? ""}\n${child.stderr ?? ""}`;
   const failMatch = output.match(/^# fail\s+(\d+)\s*$/m);
   const failed = failMatch ? Number(failMatch[1]) : 0;
-  const names = [...output.matchAll(/^not ok \d+ - (.+)$/gm)].map((m) => m[1]!.trim());
-  return { failed, names, ok: child.status === 0 };
+  const names = [...output.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1]!.trim());
+  const expected = guard.testPattern.split("|");
+  const expectedFailures = names.filter((name) =>
+    expected.some((expectedName) => name.includes(expectedName)),
+  );
+  return { failed, names, expectedFailures };
 }
 
 async function applySql(statement: string): Promise<void> {
@@ -331,19 +317,27 @@ async function mutate(guard: Guard): Promise<Outcome> {
 
   try {
     const result = runTests(guard);
-    const detected = result.failed > 0;
+    // A syntax/import failure is not proof that a security assertion caught the
+    // removed guard. At least one specifically named expected assertion must fail.
+    const detected = result.expectedFailures.length > 0;
     process.stdout.write(
       detected
-        ? `DETECTED (${result.failed} test${result.failed === 1 ? "" : "s"} failed)\n`
-        : "UNDETECTED — no test noticed\n",
+        ? `DETECTED (${result.expectedFailures.length} expected assertion${result.expectedFailures.length === 1 ? "" : "s"} failed)\n`
+        : result.failed > 0
+          ? `UNDETECTED — ${result.failed} unrelated or load failure(s) only\n`
+          : "UNDETECTED — no test noticed\n",
     );
     return {
       id: guard.id,
       guard: guard.guard,
       risk: guard.risk,
       detected,
-      failingTests: result.names,
-      note: detected ? "" : "removing this guard broke no test",
+      failingTests: result.expectedFailures,
+      note: detected
+        ? ""
+        : result.failed > 0
+          ? "the test process failed, but none of the named security assertions did"
+          : "removing this guard broke no test",
     };
   } finally {
     await restore();
@@ -353,26 +347,25 @@ async function mutate(guard: Guard): Promise<Outcome> {
 async function main(): Promise<void> {
   console.log("\nCERBERUS SECURITY MUTATION MATRIX\n");
 
-  const dirty = dirtySource();
-  if (dirty) {
-    console.error(
-      "Refusing to run with a dirty working tree.\n" +
-        "Mutations are applied in place and reverted afterwards; an uncommitted change\n" +
-        "could not be told apart from a mutation that failed to revert.\n\n" +
-        dirty,
-    );
-    process.exitCode = 1;
-    return;
-  }
+  // Snapshot exactly the files this harness mutates. This is stricter and more useful
+  // than requiring the whole tree to be clean: remediation can run the release gate
+  // before committing, while any leaked mutation is still detected byte-for-byte.
+  const sourceBaselines = new Map(
+    GUARDS.flatMap((guard) => guard.mutation.kind === "source" ? [guard.mutation.file] : [])
+      .filter((file, index, all) => all.indexOf(file) === index)
+      .map((file) => [file, readFileSync(resolve(ROOT, file))] as const),
+  );
 
   console.log("Removing one security guard at a time. Each must break its own tests.\n");
   const outcomes: Outcome[] = [];
   for (const guard of GUARDS) outcomes.push(await mutate(guard));
 
-  // The tree must be exactly as it started. A vulnerable mutation escaping into a
-  // commit would be far worse than the missing evidence.
-  const after = git(["status", "--porcelain", "--untracked-files=no"]);
-  console.log("\nWorking tree after run:", after ? `DIRTY\n${after}` : "clean (all mutations reverted)");
+  // Every mutation target must be byte-identical to its pre-run snapshot. A vulnerable
+  // edit escaping into a commit would be worse than missing mutation evidence.
+  const restored = [...sourceBaselines].every(([file, before]) =>
+    readFileSync(resolve(ROOT, file)).equals(before),
+  );
+  console.log("\nMutation targets after run:", restored ? "restored byte-for-byte" : "CHANGED");
 
   console.log("\nMATRIX\n");
   console.log("Guard removed".padEnd(58) + "Result");
@@ -388,22 +381,23 @@ async function main(): Promise<void> {
     console.error(`\n  UNDETECTED  ${outcome.guard}\n    risk: ${outcome.risk}\n    ${outcome.note}`);
   }
 
-  const clean = after === "";
-  console.log(`\nRESULT: ${detected === outcomes.length && clean ? "PASS" : "FAIL"}`);
-  if (detected !== outcomes.length || !clean) process.exitCode = 1;
+  console.log(`\nRESULT: ${detected === outcomes.length && restored ? "PASS" : "FAIL"}`);
+  if (detected !== outcomes.length || !restored) process.exitCode = 1;
 
   const report = {
     generatedFrom: git(["rev-parse", "HEAD"]),
     guards: outcomes,
     detected,
     total: outcomes.length,
-    workingTreeClean: clean,
+    mutationTargetsRestored: restored,
   };
-  writeFileSync(
-    resolve(ROOT, "artifacts/final-evidence/redteam/mutation-matrix.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
-    "utf8",
-  );
+  if (process.env.CERBERUS_EVIDENCE_OUTPUT === "1") {
+    writeFileSync(
+      resolve(ROOT, "artifacts/final-evidence/redteam/mutation-matrix.json"),
+      `${JSON.stringify(report, null, 2)}\n`,
+      "utf8",
+    );
+  }
 }
 
 await main();

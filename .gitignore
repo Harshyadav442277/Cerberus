@@ -19,6 +19,9 @@ out/
 npm-debug.log*
 pnpm-debug.log*
 
+# Release evidence must survive a clean clone even though ordinary logs stay local.
+!artifacts/final-evidence/terminal/*.log
+
 .DS_Store
 .idea/
 .vscode/

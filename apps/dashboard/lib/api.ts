@@ -1,9 +1,25 @@
 import type { FeedItem, Health } from "./types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4050";
+const CONTROL_PLANE_API =
+  process.env.CERBERUS_API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:4050";
+
+export const AUDIT_STREAM_URL = "/api/runtime/audit/stream";
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+  const serverSide = typeof window === "undefined";
+  const reviewerToken = serverSide ? process.env.REVIEWER_API_TOKEN?.trim() : undefined;
+  if (serverSide && (!reviewerToken || reviewerToken.length < 32)) {
+    throw new Error("REVIEWER_API_TOKEN is required by the dashboard server");
+  }
+  const res = await fetch(
+    serverSide ? `${CONTROL_PLANE_API}${path}` : `/api/runtime${path}`,
+    {
+      cache: "no-store",
+      headers: serverSide ? { authorization: `Bearer ${reviewerToken}` } : undefined,
+    },
+  );
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }

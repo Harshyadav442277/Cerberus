@@ -1,5 +1,8 @@
 import pg from "pg";
 
+/** Minimal read boundary accepted by repository helpers and real-role tests. */
+export type DatabaseReader = Pick<pg.Pool, "query">;
+
 /**
  * Return timestamps as ISO-8601 strings rather than JS Date objects.
  *

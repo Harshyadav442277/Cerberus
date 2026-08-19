@@ -115,6 +115,9 @@ jobs:
       - name: Dashboard build
         run: npm run build --prefix apps/dashboard
 
+      - name: Verify portable release evidence
+        run: npm run evidence:verify
+
       - name: Assert no credential files were committed
         # A committed .env would defeat every privilege boundary above it. The files
         # written in this job are CI-local and must never appear in the tree.

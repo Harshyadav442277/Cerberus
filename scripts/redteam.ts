@@ -160,9 +160,12 @@ const attacks: AttackClass[] = [
   {
     id: "H",
     label: "Unauthenticated network client reaches trusted authority",
-    remediation: "R6 — loopback scoping and reviewer-authenticated escalations",
+    remediation: "R6 — bearer-authenticated authority/read routes plus restricted CORS",
     files: [
       "apps/api/src/__tests__/reviewer-auth-postgres.test.ts",
+      "apps/api/src/__tests__/execution-route-auth.test.ts",
+      "apps/api/src/__tests__/control-plane-read-auth.test.ts",
+      "apps/reviewer/src/client.test.ts",
       "packages/core/src/__tests__/bind-host.test.ts",
     ],
     evidence: [
@@ -170,6 +173,12 @@ const attacks: AttackClass[] = [
       "refuses a forged bearer token",
       "refuses an agent-style request with no credential at all",
       "serves the list to the authenticated reviewer control plane",
+      "rejects an unauthenticated evil-origin request before issuance",
+      "rejects a forged bearer token before issuance",
+      "accepts the configured service credential",
+      "allows only the configured dashboard browser origin",
+      "protects every sensitive dashboard read before database access",
+      "authenticates both the pending read and decision write",
       "binds loopback when nothing is configured",
       "binds loopback for a blank or whitespace value",
       "reports binding to all interfaces as a deliberate exposure",
@@ -188,6 +197,33 @@ const attacks: AttackClass[] = [
       "cannot transition a payment reservation",
       "cannot rewrite audit settlement",
     ],
+  },
+  {
+    id: "J",
+    label: "Historical proposal time bypasses current policy",
+    remediation: "P1 — issuance re-evaluates time windows against trusted current time",
+    files: ["apps/api/src/__tests__/execution-authorizer.test.ts"],
+    evidence: ["uses trusted issuance time for the current time-window check"],
+  },
+  {
+    id: "K",
+    label: "Paid request hangs forever after authority is transmitted",
+    remediation: "P1 — paid submission has a finite timeout and remains outcome-unknown",
+    files: [
+      "packages/x402-client/src/__tests__/challenge.test.ts",
+      "apps/executor/src/__tests__/executor.test.ts",
+    ],
+    evidence: [
+      "aborts a hung paid request after a finite timeout",
+      "keeps a post-signature timeout OUTCOME_UNKNOWN without retrying",
+    ],
+  },
+  {
+    id: "L",
+    label: "Normal agent evaluation needs forbidden reservation reads",
+    remediation: "P1 — settled counters use agent-readable audit truth; reservations stay denied",
+    files: ["apps/agent/src/__tests__/agent-role-postgres.test.ts"],
+    evidence: ["loads its mandate and settled counters without reservation-table access"],
   },
 ];
 

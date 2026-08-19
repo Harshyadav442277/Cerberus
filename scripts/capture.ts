@@ -74,6 +74,14 @@ child.on("close", (code, signal) => {
     "utf8",
   );
 
+  // Some child tools emit CRLF even on Unix. Git's text filters would normalize
+  // those bytes on checkout and invalidate a digest taken before the commit, so the
+  // capture itself is canonical LF before either its size or hash is recorded.
+  const canonical = readFileSync(logPath, "utf8")
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n");
+  writeFileSync(logPath, canonical, "utf8");
+
   const bytes = readFileSync(logPath);
   const record: CaptureRecord = {
     name,

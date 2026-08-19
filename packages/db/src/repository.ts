@@ -9,7 +9,7 @@ import {
   type ProposedAction,
   type Settlement,
 } from "@safr/core";
-import { getPool } from "./pool.js";
+import { getPool, type DatabaseReader } from "./pool.js";
 
 /**
  * Data access for the Bible Section 7 records.
@@ -109,8 +109,12 @@ export async function getMandate(mandateId: string, version: number): Promise<Ma
  * Bible Section 7.2: audit records must be able to reference exactly which mandate
  * version was active at decision time. This is the query that makes that true.
  */
-export async function getActiveMandate(agentId: string, at: string): Promise<Mandate | null> {
-  const { rows } = await getPool().query(
+export async function getActiveMandate(
+  agentId: string,
+  at: string,
+  reader: DatabaseReader = getPool(),
+): Promise<Mandate | null> {
+  const { rows } = await reader.query(
     `SELECT ${MANDATE_COLUMNS}
        FROM mandate
       WHERE agent_id = $1

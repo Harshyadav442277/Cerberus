@@ -138,7 +138,8 @@ automatically. The demo does not need Docker.
 
 ```bash
 # 1. Install (only needed after a clean clone or a dependency change).
-npx --yes pnpm@10.34.5 install
+corepack enable
+pnpm install --frozen-lockfile
 
 # 2. Start Postgres.
 pg_ctl -D "C:\Users\hyada\scoop\persist\postgresql\data" -l "C:\Users\hyada\scoop\persist\postgresql\data\server.log" start

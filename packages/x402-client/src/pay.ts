@@ -80,7 +80,15 @@ export function createX402Payer(
   fetchImpl: Fetch = defaultFetch,
   blockNumber: () => Promise<bigint> = () =>
     createPublicClient({ chain: baseSepolia, transport: http(env.rpcUrl) }).getBlockNumber(),
+  paidRequestTimeoutMs = 30_000,
 ): X402Payer {
+  if (
+    !Number.isInteger(paidRequestTimeoutMs) ||
+    paidRequestTimeoutMs <= 0 ||
+    paidRequestTimeoutMs >= 300_000
+  ) {
+    throw new Error("paid request timeout must be between 1 and 299999 milliseconds");
+  }
   const signer = privateKeyToAccount(env.privateKey as `0x${string}`);
 
   const client = new x402Client();
@@ -129,11 +137,18 @@ export function createX402Payer(
           //
           // This rejects AFTER the request reached the intended merchant, so the
           // caller correctly treats it as OUTCOME_UNKNOWN rather than non-payment.
-          const response = await fetchImpl(new Request(challenge.requestUrl, {
-            method: challenge.method,
-            headers,
-            redirect: "error",
-          }));
+          // A paid request is never allowed to wait forever. Once this request is
+          // attempted the merchant may possess live payment authority, so an abort is
+          // deliberately surfaced as ambiguity; the executor records OUTCOME_UNKNOWN
+          // and reconciliation, never a safe-to-retry failure.
+          const response = await fetchImpl(
+            new Request(challenge.requestUrl, {
+              method: challenge.method,
+              headers,
+              redirect: "error",
+              signal: AbortSignal.timeout(paidRequestTimeoutMs),
+            }),
+          );
           if (response.redirected || (response.status >= 300 && response.status < 400)) {
             throw new Error(
               "merchant redirected the paid request; signed payment authority was not forwarded",

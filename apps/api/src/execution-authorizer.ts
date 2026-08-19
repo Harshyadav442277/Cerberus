@@ -191,10 +191,15 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
         throw new AuthorizationIssuanceError("STALE_MANDATE");
       }
 
-      // Re-run the rules under current authority. This is what catches limits edited
-      // in place and a counterparty removed from the allowlist — changes that do not
-      // move the version number but do change what the agent may do.
-      const currentDisposition = evaluate(action, current.mandate, current.counters);
+      // Re-run the rules under current authority. Policy payload fields remain bound
+      // to the stored proposal, but the time-window input comes from this trusted
+      // process clock. Reusing caller-controlled proposed_at here would let an old,
+      // in-window proposal mint fresh authority after the window had closed.
+      const currentDisposition = evaluate(
+        { ...action, proposed_at: nowIso },
+        current.mandate,
+        current.counters,
+      );
       if (currentDisposition.disposition === "DENY") {
         throw new AuthorizationIssuanceError("CURRENT_AUTHORITY_DENIES");
       }

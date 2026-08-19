@@ -126,6 +126,21 @@ describe("money boundaries", () => {
       }
     });
 
+    it("refuses sub-atomic and over-precision amounts before policy evaluation", () => {
+      for (const amount of [Number.MIN_VALUE, 0.0000001, 1.1234567]) {
+        strictEqual(
+          ProposedActionPayloadSchema.safeParse(payload(amount)).success,
+          false,
+          `${String(amount)} must not parse as a proposal`,
+        );
+      }
+      strictEqual(ProposedActionPayloadSchema.safeParse(payload(0.000001)).success, true);
+      strictEqual(ProposedActionPayloadSchema.safeParse(payload(1.123456)).success, true);
+      // Binary floating-point multiplication is not itself a decimal precision test:
+      // 4.091509 * 1e6 is 4091509.0000000005 in JS, despite the input being valid.
+      strictEqual(ProposedActionPayloadSchema.safeParse(payload(4.091509)).success, true);
+    });
+
     it("refuses a string amount rather than coercing it", () => {
       // A coerced "5" would pass every downstream numeric check while having arrived
       // as attacker-controlled text.

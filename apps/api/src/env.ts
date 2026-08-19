@@ -25,9 +25,17 @@ function optional(name: string, fallback: string): string {
 
 export const apiEnv = {
   port: Number(optional("API_PORT", "4050")),
+  corsOrigins: optional("API_CORS_ORIGINS", "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   executionAuthPrivateKey:
     process.env.EXECUTION_AUTH_PRIVATE_KEY?.trim() ||
     authorizer["EXECUTION_AUTH_PRIVATE_KEY"]?.trim() ||
+    "",
+  executionApiToken:
+    process.env.EXECUTION_API_TOKEN?.trim() ||
+    authorizer["EXECUTION_API_TOKEN"]?.trim() ||
     "",
   merchantBaseUrl: optional("MERCHANT_BASE_URL", "http://localhost:4021"),
   payTo: optional("EVM_ADDRESS", ""),

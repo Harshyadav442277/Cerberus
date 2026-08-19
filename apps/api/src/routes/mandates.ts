@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { getActiveMandate, getAgentIdentity } from "@safr/db";
 import { getCounters } from "@safr/controls-repository";
+import { apiEnv } from "../env.js";
+import { createReviewerAuth } from "../reviewer-auth.js";
 
 export const mandatesRouter = Router();
+const dashboardReadAuth = createReviewerAuth({
+  token: apiEnv.reviewerApiToken,
+  reviewerId: apiEnv.reviewerId,
+});
+mandatesRouter.use(dashboardReadAuth);
 
 /** GET /mandates/active?agent_id=… — read-only §7.2 mandate for the Mandate screen. */
 mandatesRouter.get("/active", async (req, res, next) => {
@@ -23,6 +30,7 @@ mandatesRouter.get("/active", async (req, res, next) => {
 
 /** GET /agents/:agentId — §7.1 identity + live counters for the Agent screen. */
 export const agentsRouter = Router();
+agentsRouter.use(dashboardReadAuth);
 
 agentsRouter.get("/:agentId", async (req, res, next) => {
   try {

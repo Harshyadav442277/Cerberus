@@ -170,6 +170,43 @@ describe("exact live challenge binding", () => {
 });
 
 describe("paid retry uses only the pinned challenge", () => {
+  it("aborts a hung paid request after a finite timeout", async () => {
+    let attempts = 0;
+    let persisted = false;
+    const payer = createX402Payer(
+      {
+        privateKey: `0x${"44".repeat(32)}`,
+        network: "eip155:84532",
+        facilitatorUrl: "https://x402.org/facilitator",
+        rpcUrl: "https://sepolia.base.org",
+        merchantBaseUrl: "http://localhost:4021",
+      },
+      async (input) => {
+        attempts += 1;
+        const request = input instanceof Request ? input : new Request(input);
+        strictEqual(request.headers.has("PAYMENT-SIGNATURE"), true);
+        return new Promise<Response>((_resolve, reject) => {
+          request.signal.addEventListener("abort", () => reject(request.signal.reason), {
+            once: true,
+          });
+        });
+      },
+      async () => 12_345_678n,
+      5,
+    );
+    const prepared = await payer.prepare(validateX402Challenge(challenge(), EXPECTED));
+
+    await rejects(
+      () => prepared.submit(async () => {
+        persisted = true;
+        return true;
+      }),
+      (error: unknown) => error instanceof Error && error.name === "TimeoutError",
+    );
+    strictEqual(persisted, true, "correlation is durable before the ambiguous send");
+    strictEqual(attempts, 1, "the paid request is never retried");
+  });
+
   it("constructs one signature and submits directly without fetching another 402", async () => {
     const validated = validateX402Challenge(challenge(), EXPECTED);
     let paidRequests = 0;

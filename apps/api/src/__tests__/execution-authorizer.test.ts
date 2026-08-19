@@ -206,6 +206,7 @@ function authorizer(
     approval?: HumanApprovalBinding | null;
     /** Null models an agent with no identity row at all. */
     agent?: AgentIdentity | null;
+    nowIso?: string;
   } = {},
 ) {
   const historical = options.mandate ?? MANDATE;
@@ -232,7 +233,7 @@ function authorizer(
       payTo: "0x1111111111111111111111111111111111111111",
       merchantBaseUrl: "http://localhost:4021",
     },
-    nowMs: () => Date.parse("2027-01-15T22:05:00.000Z"),
+    nowMs: () => Date.parse(options.nowIso ?? "2027-01-15T22:05:00.000Z"),
   });
 }
 
@@ -367,6 +368,100 @@ describe("authorization is backed by committed capacity", () => {
 });
 
 describe("current authority is checked, not just historical", () => {
+  it("uses trusted issuance time for the current time-window check", async () => {
+    const officeHours: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        time_window: {
+          allowed_hours_utc: ["09:00-17:00"],
+          allowed_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        },
+      },
+    };
+    const store = reservations();
+
+    // The caller's proposed_at is 10:00 and historically valid. Trusted nowMs is
+    // 22:05, so a capability must not be minted after the window has closed.
+    await rejects(
+      () => authorizer(ACTION, AUDIT, store, { mandate: officeHours }).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "CURRENT_AUTHORITY_DENIES",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("does not let a forged future proposed_at replace trusted issuance time", async () => {
+    const officeHours: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        time_window: {
+          allowed_hours_utc: ["09:00-17:00"],
+          allowed_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        },
+      },
+    };
+    const future = { ...ACTION, proposed_at: "2027-01-18T10:00:00.000Z" };
+    const store = reservations();
+
+    await rejects(
+      () => authorizer(future, AUDIT, store, { mandate: officeHours }).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "CURRENT_AUTHORITY_DENIES",
+    );
+    strictEqual(store.calls.reserve, 0);
+  });
+
+  it("issues when both historical proposal time and trusted now are inside the window", async () => {
+    const officeHours: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        time_window: {
+          allowed_hours_utc: ["09:00-17:00"],
+          allowed_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        },
+      },
+    };
+
+    const envelope = await authorizer(ACTION, AUDIT, reservations(), {
+      mandate: officeHours,
+      nowIso: "2027-01-15T10:30:00.000Z",
+    }).issue(AUDIT.audit_id);
+    strictEqual(envelope.authorization.proposalHash, hashProposal(ACTION));
+  });
+
+  it("preserves the documented inclusive whole-minute boundary at trusted now", async () => {
+    const officeHours: Mandate = {
+      ...MANDATE,
+      controls: {
+        ...MANDATE.controls,
+        time_window: {
+          allowed_hours_utc: ["09:00-17:00"],
+          allowed_days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        },
+      },
+    };
+
+    const atBoundary = await authorizer(ACTION, AUDIT, reservations(), {
+      mandate: officeHours,
+      nowIso: "2027-01-15T17:00:59.999Z",
+    }).issue(AUDIT.audit_id);
+    strictEqual(atBoundary.authorization.proposalHash, hashProposal(ACTION));
+
+    const afterBoundary = reservations();
+    await rejects(
+      () => authorizer(ACTION, AUDIT, afterBoundary, {
+        mandate: officeHours,
+        nowIso: "2027-01-15T17:01:00.000Z",
+      }).issue(AUDIT.audit_id),
+      (error) =>
+        error instanceof AuthorizationIssuanceError && error.code === "CURRENT_AUTHORITY_DENIES",
+    );
+    strictEqual(afterBoundary.calls.reserve, 0);
+  });
+
   it("refuses when the mandate has been superseded since the decision", async () => {
     const store = reservations();
     await rejects(

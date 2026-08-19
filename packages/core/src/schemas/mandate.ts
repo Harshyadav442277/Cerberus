@@ -19,7 +19,9 @@ import { DispositionValueSchema } from "./disposition.js";
 export const SpendCapsSchema = z.object({
   per_transaction_max: z.number().positive(),
   rolling_window: z.object({
-    window: z.string().min(1),
+    // The reservation layer supports positive integer hours/days. Validate here so
+    // an operator cannot publish "0h" and silently create an empty budget window.
+    window: z.string().regex(/^[1-9]\d*\s*[hd]$/i, "window must be positive hours or days"),
     max_total: z.number().positive(),
   }),
 });
