@@ -4,14 +4,14 @@ BASE AUDITED SHA: `7a51ab5f87b37bc42ed4b4ebece89fd668e724ba`
 
 FINAL TESTED SOURCE SHA: `cd75049c0ade2f8e1ec03227079cb2bcf5c77b50`
 
-FINAL SHA: the release-payload commit containing this report and the generated
-evidence is the immediate child of the tested source SHA above. Its exact SHA and CI
-run are recorded in the final release handoff after the commit is pushed; a commit
-cannot truthfully contain its own SHA.
+FINAL SHA: `bb3f6a282d8f3436cb79bcb21a939741a72a9022` is the exact release-payload
+commit containing the remediated source, generated evidence and initial report. It
+passed CI. The immediate descendant is a report-only CI attestation because a commit
+cannot truthfully contain its own SHA or its not-yet-started CI result.
 
-COMMITS ADDED: two release-payload commits: source remediation, followed by generated
-evidence and this report. A report-only CI attestation may follow after the payload CI
-run completes.
+COMMITS ADDED: source remediation `cd75049c0ade2f8e1ec03227079cb2bcf5c77b50`,
+release evidence/report `bb3f6a282d8f3436cb79bcb21a939741a72a9022`, and one
+report-only CI attestation immediately afterward.
 
 FILES CHANGED: 55 source/test/configuration/documentation files, 33 final-evidence
 files, and this report (89 paths total relative to the audited commit).
@@ -83,9 +83,9 @@ left out of the remediation commits.
   the same set; verification rejects any manifest file not tracked by Git and scans
   the new execution token as a secret.
 - Regression/gate: `npm run evidence:verify` is now part of CI.
-- Verification: local staged-tree validation reports `0 failure(s)` with one honest
-  expected warning for blocked live preflight. A fresh clean-checkout verification is
-  required immediately after the evidence commit and is recorded below/final handoff.
+- Verification: local staged-tree and detached clean-checkout validation at
+  `bb3f6a2` both report `0 failure(s)` with one honest expected warning for blocked
+  live preflight. CI independently reproduced the clean-checkout PASS.
 - Residual limitation: fresh funded evidence is not available; the manifest says
   `BLOCKED` rather than fabricating success.
 
@@ -188,11 +188,11 @@ CONTRACT RESULT: **PASS — solc compile, 263-byte deployable bytecode.**
 
 DEPENDENCY AUDIT RESULT: **PASS — no known vulnerabilities.**
 
-EVIDENCE VERIFY RESULT: **PASS locally after staging; clean-checkout result recorded after evidence commit.**
+EVIDENCE VERIFY RESULT: **PASS — local staged tree, detached clean checkout at `bb3f6a2`, and CI; 0 failures, one expected blocked-preflight warning.**
 
 NON-FUNDED DEMO RESULT: **PASS — clean ALLOW; cap breach DENY with x402 never constructed; new counterparty ESCALATE approved through authenticated `reviewer:auto`. No funded settlement is claimed.**
 
-CI RESULT: **PENDING PUSH — the workflow includes the real agent-role regression and clean-clone evidence verification. Exact-SHA result is recorded after publication.**
+CI RESULT: **PASS — exact release payload `bb3f6a282d8f3436cb79bcb21a939741a72a9022`, run [32285988923](https://github.com/Harshyadav442277/Cerberus/actions/runs/32285988923), all 17 steps green in 1m52s.**
 
 P0 REMAINING: **0**
 
