@@ -60,6 +60,7 @@ labelled as such.
 | **Seeded sandbox** (`npm run sandbox`) | 1000 actions / 50 agents / 25 concurrent — **0 budget violations, 0 duplicate effects, 0 replay violations** |
 | **Dependency audit** (`corepack pnpm audit`) | **no known vulnerabilities** |
 | **Typecheck / dashboard build / contract compile** | all clean |
+| **Continuous integration** | **green** — GitHub Actions reproduces the full gate on a clean Linux runner with no wallet secrets |
 | **Database verification** (`npm run db:verify`) | all checks pass |
 | **Fresh live evidence** | **BLOCKED — not captured.** The three signers are not provisioned on this machine and no funded payment has been made on the hardened path. Nothing has been fabricated; see [LIVE_EVIDENCE_BLOCKED.md](docs/submission/LIVE_EVIDENCE_BLOCKED.md). |
 | **Phase 7 (seeded sandbox)** | **Complete.** `npm run sandbox` |

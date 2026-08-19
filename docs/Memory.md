@@ -225,6 +225,15 @@ covers the gap step by step.
 plane, unauthenticated `GET /escalations` returned 401 and the reviewer token returned
 200, and the API bound `127.0.0.1` rather than `0.0.0.0`.
 
+**CI is green.** Three runs failed before this was noticed, all at the install step.
+pnpm 11 renamed `onlyBuiltDependencies` (list) to `allowBuilds` (map); the old key
+is still PARSED and shows in `pnpm config list`, so it looked configured while doing
+nothing, and pnpm 11 also promoted an ignored build from warning to hard error.
+Local installs passed only because node_modules already existed. `packageManager` is
+now pinned so CI and local cannot drift apart again, and setup-node's automatic
+pnpm cache is disabled because it runs before corepack. CI now independently
+reproduces every headline number on a clean Linux runner.
+
 **Verified.** typecheck clean; `npm test` **363/363 across 72 suites**;
 `npm run adversarial` 12/12 classes / 80 assertions; `npm run redteam` 9/9 / 60;
 `npm run mutation` 12/12; sandbox PASS on seeds 42 and 1337; dashboard build clean;
