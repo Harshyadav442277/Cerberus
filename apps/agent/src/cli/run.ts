@@ -9,6 +9,7 @@
  *       wait for Approve/Deny from the authenticated reviewer control plane
  */
 import { getAnchor } from "@safr/audit-log";
+import { waitForAnchorDigests } from "../anchor-wait.js";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool } from "@safr/db";
 import { createAuditLog } from "../audit.js";
@@ -85,7 +86,13 @@ async function runScenario(key: string, scenario: Scenario): Promise<Outcome> {
  * 6.1 requires. The digests below are present whether or not the chain was reachable.
  */
 async function reportAnchors(outcomes: Outcome[]): Promise<void> {
-  await auditLog.anchors.drain();
+  // This process no longer anchors anything: it has no anchor signer and no
+  // `audit_anchor` privilege. It queued a finalization request and now waits for the
+  // trusted anchor worker to satisfy it. If no worker is running the digests simply
+  // report as pending, which is accurate rather than convenient.
+  await waitForAnchorDigests(
+    outcomes.flatMap((outcome) => (outcome.audit ? [outcome.audit.audit_id] : [])),
+  );
 
   console.log("\nAudit anchors");
   for (const outcome of outcomes) {

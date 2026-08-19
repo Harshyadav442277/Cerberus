@@ -8,6 +8,7 @@
  * Prefer: npm run demo:script
  */
 import { getAnchor } from "@safr/audit-log";
+import { waitForAnchorDigest } from "../anchor-wait.js";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import { closePool, getAuditLogRecord } from "@safr/db";
 import { createAuditLog } from "../audit.js";
@@ -157,8 +158,9 @@ async function runOnce(runLabel: string): Promise<void> {
       fail(`${key}: stored rule_triggered wrong`);
     }
 
-    // Anchoring is fire-and-forget; wait for the pending row before asserting it.
-    await auditLog.anchors.drain();
+    // Anchoring is performed by the trusted anchor worker, not by this process.
+    // Wait for it to satisfy the queued finalization request before asserting.
+    await waitForAnchorDigest(outcome.audit.audit_id);
     const anchor = await getAnchor(outcome.audit.audit_id);
     if (!anchor?.record_hash) fail(`${key}: missing anchor digest`);
 
