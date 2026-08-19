@@ -797,6 +797,21 @@ describe("committed financial state gates execution", () => {
     strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
   });
 
+  it("keeps a post-signature timeout OUTCOME_UNKNOWN without retrying", async () => {
+    const h = harness({ audit: AUDIT, action: ACTION }, undefined, async () => {
+      const timeout = new Error("merchant timed out after PAYMENT-SIGNATURE");
+      timeout.name = "TimeoutError";
+      throw timeout;
+    });
+    await rejects(
+      async () => h.executor.execute({ audit_id: AUDIT.audit_id, envelope: await signed() }),
+      (error) => error instanceof SettlementOutcomeUnknownError,
+    );
+    strictEqual(h.paid(), 1, "the signed request is attempted exactly once");
+    deepStrictEqual(h.store.calls, ["outcome_unknown"]);
+    strictEqual(h.store.status(), "OUTCOME_UNKNOWN");
+  });
+
   it("refuses to spend under a mandate that has been superseded", async () => {
     // The control plane authorised this a moment ago; an administrator has published
     // a new version since. The process holding the payment key checks for itself.

@@ -96,6 +96,15 @@ async function assertNoAuthorityWrite(): Promise<void> {
   const record = await getAuditLogRecordByActionId(ACTION_ID);
   assert.equal(record?.human_review, null, "unauthenticated request must not write human_review");
   assert.equal(await getHumanApproval(AUDIT_ID), null, "unauthenticated request must not write approval");
+  const authorizations = await getPool().query(
+    "SELECT 1 FROM execution_authorization WHERE audit_id = $1",
+    [AUDIT_ID],
+  );
+  assert.equal(
+    authorizations.rowCount,
+    0,
+    "unauthenticated request must not create payment authorization",
+  );
 }
 
 before(async () => {
