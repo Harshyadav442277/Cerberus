@@ -3,6 +3,7 @@ import { z } from "zod";
 import { loadEvaluationContext } from "@safr/controls-repository";
 import {
   bindAuthorization,
+  getAgentIdentity,
   getAuditLogRecord,
   getHumanApproval,
   getProposedAction,
@@ -30,6 +31,7 @@ const authorizer = createExecutionAuthorizer({
     getAction: getProposedAction,
     loadEvaluationContext,
     getApproval: getHumanApproval,
+    getAgent: getAgentIdentity,
   },
   authorizerPrivateKey: apiEnv.executionAuthPrivateKey,
   reservations: {

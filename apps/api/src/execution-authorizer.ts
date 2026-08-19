@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
+import type { AgentIdentity, AuditLogRecord, Mandate, ProposedAction } from "@safr/core";
 import { evaluate } from "@safr/disposition-engine";
 import type {
   ApprovalFreshness,
@@ -48,7 +48,13 @@ export class AuthorizationIssuanceError extends Error {
       /** Current authority no longer permits this proposal: limits or allowlist changed. */
       | "CURRENT_AUTHORITY_DENIES"
       /** The human approval no longer covers what is about to happen. */
-      | "STALE_APPROVAL",
+      | "STALE_APPROVAL"
+      /** The agent is suspended, or has no identity at all. Suspension is a kill
+       *  switch, not a label: a suspended agent receives no new capability. */
+      | "AGENT_SUSPENDED"
+      /** A live reservation exists for this proposal but describes a different
+       *  payment. Never reused, never silently replaced. */
+      | "RESERVATION_CONTEXT_MISMATCH",
   ) {
     super(code);
     this.name = "AuthorizationIssuanceError";
@@ -66,6 +72,13 @@ export interface AuthorizationContextPort {
   loadEvaluationContext(agentId: string, at: string): Promise<EvaluationContext>;
   /** The approval binding for an escalated audit, if a human ever decided it. */
   getApproval(auditId: string): Promise<HumanApprovalBinding | null>;
+  /**
+   * The agent's trusted identity, read from the database at issuance time.
+   *
+   * Never supplied by the caller. A hostile agent asking for a capability must not
+   * also be the source of truth for whether it is still allowed to hold one.
+   */
+  getAgent(agentId: string): Promise<AgentIdentity | null>;
 }
 
 /** The financial-state boundary. Injected so the authorizer stays unit-testable. */
@@ -118,6 +131,16 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
       if (!audit) throw new AuthorizationIssuanceError("AUDIT_NOT_FOUND");
       const action = await options.context.getAction(audit.action_id);
       if (!action) throw new AuthorizationIssuanceError("ACTION_NOT_FOUND");
+
+      // ── Kill-switch question: may this agent hold financial authority at all? ──
+      // Checked before policy evaluation and, critically, before any reservation is
+      // committed, so a suspension already in force never consumes budget. An agent
+      // with no identity row is treated exactly like a suspended one: authority must
+      // be positively established, never assumed from an absence.
+      const agent = await options.context.getAgent(action.agent_id);
+      if (!agent || agent.status !== "active") {
+        throw new AuthorizationIssuanceError("AGENT_SUSPENDED");
+      }
 
       // ── Historical question: was this proposal within its mandate when proposed? ──
       // This is what the audit record asserts, and it is reconstructed at proposed_at
@@ -224,6 +247,14 @@ export function createExecutionAuthorizer(options: ExecutionAuthorizerOptions): 
         velocityLimit: current.mandate.controls.velocity.max_transactions_per_hour,
         velocityOverrideApproved,
       });
+      if (reservation.outcome === "agent_suspended") {
+        // Suspended between the check above and the reservation transaction. The
+        // transaction refused, so no capacity was committed.
+        throw new AuthorizationIssuanceError("AGENT_SUSPENDED");
+      }
+      if (reservation.outcome === "context_mismatch") {
+        throw new AuthorizationIssuanceError("RESERVATION_CONTEXT_MISMATCH");
+      }
       if (reservation.outcome === "insufficient_budget") {
         throw new AuthorizationIssuanceError("INSUFFICIENT_BUDGET");
       }
