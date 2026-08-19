@@ -82,6 +82,12 @@ function collectFiles(): FileEntry[] {
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
+/** Terminal colour sequences, which must not defeat the anchored patterns below. */
+function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
 /**
  * Pulls a headline number out of a captured log rather than restating it by hand.
  *
@@ -93,7 +99,11 @@ function fromLog(suffix: string, pattern: RegExp): string | null {
   for (const prefix of ["gate-", "baseline-"]) {
     const path = resolve(EVIDENCE, "terminal", `${prefix}${suffix}.log`);
     if (!existsSync(path)) continue;
-    const match = readFileSync(path, "utf8").match(pattern);
+    // Strip ANSI colour before matching. A capture made on a colour-emitting runner
+    // otherwise fails every anchored pattern here, and the loop then falls through to
+    // the older baseline log — silently reporting a previous build's numbers as if
+    // they were this one's.
+    const match = stripAnsi(readFileSync(path, "utf8")).match(pattern);
     if (match) return (match[1] ?? match[0]).trim();
   }
   return null;
