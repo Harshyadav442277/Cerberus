@@ -1,0 +1,25 @@
+# npm run audit:verify
+# started 2026-08-19T13:10:40.323Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> safr-runtime@0.1.0 audit:verify
+> node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/verify-anchors.ts
+
+
+  Verifying 3 anchored record(s) against Base Sepolia
+  contract  0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7
+  rpc       https://sepolia.base.org
+
+  UNVERIF. audit_evidence_clean NOT_ANCHORED — digest verified locally; anchoring pending
+  UNVERIF. audit_evidence_cap_breach NOT_ANCHORED — digest verified locally; anchoring pending
+  UNVERIF. audit_evidence_new_counterparty NOT_ANCHORED — digest verified locally; anchoring pending
+
+  0/3 proven on chain
+  3 could not be verified
+
+  Not all records could be proven. UNVERIFIED is not a pass.
+
+# ------------------------------------------------------------------------
+# exit 1 after 2252ms
