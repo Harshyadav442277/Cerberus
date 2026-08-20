@@ -1,0 +1,53 @@
+# npm run redteam
+# started 2026-08-19T06:13:41.645Z
+# ------------------------------------------------------------------------
+npm warn Unknown env config "store-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> safr-runtime@0.1.0 redteam
+> tsx scripts/redteam.ts
+
+
+CERBERUS SECURITY RED-TEAM GATE
+
+Each class executes real assertions against the remediated code.
+PostgreSQL-backed classes use the configured database.
+
+  [1/9] A — Suspended agent reaches the payment key... PASS (10 assertions)
+  [2/9] B — Hostile agent falsifies audit truth... PASS (5 assertions)
+  [3/9] C — Fake on-chain anchor passes verification... PASS (12 assertions)
+  [4/9] D — Direct settlement crash splits financial and audit truth... PASS (3 assertions)
+  [5/9] E — Anchor worker crash loses the finalization... PASS (7 assertions)
+  [6/9] F — Executor and reconciler both write terminal truth... PASS (5 assertions)
+  [7/9] G — Reservation context mismatch authorizes a different payment... PASS (5 assertions)
+  [8/9] H — Unauthenticated network client reaches trusted authority... PASS (7 assertions)
+  [9/9] I — Reconciler and anchor worker hold more authority than they need... PASS (6 assertions)
+
+SUMMARY
+
+A  Suspended agent reaches the payment key                  PASS (10/10)
+   R1 — suspension is a kill switch
+B  Hostile agent falsifies audit truth                      PASS (5/5)
+   R3 — the agent does not own final audit state
+C  Fake on-chain anchor passes verification                 PASS (12/12)
+   R2 — verification independently reads Base Sepolia
+D  Direct settlement crash splits financial and audit truth PASS (3/3)
+   R4A — one transaction commits both, plus the anchor request
+E  Anchor worker crash loses the finalization               PASS (7/7)
+   R4C — durable, leased, idempotent outbox
+F  Executor and reconciler both write terminal truth        PASS (5/5)
+   R4D — every terminal update checks it won its CAS
+G  Reservation context mismatch authorizes a different payment PASS (5/5)
+   R5 — reuse verifies every field it inherits
+H  Unauthenticated network client reaches trusted authority PASS (7/7)
+   R6 — loopback scoping and reviewer-authenticated escalations
+I  Reconciler and anchor worker hold more authority than they need PASS (6/6)
+   R7 — dedicated least-privilege database roles
+
+Attack classes passed:  9/9
+Assertions passed:      60
+Assertions failed:      0
+
+RESULT: PASS
+# ------------------------------------------------------------------------
+# exit 0 after 19306ms
