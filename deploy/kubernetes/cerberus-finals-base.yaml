@@ -195,10 +195,10 @@ spec:
               && git -C /workspace/repo remote add origin
               https://github.com/Harshyadav442277/Cerberus.git
               && git -C /workspace/repo fetch --depth 1 origin
-              359b2065aa499b9679f7b6100f6eb264e3a504a0
+              5d4fc227f079efa42a0be9e891a8076ce4d9c11f
               && git -C /workspace/repo checkout --detach FETCH_HEAD
               && test "$(git -C /workspace/repo rev-parse HEAD)" =
-              "359b2065aa499b9679f7b6100f6eb264e3a504a0"
+              "5d4fc227f079efa42a0be9e891a8076ce4d9c11f"
           volumeMounts:
             - name: workspace
               mountPath: /workspace
