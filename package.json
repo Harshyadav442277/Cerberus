@@ -39,6 +39,7 @@
     "db:migrate:status": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/migrate.ts status",
     "db:roles": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/provision-roles.ts",
     "db:seed": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/seed.ts",
+    "mandate:publish:finals-v2": "node --import tsx packages/db/src/cli/publish-finals-mandate-v2.ts",
     "db:verify": "node --env-file-if-exists=.env --import tsx packages/db/src/cli/verify.ts",
     "merchant": "tsx apps/merchant/src/server.ts",
     "phase1": "tsx packages/x402-client/scripts/phase1-pay.ts",

@@ -601,7 +601,7 @@ function Overview({
           </div>
           <dl>
             <div><dt>Per transaction</dt><dd>1.00 USDC</dd></div>
-            <div><dt>Rolling 24h</dt><dd>3.00 USDC</dd></div>
+            <div><dt>Rolling 24h</dt><dd>24.00 USDC</dd></div>
             <div><dt>Velocity</dt><dd>10 / hour</dd></div>
             <div><dt>Network</dt><dd>Base Sepolia</dd></div>
           </dl>
