@@ -141,8 +141,9 @@ falsify settlement.
 - MAS approved, MAS certified, or SAFR compliant in any official or certification sense.
 - Irreversible blockchain finality. A production deployment would add a chain-specific
   confirmation/finality threshold before treating accounting state as irreversible.
-- Fresh hardened live payment evidence. None exists.
-- Current signer-isolation proof drawn from historical Stage-1 transactions.
+- Current signer-isolation proof drawn from historical Stage-1 transactions. The
+  hardened-path claim rests only on the 22 August 2026 run set in
+  `artifacts/judge-evidence/`; no Stage-1 hash stands in for it.
 
 ---
 
@@ -196,13 +197,10 @@ Every code change after freeze requires **all** of:
 
 ## Remaining work
 
-Not product code. In scope after freeze:
+Not product code. Signer provisioning, the funded Base Sepolia run, audit anchoring,
+screenshots and the screen recordings are **done** — see **Current live-evidence
+status** above and `artifacts/judge-evidence/`. In scope after freeze:
 
-- signer provisioning;
-- funded Base Sepolia evidence;
-- audit anchoring;
-- screenshots;
-- recording;
 - presentation;
 - rehearsal;
 - judge Q&A.

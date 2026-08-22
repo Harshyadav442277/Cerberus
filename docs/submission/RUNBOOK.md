@@ -20,8 +20,9 @@ hardened-path run set of 22 August 2026 is in
 manifest in [EVIDENCE.md](./EVIDENCE.md). Keep the two sets labelled separately.
 
 Create the ignored environment files from their examples. `.env` is shared/public,
-`.env.agent` is the only file parsed by the agent, `.env.authorizer` holds the
-Execution Authorization signer and anchor-deployment key, `.env.executor` alone holds
+`.env.agent` is the only file parsed by the agent and holds no signer, `.env.authorizer`
+holds the Execution Authorization signer only, `.env.anchor` alone holds the
+audit-anchor signer and is read only by `npm run anchor`, `.env.executor` alone holds
 the x402 payment key, and `.env.reconciler` contains only its least-privilege database
 URL plus public RPC URL. If upgrading an old clone, remove `EVM_PRIVATE_KEY` from the
 old `.env`; rename it to `EXECUTOR_EVM_PRIVATE_KEY` in `.env.executor`. Generate

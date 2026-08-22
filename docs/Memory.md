@@ -66,7 +66,8 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   services with reviewer-authenticated escalation reads, dedicated reconciler and
   anchor database roles, and a clean dependency audit. *(As written, Phases 7–8 had not
   started. Phase 7 is since complete; Phase 8's narration was recorded and the visual
-  edit intentionally omitted.)* The fresh funded hardened-path run remains pending.
+  edit intentionally omitted. The fresh funded hardened-path run is since complete —
+  see the Aug 22 entry below.)*
 - **Post-review hardening (Aug 7):** atomic escalation claim, pay() throw → failed settlement + finalize, Agent page §7.1 fields, drill-down threshold vs actual, Audit Log 24h spend strip.
 - **Pre-recording hardening (Aug 14):** judge-visible product branding is CERBERUS / SAFR Runtime; strict evidence capture refuses failed settlements, missing human approval, unanchored records, or an unconfigured anchor contract.
 - **Submission PDF (Aug 14):** an 11-page 16:9 CERBERUS supporting-deck draft and reproducible LaTeX/TikZ source remain local under ignored `output/`. They were verified before B1 resolved and still contain stale "public-chain capture pending" wording, so they are reference material only unless regenerated from the verified evidence in `docs/submission/EVIDENCE.md`.
@@ -82,12 +83,12 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   and privilege suites test database properties and are worthless against stubs.
   Test files run with `--test-concurrency=1` because the database suites share one
   database. Historical entries below preserve the counts correct when written.
-- **Next concrete step:** provision the three signers and fund them, then capture a
-  fresh funded ALLOW plus dashboard-approved ESCALATE through the hardened path. The
-  exact procedure is in `docs/submission/LIVE_EVIDENCE_BLOCKED.md`; `npm run preflight`
-  reports what is still missing and exits non-zero until it is all present. After that,
-  record the demo using `docs/submission/MANUAL_RECORDING_GUIDE.md`. Phase 7 (seeded
-  sandbox) is complete.
+- **Next concrete step:** presentation rehearsal and judge Q&A. Signer provisioning,
+  the funded hardened-path run, audit anchoring, screenshots and the seven screen
+  recordings are all captured — see the Aug 22 entry below and
+  `artifacts/judge-evidence/`. `docs/submission/LIVE_EVIDENCE_BLOCKED.md` is retained as
+  the reproduction procedure for a fresh machine, not as a current status claim;
+  `npm run preflight` still reports what a new machine is missing before a live run.
 - **New operational requirement:** `npm run anchor` must run alongside the other
   services. The agent no longer anchors its own records — it holds no anchor signer
   and no `audit_anchor` privilege — so without the worker, digests are stored

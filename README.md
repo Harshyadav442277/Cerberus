@@ -219,6 +219,7 @@ cp .env.example .env
 cp .env.agent.example .env.agent
 cp .env.executor.example .env.executor
 cp .env.authorizer.example .env.authorizer
+cp .env.anchor.example .env.anchor
 cp .env.reviewer.example .env.reviewer
 cp .env.reconciler.example .env.reconciler
 cp apps/dashboard/.env.local.example apps/dashboard/.env.local
@@ -232,16 +233,19 @@ Copy-Item .env.example .env
 Copy-Item .env.agent.example .env.agent
 Copy-Item .env.executor.example .env.executor
 Copy-Item .env.authorizer.example .env.authorizer
+Copy-Item .env.anchor.example .env.anchor
 Copy-Item .env.reviewer.example .env.reviewer
 Copy-Item .env.reconciler.example .env.reconciler
 Copy-Item apps/dashboard/.env.local.example apps/dashboard/.env.local
 npm run wallets:new
 ```
 
-Copy each generated value into the file named by the command: public addresses into
-`.env`, the x402 payment key into `.env.executor`, and the authorization/anchor keys
-into `.env.authorizer`. Copy the audit-anchor key into `.env.agent` only when on-chain
-anchoring is enabled. Generate one high-entropy `REVIEWER_API_TOKEN` and copy it into
+Copy each generated value into the file named by the command, and into that file only:
+public addresses into `.env`, the x402 payment key into `.env.executor`, the Execution
+Authorization key into `.env.authorizer`, and the audit-anchor key into `.env.anchor`.
+No private key ever belongs in `.env.agent` — the agent process holds no signer, which
+is the property the whole architecture rests on. Generate one high-entropy
+`REVIEWER_API_TOKEN` and copy it into
 `.env.authorizer`, `.env.reviewer`, and `apps/dashboard/.env.local`; it must never use
 the `NEXT_PUBLIC_` prefix or appear in `.env.agent`. Set a separate
 `REVIEWER_DASHBOARD_PASSWORD` in `apps/dashboard/.env.local`; the browser prompts the
@@ -255,8 +259,9 @@ executor, and keyless reconciler are intentionally separate PostgreSQL logins. T
 root `.env` `DATABASE_URL` is schema-owner authority for migrations, role
 provisioning, seed/reset, and tests only; no application process loads it.
 
-You may leave `ANTHROPIC_API_KEY`, `AUDIT_ANCHOR_ADDRESS`, and
-`AUDIT_ANCHOR_PRIVATE_KEY` empty in `.env.agent` for local governance verification.
+You may leave `ANTHROPIC_API_KEY` and `AUDIT_ANCHOR_ADDRESS` empty in `.env.agent` for
+local governance verification. `AUDIT_ANCHOR_ADDRESS` is a public contract address, not
+a credential; `.env.agent` has no private-key variable to leave empty.
 
 ### 3. Start Postgres and initialize the data
 
@@ -456,9 +461,10 @@ Deploy a fresh audit anchor for your clone:
 npm run contracts:deploy
 ```
 
-Copy the printed contract address into `.env` and `.env.agent` as
-`AUDIT_ANCHOR_ADDRESS`. Also copy `AUDIT_ANCHOR_PRIVATE_KEY` from `.env.authorizer`
-to `.env.agent` on this prototype machine. The next agent process will load it; then run:
+Copy the printed contract address into `.env`, `.env.agent`, and `.env.anchor` as
+`AUDIT_ANCHOR_ADDRESS`. It is a public address, not a credential. The audit-anchor
+private key stays in `.env.anchor`, read only by `npm run anchor`; the agent never
+receives it. Then run:
 
 ```bash
 npm run demo:script -- --live

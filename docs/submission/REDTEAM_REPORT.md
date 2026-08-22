@@ -281,7 +281,8 @@ counters:
 
 ## Remaining limitations
 
-Stated plainly. None of these is claimed as fixed anywhere in this repository.
+Stated plainly, as of this report's date. None of these is claimed as fixed anywhere in
+this repository, except where an item is explicitly annotated below as resolved later.
 
 - **Inclusion, not finality.** Settlement proof requires an exact successful on-chain
   transfer but does not wait for a confirmation threshold. The audit verifier reports
@@ -295,8 +296,11 @@ Stated plainly. None of these is claimed as fixed anywhere in this repository.
 - **Same-host compromise.** Process isolation is by operating-system boundary and
   database role. An attacker with root on the host defeats it, as they would defeat
   any single-machine deployment.
-- **No fresh funded live evidence.** Phase E is blocked on operator key provisioning
-  and funding — see [LIVE_EVIDENCE_BLOCKED.md](./LIVE_EVIDENCE_BLOCKED.md). No live
-  hash from the hardened path exists, and none has been fabricated.
+- **Fresh funded live evidence.** *(Stated as blocked when this report was written on
+  19 August 2026; resolved on 22 August 2026.)* The signers were provisioned and the
+  hardened path settled live on Base Sepolia — see
+  [FINAL_FREEZE.md](./FINAL_FREEZE.md) and
+  [`artifacts/judge-evidence/`](../../artifacts/judge-evidence/). Nothing was fabricated
+  while the blocker stood.
 - **The sandbox does not settle.** It exercises the governance gate at scale, not the
   payment rail; the rail is proven adversarially and (historically) live.

@@ -1,5 +1,6 @@
 /**
- * Generates separate testnet payment, authorization, and merchant identities.
+ * Generates separate testnet payment, authorization, audit-anchor, and merchant
+ * identities. Each private key is printed with the one env file that may hold it.
  *
  * These keys are for Base Sepolia only. Never point .env at a wallet that holds
  * real assets — the payer key is read by the settlement path and signs transfers.
@@ -26,8 +27,10 @@ function main(): void {
   console.log(`EXECUTOR_EVM_PRIVATE_KEY=${payerPrivateKey}`);
   console.log("\nPaste into .env.authorizer (API/control-plane process only):\n");
   console.log(`EXECUTION_AUTH_PRIVATE_KEY=${authorizerPrivateKey}`);
+  console.log("\nPaste into .env.anchor (trusted anchor worker only):\n");
   console.log(`AUDIT_ANCHOR_PRIVATE_KEY=${anchorPrivateKey}`);
-  console.log("\nFor on-chain audit anchoring, also copy only AUDIT_ANCHOR_PRIVATE_KEY into .env.agent.");
+  console.log("\nEach key belongs to exactly one file. Never copy any of them into .env.agent —");
+  console.log("the agent process holds no signer at all.");
   console.log("\nPaste these public values into .env:\n");
   console.log(`EVM_ADDRESS=${payee.address}`);
   console.log(`EXECUTION_AUTHORIZER_ADDRESS=${authorizer.address}`);

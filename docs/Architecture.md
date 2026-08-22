@@ -383,8 +383,10 @@ ANTHROPIC_API_KEY=                 # or OPENAI_API_KEY — agent intent generati
 # .env.executor (executor process only)
 EXECUTOR_EVM_PRIVATE_KEY=0x...
 
-# .env.authorizer (control-plane / anchor processes only)
+# .env.authorizer (control-plane process only)
 EXECUTION_AUTH_PRIVATE_KEY=0x...
+
+# .env.anchor (trusted audit-anchor worker only)
 AUDIT_ANCHOR_PRIVATE_KEY=0x...
 
 # .env.reconciler (keyless reconciliation process only)
@@ -393,9 +395,11 @@ EVM_RPC_URL=https://sepolia.base.org
 ```
 
 **Runtime secret split:** `.env` contains public/shared configuration only;
-`.env.agent` is read only by the agent and may contain its LLM and audit-anchor
-credentials; `.env.authorizer` contains the Execution Authorization and anchor
-signing keys; `.env.executor` contains the x402 payment key; and `.env.reconciler`
-contains only its separate database login and public RPC URL. The Stage-1 payment
-evidence is complete. A fresh funded run through the hardened executor is still
-required before claiming live Phase-1 finalist evidence.
+`.env.agent` is read only by the agent and holds no signer at all — its LLM
+credential plus public endpoints and the public `AUDIT_ANCHOR_ADDRESS`;
+`.env.authorizer` contains the Execution Authorization signing key; `.env.anchor`
+contains the audit-anchor signing key and is read only by the trusted anchor worker;
+`.env.executor` contains the x402 payment key; and `.env.reconciler` contains only its
+separate database login and public RPC URL. Both the Stage-1 payment evidence and the
+fresh hardened-path run through the isolated executor are complete; the hardened run
+set is in `artifacts/judge-evidence/`.
