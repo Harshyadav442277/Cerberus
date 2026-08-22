@@ -48,9 +48,13 @@ function hasActiveFinancialState(value: unknown): boolean | null {
   return items.some((value) => {
     if (!value || typeof value !== "object") return false;
     const item = value as {
+      action?: { agent_id?: unknown };
       record?: { disposition?: unknown; human_review?: unknown };
       execution?: { status?: unknown } | null;
     };
+    // This endpoint retires only the fixed Judge presenter namespace. Unrelated
+    // historical/sandbox agents cannot be affected by that in-memory reset.
+    if (item.action?.agent_id !== "agent_treasury_01") return false;
     const pendingReview =
       item.record?.disposition === "ESCALATE" && item.record.human_review === null;
     return pendingReview || activeExecution.has(String(item.execution?.status ?? ""));

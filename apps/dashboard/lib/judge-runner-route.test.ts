@@ -166,6 +166,7 @@ describe("Judge Console presentation reset", () => {
         return Response.json({
           items: [
             {
+              action: { agent_id: "agent_treasury_01" },
               record: { disposition: "ALLOW", human_review: null },
               execution: { status: "OUTCOME_UNKNOWN" },
             },
@@ -190,7 +191,15 @@ describe("Judge Console presentation reset", () => {
         method: init?.method ?? "GET",
       });
       return String(url).includes("/audit?")
-        ? Response.json({ items: [] })
+        ? Response.json({
+            items: [
+              {
+                action: { agent_id: "agent_once" },
+                record: { disposition: "ALLOW", human_review: null },
+                execution: { status: "RESERVED" },
+              },
+            ],
+          })
         : Response.json({ status: "RESET", retired: 2 });
     });
     const response = await handler(resetRequest());
