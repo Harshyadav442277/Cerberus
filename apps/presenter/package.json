@@ -1,0 +1,23 @@
+{
+  "name": "@safr/presenter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixed-scenario finals adapter for the Cerberus Judge Console.",
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env.presenter --import tsx src/server.ts"
+  },
+  "dependencies": {
+    "@safr/agent": "workspace:*",
+    "@safr/controls-repository": "workspace:*",
+    "@safr/core": "workspace:*",
+    "@safr/db": "workspace:*",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

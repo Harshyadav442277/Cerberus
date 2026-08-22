@@ -1,0 +1,13 @@
+[Unit]
+Description=Cerberus HTTPS ingress for API and presenter
+After=network-online.target cerberus-ingress.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/AeroChrome/Desktop/Projects/Cerberus
+ExecStart=/usr/local/bin/ngrok start --all --config /home/AeroChrome/.config/ngrok/ngrok.yml --config /home/AeroChrome/Desktop/Projects/Cerberus/deploy/ngrok.yml --log stdout
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

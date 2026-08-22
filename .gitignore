@@ -12,6 +12,7 @@ out/
 .env.reviewer
 .env.reconciler
 .env.anchor
+.env.presenter
 .env.local
 .env.*.local
 

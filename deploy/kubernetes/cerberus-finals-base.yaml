@@ -1,0 +1,537 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cerberus-finals-runtime
+  namespace: infra-team
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cerberus-finals-public-config
+  namespace: infra-team
+data:
+  API_PORT: "4050"
+  API_BIND_HOST: "0.0.0.0"
+  API_CORS_ORIGINS: "https://cerberus-judge-console.vercel.app"
+  EXECUTOR_PORT: "4060"
+  EXECUTOR_BIND_HOST: "0.0.0.0"
+  MERCHANT_PORT: "4021"
+  PRESENTER_PORT: "4070"
+  PRESENTER_BIND_HOST: "0.0.0.0"
+  NEXT_PUBLIC_API_URL: "http://127.0.0.1:4050"
+  EXECUTOR_URL: "http://127.0.0.1:4060"
+  MERCHANT_BASE_URL: "http://127.0.0.1:4021"
+  EVM_RPC_URL: "https://base-sepolia-rpc.publicnode.com"
+  EVM_ADDRESS: "0xf56e3F3134879156e11EAff78978a270726B661b"
+  X402_NETWORK: "eip155:84532"
+  X402_FACILITATOR_URL: "https://x402.org/facilitator"
+  AUDIT_ANCHOR_ADDRESS: "0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7"
+  EXECUTOR_WALLET_ADDRESS: "0x35820e5cC60F961515EF987C94D4328a82Df38Fc"
+  EXECUTION_AUTHORIZER_ADDRESS: "0xB80214Cd0610e4e67b8C6aF01d2b7670B8657e42"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cerberus-finals-postgres
+  namespace: infra-team
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cerberus-finals-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cerberus-finals-postgres
+  namespace: infra-team
+spec:
+  serviceName: cerberus-finals-postgres
+  replicas: 1
+  updateStrategy:
+    type: OnDelete
+    rollingUpdate: null
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cerberus-finals-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cerberus-finals-postgres
+        app.kubernetes.io/part-of: cerberus-finals
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - key: farlands.sh/nodepool
+          operator: Equal
+          value: infra-team-autoscale
+          effect: NoSchedule
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: cerberus-finals-postgres-admin
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: farlands-gp3
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cerberus-finals-runtime-headless
+  namespace: infra-team
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: cerberus-finals-runtime
+  ports:
+    - name: api
+      port: 4050
+      targetPort: 4050
+    - name: presenter
+      port: 4070
+      targetPort: 4070
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cerberus-finals-runtime
+  namespace: infra-team
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cerberus-finals-runtime
+  ports:
+    - name: api
+      port: 4050
+      targetPort: 4050
+    - name: presenter
+      port: 4070
+      targetPort: 4070
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cerberus-finals-runtime
+  namespace: infra-team
+spec:
+  serviceName: cerberus-finals-runtime-headless
+  replicas: 1
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cerberus-finals-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cerberus-finals-runtime
+        app.kubernetes.io/part-of: cerberus-finals
+    spec:
+      serviceAccountName: cerberus-finals-runtime
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      tolerations:
+        - key: farlands.sh/nodepool
+          operator: Equal
+          value: infra-team-autoscale
+          effect: NoSchedule
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: checkout-frozen-source
+          image: alpine/git:v2.47.2
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >-
+              git init /workspace/repo
+              && git -C /workspace/repo remote add origin
+              https://github.com/Harshyadav442277/Cerberus.git
+              && git -C /workspace/repo fetch --depth 1 origin
+              5d4fc227f079efa42a0be9e891a8076ce4d9c11f
+              && git -C /workspace/repo checkout --detach FETCH_HEAD
+              && test "$(git -C /workspace/repo rev-parse HEAD)" =
+              "5d4fc227f079efa42a0be9e891a8076ce4d9c11f"
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: install-frozen-dependencies
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["/bin/sh", "-ec"]
+          args:
+            - corepack pnpm install --frozen-lockfile
+          env:
+            - name: PNPM_HOME
+              value: /workspace/.pnpm
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - until pg_isready -h cerberus-finals-postgres -p 5432; do sleep 2; done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: api
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "apps/api/src/server.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+            - secretRef:
+                name: cerberus-finals-authorizer-env
+          env:
+            - name: CONTROL_PLANE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cerberus-finals-database-urls
+                  key: CONTROL_PLANE_DATABASE_URL
+          ports:
+            - name: api
+              containerPort: 4050
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - fetch('http://127.0.0.1:4050/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 4050
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 4
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: executor
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "apps/executor/src/server.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+            - secretRef:
+                name: cerberus-finals-executor-env
+          env:
+            - name: EXECUTOR_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cerberus-finals-database-urls
+                  key: EXECUTOR_DATABASE_URL
+          ports:
+            - name: executor
+              containerPort: 4060
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - fetch('http://127.0.0.1:4060/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 4060
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 4
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: merchant
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "apps/merchant/src/server.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+          ports:
+            - name: merchant
+              containerPort: 4021
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - fetch('http://127.0.0.1:4021/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 12
+          livenessProbe:
+            tcpSocket:
+              port: 4021
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 4
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { cpu: 500m, memory: 384Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: presenter
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "apps/presenter/src/server.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+            - secretRef:
+                name: cerberus-finals-presenter-env
+          env:
+            - name: AGENT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cerberus-finals-database-urls
+                  key: AGENT_DATABASE_URL
+            - name: NEXT_PUBLIC_API_URL
+              value: http://127.0.0.1:4050
+            - name: EXECUTOR_URL
+              value: http://127.0.0.1:4060
+            - name: MERCHANT_BASE_URL
+              value: http://127.0.0.1:4021
+            - name: PRESENTER_BIND_HOST
+              value: 0.0.0.0
+          ports:
+            - name: presenter
+              containerPort: 4070
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - fetch('http://127.0.0.1:4070/health',{headers:{authorization:'Bearer '+process.env.JUDGE_RUNNER_API_TOKEN}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 18
+          livenessProbe:
+            tcpSocket:
+              port: 4070
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            failureThreshold: 4
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: reconciler
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "apps/executor/src/reconcile-cli.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+            - secretRef:
+                name: cerberus-finals-reconciler-env
+          env:
+            - name: RECONCILER_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cerberus-finals-database-urls
+                  key: RECONCILER_DATABASE_URL
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+        - name: anchor
+          image: node:24.13.1-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /workspace/repo
+          command: ["node", "--import", "tsx", "packages/audit-log/src/cli/anchor-worker.ts"]
+          envFrom:
+            - configMapRef:
+                name: cerberus-finals-public-config
+            - secretRef:
+                name: cerberus-finals-anchor-env
+          env:
+            - name: ANCHOR_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: cerberus-finals-database-urls
+                  key: ANCHOR_DATABASE_URL
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: workspace
+          emptyDir:
+            sizeLimit: 4Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cerberus-finals-postgres-ingress
+  namespace: infra-team
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cerberus-finals-postgres
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cerberus-finals-runtime
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cerberus-finals-runtime-ingress
+  namespace: infra-team
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cerberus-finals-runtime
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cerberus-finals-gateway
+      ports:
+        - protocol: TCP
+          port: 4050
+        - protocol: TCP
+          port: 4070

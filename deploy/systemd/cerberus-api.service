@@ -1,0 +1,13 @@
+[Unit]
+Description=Cerberus control-plane API
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/AeroChrome/Desktop/Projects/Cerberus
+ExecStart=/home/AeroChrome/.nvm/versions/node/v24.13.1/bin/node --import tsx apps/api/src/server.ts
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
