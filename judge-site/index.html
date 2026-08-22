@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<meta name="description" content="Read-only judge evidence for Cerberus, the SAFR pre-execution governance runtime for AI-agent payments: the 22 August 2026 hardened-path run on Base Sepolia, with receipts, recordings, screenshots, verified gates, integrity manifest and stated limitations.">
+<title>Cerberus — judge evidence, 22 Aug 2026 hardened run</title>
+<style>
+:root{--bg:#ffffff;--fg:#18181b;--muted:#5b5f66;--line:#e2e4e8;--card:#f5f6f8;--code:#eef0f3;--accent:#0b57d0;--allow:#1a7f37;--deny:#b42318;--esc:#8a5a00;--amb:#475467;--allow-bg:#e6f4ea;--deny-bg:#fdecea;--esc-bg:#fff3cd;--amb-bg:#eef0f3}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1116;--fg:#e7e9ee;--muted:#a3a9b5;--line:#2a3039;--card:#161b22;--code:#1c222b;--accent:#7ab0ff;--allow:#56d364;--deny:#ff7b72;--esc:#e3b341;--amb:#b0b8c4;--allow-bg:#12301a;--deny-bg:#3a1a17;--esc-bg:#3a2e0d;--amb-bg:#1f2630}}
+*{box-sizing:border-box}
+html{color-scheme:light dark;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:900px;margin:0 auto;padding:1rem 1rem 3rem}
+header.top{padding:.5rem 0 .25rem}
+h1{font-size:1.55rem;line-height:1.25;margin:.25rem 0 .5rem}
+h2{font-size:1.3rem;line-height:1.3;margin:2.75rem 0 .75rem;padding-top:.75rem;border-top:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.5rem 0 .5rem}
+p,li{max-width:74ch}
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+code,.hash,pre,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+code{font-size:.9em;background:var(--code);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code);padding:.75rem .9rem;border-radius:8px;overflow-x:auto;font-size:.85rem;line-height:1.45;margin:.75rem 0}
+pre code{background:none;padding:0;font-size:inherit}
+.hash{font-size:.8rem;word-break:break-all;line-height:1.35}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:1rem 0;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:.93rem}
+table.narrow{min-width:0}
+table.scen{min-width:980px}
+th,td{padding:.55rem .65rem;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:var(--card);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.nowrap,th.nowrap,.nobr{white-space:nowrap;overflow-wrap:normal}
+/* On narrow screens the seven-column scenario table stacks into one card per scenario */
+@media (max-width:700px){
+  .table-wrap.stack{overflow:visible;border:0;border-radius:0}
+  table.scen{min-width:0;display:block}
+  table.scen caption{display:block;padding:0 0 .5rem !important}
+  table.scen thead{display:none}
+  table.scen tbody,table.scen tr,table.scen td{display:block;width:100%}
+  table.scen tr{border:1px solid var(--line);border-radius:10px;margin:0 0 1rem;background:var(--card);overflow:hidden}
+  table.scen td{border-bottom:1px solid var(--line);padding:.55rem .8rem;overflow-wrap:anywhere}
+  table.scen tr:last-child td{border-bottom:1px solid var(--line)}
+  table.scen td:last-child{border-bottom:0}
+  table.scen td::before{content:attr(data-label);display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:.15rem}
+  table.scen td[data-label="Scenario"]{background:var(--bg)}
+  table.scen td[data-label="Scenario"]::before{display:none}
+}
+.badge{display:inline-block;font-weight:700;font-size:.76rem;letter-spacing:.04em;padding:.12em .55em;border-radius:999px;white-space:nowrap;vertical-align:middle}
+.b-allow{color:var(--allow);background:var(--allow-bg)}
+.b-deny{color:var(--deny);background:var(--deny-bg)}
+.b-esc{color:var(--esc);background:var(--esc-bg)}
+.b-amb{color:var(--amb);background:var(--amb-bg)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.75rem .9rem;font-size:.93rem}
+.card .badge{margin-bottom:.35rem}
+.card b{display:block}
+.note{background:var(--card);border-left:4px solid var(--accent);padding:.75rem 1rem;border-radius:0 8px 8px 0;margin:1rem 0}
+.note.warn{border-left-color:var(--esc)}
+.note p:first-child{margin-top:0}.note p:last-child{margin-bottom:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin:1rem 0}
+figure{margin:0}
+figure img,figure video{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:#000}
+figure img{background:var(--card)}
+figcaption{font-size:.9rem;color:var(--muted);margin-top:.45rem;line-height:1.45}
+figcaption b{color:var(--fg)}
+.videos{display:grid;grid-template-columns:1fr;gap:1.5rem;margin:1rem 0}
+@media (min-width:700px){.videos{grid-template-columns:1fr 1fr}}
+.slide{margin:1rem 0}
+nav.toc{font-size:.92rem;margin:1rem 0 0;padding:.75rem 1rem;background:var(--card);border:1px solid var(--line);border-radius:10px}
+nav.toc ol{margin:.35rem 0 0;padding-left:1.25rem;columns:2;column-gap:1.5rem}
+nav.toc li{margin:.15rem 0;break-inside:avoid}
+@media (max-width:520px){nav.toc ol{columns:1}}
+.meta{color:var(--muted);font-size:.92rem}
+.kicker{text-transform:uppercase;letter-spacing:.08em;font-size:.76rem;color:var(--muted);font-weight:700}
+.thesis{font-size:1.08rem;border-left:4px solid var(--accent);padding:.4rem 0 .4rem .9rem;margin:1rem 0}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.88rem;color:var(--muted)}
+ul.tight li,ol.tight li{margin:.35rem 0}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1rem;margin:.75rem 0;font-size:.93rem}
+dl.kv dt{font-weight:600}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:520px){dl.kv{grid-template-columns:1fr}dl.kv dd{margin-bottom:.35rem}}
+.yesno{font-weight:600}
+.ok{color:var(--allow)}
+.small{font-size:.88rem}
+</style>
+</head>
+<body>
+<main>
+
+<header class="top">
+  <div class="kicker">NTU InnovateX 2026 finalist · Track 1: Payments and Financial Infrastructure</div>
+  <h1>Cerberus — SAFR pre-execution governance runtime for AI-agent payments</h1>
+  <p class="thesis">An AI agent can propose a payment; Cerberus decides <strong>ALLOW / DENY / ESCALATE</strong> before the x402 request exists, and the payment key lives in a separate process.</p>
+  <p class="meta">Judge evidence for the hardened-path run of <strong>22 August 2026</strong> on Base Sepolia (<code>eip155:84532</code>). Static and read-only. Every figure and hash on this page is copied from the repository's committed evidence package and submission documents; the links to <code>base-sepolia.blockscout.com</code> are the independent check.</p>
+  <nav class="toc" aria-label="Contents">
+    <strong>On this page</strong>
+    <ol>
+      <li><a href="#what">What this page is / is not</a></li>
+      <li><a href="#run">The hardened-path run</a></li>
+      <li><a href="#media">Recordings &amp; screenshots</a></li>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#gates">Verified gates</a></li>
+      <li><a href="#integrity">Integrity</a></li>
+      <li><a href="#limits">Limitations</a></li>
+      <li><a href="#links">Links</a></li>
+    </ol>
+  </nav>
+</header>
+
+<section id="what">
+  <h2>1. What this page is / is not</h2>
+  <ul class="tight">
+    <li><strong>It is</strong> a static, read-only evidence page. It was built from the repository's committed evidence package (<code>artifacts/judge-evidence/</code>) and the submission documents (<code>docs/submission/EVIDENCE.md</code>, <code>docs/submission/FINAL_FREEZE.md</code>). The recordings, screenshots, the SHA-256 manifest and the evidence summary served here are byte-for-byte copies of the files in the repository.</li>
+    <li><strong>It is not</strong> the runtime. Cerberus runs on the operator's machine by design: its trusted services (control plane and isolated executor) bind <code>127.0.0.1</code> and are loopback-scoped, and no public-internet deployment is claimed.</li>
+    <li><strong>Nothing here is live or interactive.</strong> No button on this page proposes, approves, settles or anchors anything. The only outbound links are to GitHub and to the public Base Sepolia block explorer.</li>
+    <li><strong>No keys or secrets are involved.</strong> This site contains no wallet, signer, token, credential or environment file. The evidence package lists credential <em>variable names</em> and lengths only, never values.</li>
+  </ul>
+</section>
+
+<section id="run">
+  <h2>2. The hardened-path run — 22 August 2026, Base Sepolia</h2>
+  <p>Captured on the finalist build with the <strong>payment signer</strong>, the <strong>execution-authorization signer</strong> and the <strong>audit-anchor signer</strong> held by three separate processes with three separate least-privilege database logins. The agent process holds none of them. The seeded mandate allows at most <strong>1 USDC per transaction</strong> and <strong>3 USDC per rolling 24 hours</strong>.</p>
+
+  <div class="cards" aria-label="Outcomes at a glance">
+    <div class="card"><span class="badge b-deny">DENY</span><b>5 USDC → merchant_abc</b>Cap breach. x402 never constructed; no settlement, no failed transaction either.</div>
+    <div class="card"><span class="badge b-esc">ESCALATE</span><b>0.75 USDC → merchant_new</b>Held for a human, approved by <code>reviewer:local</code>, then SETTLED on chain.</div>
+    <div class="card"><span class="badge b-allow">ALLOW</span><b>0.5 USDC → merchant_xyz</b>Within mandate; SETTLED on chain.</div>
+    <div class="card"><span class="badge b-amb">AMBIGUOUS OUTCOME</span><b>0.5 USDC, real incident</b>No blind retry; non-payment proven on chain; terminal FAILED, safe to retry.</div>
+  </div>
+
+  <h3>The four scenarios</h3>
+  <div class="table-wrap stack">
+  <table class="scen">
+    <caption class="small" style="text-align:left;padding:.5rem .65rem;color:var(--muted)">Source: <code>docs/submission/EVIDENCE.md</code> and <code>artifacts/judge-evidence/08_final/evidence-summary.json</code>. Explorer: base-sepolia.blockscout.com.</caption>
+    <thead>
+      <tr><th>Scenario</th><th>Amount</th><th>Audit id</th><th>Governance result</th><th>Financial outcome</th><th>Settlement tx</th><th>Anchor tx</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Scenario"><span class="badge b-deny">DENY</span><br><span class="small">scenario <code>cap_breach</code>, counterparty <code>merchant_abc</code></span></td>
+        <td data-label="Amount"><strong>5 USDC</strong> against a 1 USDC per-transaction cap</td>
+        <td data-label="Audit id"><code class="nobr">audit_84670a33</code></td>
+        <td data-label="Governance result"><code>DENY</code> · <code>per_transaction_cap_exceeded</code> · rule <code>spend_caps.per_transaction_max</code> · <strong>x402 never constructed</strong></td>
+        <td data-label="Financial outcome">None. There is no failed blockchain transaction either, because payment authority never existed.</td>
+        <td data-label="Settlement tx">— (none)</td>
+        <td data-label="Anchor tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa">0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa</a><br><span class="small">block 45793550</span></td>
+      </tr>
+      <tr>
+        <td data-label="Scenario"><span class="badge b-esc">ESCALATE</span><br><span class="small">scenario <code>new_counterparty</code>, counterparty <code>merchant_new</code></span></td>
+        <td data-label="Amount"><strong>0.75 USDC</strong></td>
+        <td data-label="Audit id"><code class="nobr">audit_30aa1a70</code></td>
+        <td data-label="Governance result"><code>ESCALATE</code> · <code>counterparty_not_on_allowlist</code> · rule <code>counterparty_policy</code> · held for a human, <strong>approved by <code>reviewer:local</code></strong> · authorization <code>auth_f70a3e32-35f9-4427-b5e6-a8b1e72f5234</code> (CONSUMED)</td>
+        <td data-label="Financial outcome"><strong>SETTLED</strong> — receipt <code>status = 0x1</code>, block 45795096, USDC <code>Transfer</code> of 750000 atomic (0.75 USDC) executor → merchant; settled 2026-08-22T00:28:02Z</td>
+        <td data-label="Settlement tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469">0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469</a></td>
+        <td data-label="Anchor tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877">0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877</a><br><span class="small">block 45795114</span></td>
+      </tr>
+      <tr>
+        <td data-label="Scenario"><span class="badge b-allow">ALLOW</span><br><span class="small">scenario <code>clean</code>, counterparty <code>merchant_xyz</code>, <code>invoice_884</code></span></td>
+        <td data-label="Amount"><strong>0.5 USDC</strong></td>
+        <td data-label="Audit id"><code class="nobr">audit_ff45a977</code></td>
+        <td data-label="Governance result"><code>ALLOW</code> · <code>within_mandate</code> · authorization <code>auth_8b204222-ac27-40b9-a5dc-d5a3dc8cb875</code> (CONSUMED)</td>
+        <td data-label="Financial outcome"><strong>SETTLED</strong> — receipt <code>status = 0x1</code>, block 45796303, USDC <code>Transfer</code> of 500000 atomic (0.5 USDC) executor → merchant; settled 2026-08-22T01:08:17Z</td>
+        <td data-label="Settlement tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa">0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa</a></td>
+        <td data-label="Anchor tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368">0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368</a><br><span class="small">block 45796318</span></td>
+      </tr>
+      <tr>
+        <td data-label="Scenario"><span class="badge b-amb">AMBIGUOUS OUTCOME</span><br><span class="small">a real incident during the run set, not staged</span></td>
+        <td data-label="Amount"><strong>0.5 USDC</strong></td>
+        <td data-label="Audit id"><code class="nobr">audit_0aaac796</code></td>
+        <td data-label="Governance result"><code>ALLOW</code> · <code>within_mandate</code> · x402 reached · authorization <code>auth_4920d58f-1337-4d44-ba7a-70b3f0fdff9a</code> (CONSUMED) · execution became ambiguous <strong>after signing</strong></td>
+        <td data-label="Financial outcome"><strong>No transfer.</strong> Capacity stayed held; nothing was blindly retried; the keyless reconciler returned <code>deferred</code> 17 times; the EIP-3009 authorization expired unused. Terminal state <code>FAILED</code>, <code>settlement_tx</code> <code>NULL</code>, “EIP-3009 authorization expired unused; safe to retry”.</td>
+        <td data-label="Settlement tx">— (none)</td>
+        <td data-label="Anchor tx"><a class="hash" href="https://base-sepolia.blockscout.com/tx/0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3">0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3</a><br><span class="small">block 45795806</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Identities</h3>
+  <div class="table-wrap">
+  <table class="narrow">
+    <thead><tr><th>Item</th><th>Address (Base Sepolia)</th></tr></thead>
+    <tbody>
+      <tr><td>Executor (payer)</td><td><a class="hash" href="https://base-sepolia.blockscout.com/address/0x35820e5cC60F961515EF987C94D4328a82Df38Fc">0x35820e5cC60F961515EF987C94D4328a82Df38Fc</a></td></tr>
+      <tr><td>Merchant <code>payTo</code></td><td><a class="hash" href="https://base-sepolia.blockscout.com/address/0xf56e3F3134879156e11EAff78978a270726B661b">0xf56e3F3134879156e11EAff78978a270726B661b</a></td></tr>
+      <tr><td>USDC</td><td><a class="hash" href="https://base-sepolia.blockscout.com/address/0x036CbD53842c5426634e7929541eC2318f3dCF7e">0x036CbD53842c5426634e7929541eC2318f3dCF7e</a></td></tr>
+      <tr><td><code>AuditAnchor</code> contract</td><td><a class="hash" href="https://base-sepolia.blockscout.com/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7">0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7</a></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><code>npm run audit:verify</code> → <strong>5/5 anchored records proven on chain</strong>. Each record's digest was reproduced from the stored record and matched against its own anchor transaction — the four scenario records above plus one further record from the same run set, <code class="nobr">audit_03117a66</code> (anchor <a class="hash" href="https://base-sepolia.blockscout.com/tx/0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da">0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da</a>, block 45793552). Transcript: <code>artifacts/judge-evidence/08_final/final-verification.log</code>.</p>
+  </div>
+
+  <h3>Why the ambiguous outcome is the strongest evidence, not the weakest</h3>
+  <p>A merchant's HTTP response is not financial truth. When the response to a signed execution never resolved, Cerberus did not treat “the merchant said it failed” as proof that money did not move — it kept the mandate capacity held and refused to retry. The keyless reconciler (it holds no private key) deferred 17 times rather than guess.</p>
+  <p>The proof of non-payment is read from the chain, not from the merchant. Calling <code>USDC.authorizationState(payer, nonce)</code> for the reservation's own EIP-3009 authorization returns <strong>false</strong>, and that authorization's <code>validBefore</code> has elapsed. The money did not move, and cannot move under that authorization. That is positive non-payment evidence.</p>
+  <dl class="kv">
+    <dt>Reservation</dt><dd><code>res_bcaf9720-4b9a-4710-946c-cb9d00d04a36</code></dd>
+    <dt>Payer</dt><dd><code>0x35820e5cC60F961515EF987C94D4328a82Df38Fc</code></dd>
+    <dt>EIP-3009 nonce</dt><dd><code>0x8dbcbebfc0c876c91a6b64f0e716f5b52f09257901583d7692b38d06dc9739dc</code></dd>
+    <dt><code>validBefore</code></dt><dd><code>1787359784</code> = 2026-08-22T00:49:44Z (elapsed)</dd>
+    <dt><code>authorizationState</code></dt><dd><code>0x00…00</code> → <strong>false</strong>; never consumed on chain</dd>
+    <dt>Terminal state</dt><dd><code>FAILED</code>, <code>settlement_tx</code> <code>NULL</code>, reconciliation attempts 17, “EIP-3009 authorization expired unused; safe to retry”</dd>
+  </dl>
+
+  <div class="note warn">
+    <p><strong>Reading the raw logs and the Phase 5 screenshot.</strong> The demo CLI prints a generic note that a failed settlement and unanchored records “are expected until the payer wallet is funded”. That wording is stale informational text carried by the runner and does <strong>not</strong> describe these runs: the payer was funded, both permitted scenarios settled, and all five records are anchored. The authoritative facts are the on-chain receipts and the <code>payment_reservation</code> rows, both re-read in <code>08_final/final-verification.log</code>. Historical logs are kept byte-for-byte rather than edited after the fact. <code>05_escalate/escalate-raw.log</code> is the first ESCALATE attempt, which timed out waiting for a human reviewer; it is retained on purpose — the human gate is a real cross-process hold, not an in-memory pause.</p>
+  </div>
+</section>
+
+<section id="media">
+  <h2>3. Recordings &amp; screenshots</h2>
+  <p class="meta">Seven screen recordings (WebM) and five screenshots, copied unchanged from <code>artifacts/judge-evidence/11_videos/</code> and <code>10_screenshots/</code>. Videos do not preload; tap to play. If your browser cannot play WebM inline, use the “open file” link under each recording.</p>
+
+  <h3>Screen recordings — phases 0 to 7</h3>
+  <div class="videos">
+    <figure>
+      <video controls preload="none" playsinline width="1335" height="1032"><source src="media/phase-00-01-environment-database.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-00-01-environment-database.webm">Open the file</a>.</video>
+      <figcaption><b>Phases 0–1 — Environment and database</b> (54 s). Environment capture, Postgres runtime, migrations, the least-privilege database logins and <code>npm run db:verify</code>. <a href="media/phase-00-01-environment-database.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1336" height="1030"><source src="media/phase-02-credential-boundaries.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-02-credential-boundaries.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 2 — Credential boundaries</b> (12 s). The payment, authorization and anchor signers are absent from the agent process. <a href="media/phase-02-credential-boundaries.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1336" height="1032"><source src="media/phase-03-runtime-health.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-03-runtime-health.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 3 — Runtime health</b> (19 s). Merchant, control plane, isolated executor, reviewer dashboard, reconciler and anchor worker. <a href="media/phase-03-runtime-health.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1186" height="1022"><source src="media/phase-04-deny.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-04-deny.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 4 — DENY</b> (23 s). 5 USDC against the 1 USDC per-transaction cap; the x402 client is never constructed; <code class="nobr">audit_84670a33</code>. <a href="media/phase-04-deny.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1919" height="1030"><source src="media/phase-05-escalate-human-approval.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-05-escalate-human-approval.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 5 — ESCALATE with human approval</b> (31 s). 0.75 USDC to <code>merchant_new</code> is held for a human, approved by <code>reviewer:local</code>, then settled; <code class="nobr">audit_30aa1a70</code>. <a href="media/phase-05-escalate-human-approval.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1312" height="1022"><source src="media/phase-06-allow-settled.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-06-allow-settled.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 6 — ALLOW, settled</b> (26 s). 0.5 USDC within mandate, settled on Base Sepolia; <code class="nobr">audit_ff45a977</code>. <a href="media/phase-06-allow-settled.webm">open file</a></figcaption>
+    </figure>
+    <figure>
+      <video controls preload="none" playsinline width="1305" height="1028"><source src="media/phase-07-outcome-unknown-reconciliation.webm" type="video/webm">Your browser does not play WebM here. <a href="media/phase-07-outcome-unknown-reconciliation.webm">Open the file</a>.</video>
+      <figcaption><b>Phase 7 — Ambiguous outcome and reconciliation</b> (16 s). The real incident: the keyless reconciler defers, the EIP-3009 authorization expires unused; <code class="nobr">audit_0aaac796</code>. <a href="media/phase-07-outcome-unknown-reconciliation.webm">open file</a></figcaption>
+    </figure>
+  </div>
+
+  <h3>Screenshots</h3>
+  <div class="grid">
+    <figure>
+      <a href="screenshots/phase-00-01-01-postgres-runtime.png"><img src="screenshots/phase-00-01-01-postgres-runtime.png" width="1340" height="704" loading="lazy" decoding="async" alt="Terminal: CERBERUS — POSTGRES RUNTIME. Container safr-postgres, image postgres:16-alpine, status Up 37 hours (healthy), port 5544."></a>
+      <figcaption><b>Phase 1 — Postgres runtime.</b> <code>safr-postgres</code> (postgres:16-alpine) healthy on port 5544.</figcaption>
+    </figure>
+    <figure>
+      <a href="screenshots/phase-00-01-02-migrations.png"><img src="screenshots/phase-00-01-02-migrations.png" width="1340" height="466" loading="lazy" decoding="async" alt="Terminal: npm run db:migrate reports no pending migrations."></a>
+      <figcaption><b>Phase 1 — Migrations.</b> <code>npm run db:migrate</code>: no pending migrations.</figcaption>
+    </figure>
+    <figure>
+      <a href="screenshots/phase-00-01-03-database-roles.png"><img src="screenshots/phase-00-01-03-database-roles.png" width="1340" height="611" loading="lazy" decoding="async" alt="Terminal: npm run db:roles lists the Cerberus runtime database logins for agent, control-plane, executor, reconciler and anchor, provisioned without exposing passwords."></a>
+      <figcaption><b>Phase 1 — Least-privilege database logins.</b> <code>npm run db:roles</code>: separate logins for agent, control-plane, executor, reconciler and anchor, provisioned without exposing passwords.</figcaption>
+    </figure>
+    <figure>
+      <a href="screenshots/phase-00-01-04-db-verify.png"><img src="screenshots/phase-00-01-04-db-verify.png" width="1341" height="921" loading="lazy" decoding="async" alt="Terminal: npm run db:verify prints thirteen OK lines and All checks passed."></a>
+      <figcaption><b>Phase 1 — Schema and engine verification.</b> <code>npm run db:verify</code>: all 13 checks pass; the stored mandate drives the three demo outcomes through the real engine.</figcaption>
+    </figure>
+    <figure>
+      <a href="screenshots/phase-05-escalate-terminal-approved.png"><img src="screenshots/phase-05-escalate-terminal-approved.png" width="1215" height="790" loading="lazy" decoding="async" alt="Terminal: npm run demo -- new_counterparty. Proposes 0.75 USDC to merchant_new, disposition ESCALATE, reason counterparty_not_on_allowlist, rule counterparty_policy, human review approved by reviewer:local, x402 reached yes, audit_id audit_30aa1a70."></a>
+      <figcaption><b>Phase 5 — ESCALATE approved in the terminal.</b> 0.75 USDC to <code>merchant_new</code> → <code>ESCALATE</code>, <code>counterparty_not_on_allowlist</code>, approved by <code>reviewer:local</code>, x402 reached, <code class="nobr">audit_30aa1a70</code>. The closing note about an unfunded payer wallet is stale runner text (see above); this run settled and its anchor landed — see the table in section 2.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="how">
+  <h2>4. How it works</h2>
+  <figure class="slide">
+    <img src="assets/safr-architecture-slide.png" width="1200" height="720" loading="lazy" decoding="async" alt="Cerberus architecture slide: an AI agent orchestrator proposes an action; the pre-execution gate (deterministic Disposition Engine over the controls repository mandate) returns ALLOW, ESCALATE or DENY before any x402 request object exists; ALLOW proceeds to x402 settlement in USDC on Base Sepolia; every disposition writes the audit log, read by the compliance dashboard.">
+    <figcaption>Concept diagram from the repository README (<code>docs/assets/safr-architecture-slide.png</code>, drawn at Stage 1). The pre-execution gate, the three dispositions and the audit log are unchanged; the finalist build adds the signer isolation, isolated executor, reconciler and anchor worker described below.</figcaption>
+  </figure>
+  <ol class="tight">
+    <li><strong>The agent proposes.</strong> The AI agent's orchestrator produces a structured proposed payment. The agent process holds no payment key, no authorization signer and no anchor signer (Phase 2 of the run checks this).</li>
+    <li><strong>A deterministic disposition engine evaluates it against a versioned mandate</strong> — spend caps, counterparty allowlist, time windows, velocity — as a pure, rule-based library call inside the orchestrator, before any x402 request object exists. No LLM is in the decision path.</li>
+    <li><strong>The result is ALLOW, DENY or ESCALATE.</strong> DENY means the x402 client is never constructed. ESCALATE holds the action until a human reviewer approves or denies it from a separate process; the agent cannot approve itself.</li>
+    <li><strong>An isolated executor acts only on a one-use, 60-second signed authorization.</strong> The executor is the only process that holds the payment key. It accepts a short-lived, single-use Execution Authorization bound to the exact proposal, mandate version, chain, token, atomic amount, payee and resource, and consumes it one-shot.</li>
+    <li><strong>Settlement is proven by reading the chain; audit records are hash-anchored by a separate trusted worker.</strong> A payment is marked SETTLED only on exact successful on-chain inclusion of the USDC transfer — never on the merchant's HTTP response — and a keyless reconciler handles ambiguous outcomes. Terminal audit records are canonically hashed and anchored to Base Sepolia by a separate anchor worker, which makes them tamper-evident.</li>
+  </ol>
+</section>
+
+<section id="gates">
+  <h2>5. Verified gates</h2>
+  <p class="meta">Figures from <code>docs/submission/FINAL_FREEZE.md</code> and the README “Current finalist build” table. CI reproduced the gate independently on a clean Linux runner with no wallet secrets.</p>
+  <div class="table-wrap">
+  <table class="narrow">
+    <thead><tr><th>Gate</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>npm test</code></td><td><strong>384/384 tests, 78 suites</strong>, 0 failed, 0 skipped</td></tr>
+      <tr><td><code>npm run adversarial</code></td><td><strong>12/12 attack classes</strong>, 80 assertions</td></tr>
+      <tr><td><code>npm run redteam</code></td><td><strong>12/12 attack classes</strong>, 70 assertions</td></tr>
+      <tr><td><code>npm run mutation</code></td><td><strong>12/12 security guards</strong> proven detectable</td></tr>
+      <tr><td><code>npm run sandbox</code> — seeds 42 and 1337</td><td>1,000 actions / 50 agents / concurrency 25 per seed — <strong>0 budget, duplicate-effect or replay violations</strong></td></tr>
+      <tr><td><code>npm run db:verify</code></td><td><strong>13 checks</strong>, all pass</td></tr>
+      <tr><td><code>npm run audit:verify</code></td><td><strong>5/5 anchored records proven on chain</strong></td></tr>
+      <tr><td><code>npm run evidence:verify</code></td><td><strong>PASS on a clean clone</strong> (CI step “Verify portable release evidence”)</td></tr>
+      <tr><td><code>npm run typecheck</code> · dashboard build · <code>contracts:compile</code> · <code>pnpm audit</code></td><td>clean · clean · clean · no known vulnerabilities</td></tr>
+      <tr><td>Continuous integration</td><td>GitHub Actions run <a href="https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842">32301340842</a> on head <code>6d40e85bef71d2dfa51edff34a99c7a6b8eebad1</code> — all 21 steps green</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="integrity">
+  <h2>6. Integrity</h2>
+  <p>The evidence package is covered by a SHA-256 manifest. Both integrity files are served here as exact copies of the repository files:</p>
+  <ul class="tight">
+    <li><a href="evidence/SHA256SUMS.txt">SHA256SUMS.txt</a> — the manifest for <code>artifacts/judge-evidence/</code> (every file except itself and the volatile <code>03_services/dashboard.log</code>, which the dashboard service was still appending to at packaging time).</li>
+    <li><a href="evidence/evidence-summary.json">evidence-summary.json</a> — the machine-readable summary of the run set (generated 2026-08-22T01:49:00Z; <code>status: PASS</code>; <code>critical_missing: []</code>).</li>
+  </ul>
+  <p>Verify the package has not changed since capture, from a clone of the repository:</p>
+  <pre><code>cd artifacts/judge-evidence &amp;&amp; sha256sum -c 08_final/SHA256SUMS.txt</code></pre>
+  <p>The recordings and screenshots served by this site are the files named in that manifest; their listed digests are reproduced here so a file downloaded from this page can be checked against the repository.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>File on this site</th><th>Manifest path</th><th>SHA-256 (from SHA256SUMS.txt)</th></tr></thead>
+    <tbody>
+      <tr><td><a href="media/phase-00-01-environment-database.webm">media/phase-00-01-environment-database.webm</a></td><td><code>11_videos/phase-00-01-environment-database.webm</code></td><td><span class="hash">16c518c4fde6af1aeca51dc0cbe7e2fc7866c1089dd37807c3680e0a1aa987d8</span></td></tr>
+      <tr><td><a href="media/phase-02-credential-boundaries.webm">media/phase-02-credential-boundaries.webm</a></td><td><code>11_videos/phase-02-credential-boundaries.webm</code></td><td><span class="hash">18854c5525c804f2de6ef2f0c97f4c9085ce50aca4a49accae6cb2c7a38cac12</span></td></tr>
+      <tr><td><a href="media/phase-03-runtime-health.webm">media/phase-03-runtime-health.webm</a></td><td><code>11_videos/phase-03-runtime-health.webm</code></td><td><span class="hash">0b3d1a381cb201b7f09288eeab7ced318e984c0d4cd3126bb4e5332807f286ce</span></td></tr>
+      <tr><td><a href="media/phase-04-deny.webm">media/phase-04-deny.webm</a></td><td><code>11_videos/phase-04-deny.webm</code></td><td><span class="hash">0b32f2b074c8cd7a6daa3d8b38c87bdbf6df50a82ec1938315f38d7ce2896318</span></td></tr>
+      <tr><td><a href="media/phase-05-escalate-human-approval.webm">media/phase-05-escalate-human-approval.webm</a></td><td><code>11_videos/phase-05-escalate-human-approval.webm</code></td><td><span class="hash">aebb49bf8e68f0845dd39c23c8b8a950c8fbc7487c6db0643f18136c1e044081</span></td></tr>
+      <tr><td><a href="media/phase-06-allow-settled.webm">media/phase-06-allow-settled.webm</a></td><td><code>11_videos/phase-06-allow-settled.webm</code></td><td><span class="hash">fa4b6978a9310ac45016a622959c1a1cb735d76f11da9080e1c2c66d8adedd2c</span></td></tr>
+      <tr><td><a href="media/phase-07-outcome-unknown-reconciliation.webm">media/phase-07-outcome-unknown-reconciliation.webm</a></td><td><code>11_videos/phase-07-outcome-unknown-reconciliation.webm</code></td><td><span class="hash">6400b8d40a804724891d6ef0cf32d74bbcefce67dc5c62f41dd7df9b984827aa</span></td></tr>
+      <tr><td><a href="screenshots/phase-00-01-01-postgres-runtime.png">screenshots/phase-00-01-01-postgres-runtime.png</a></td><td><code>10_screenshots/phase-00-01/01-postgres-runtime.png</code></td><td><span class="hash">90363befdba21661da6fda18a681d3c615c4a763639e30761824c69c6f0b9cdf</span></td></tr>
+      <tr><td><a href="screenshots/phase-00-01-02-migrations.png">screenshots/phase-00-01-02-migrations.png</a></td><td><code>10_screenshots/phase-00-01/02-migrations.png</code></td><td><span class="hash">4bce6a01e270b44166571d331554d77562d324aea6dd162cec94779b886879d9</span></td></tr>
+      <tr><td><a href="screenshots/phase-00-01-03-database-roles.png">screenshots/phase-00-01-03-database-roles.png</a></td><td><code>10_screenshots/phase-00-01/03-database-roles.png</code></td><td><span class="hash">c1c31e92191f1d55d0ad1d20ed3fa18be7f1d2c7376266af3cad389ed37348d1</span></td></tr>
+      <tr><td><a href="screenshots/phase-00-01-04-db-verify.png">screenshots/phase-00-01-04-db-verify.png</a></td><td><code>10_screenshots/phase-00-01/04-db-verify.png</code></td><td><span class="hash">75e9f26b1159f4c9a28bd784fd61597e47aaabd57ce178cd29af0089f810db22</span></td></tr>
+      <tr><td><a href="screenshots/phase-05-escalate-terminal-approved.png">screenshots/phase-05-escalate-terminal-approved.png</a></td><td><code>10_screenshots/phase-05/escalate-terminal-approved.png</code></td><td><span class="hash">48613f99a070f4e50e449f7607938af0f04429f4f768545db689d01c57cf7dac</span></td></tr>
+      <tr><td><a href="evidence/evidence-summary.json">evidence/evidence-summary.json</a></td><td><code>08_final/evidence-summary.json</code></td><td><span class="hash">183c0a7deebc02c0f985d2160cc5793455b8aa1b4230c9bf8b82a02d0707e589</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="small meta">The architecture slide in section 4 is the README illustration, not part of the evidence package, and is therefore not in the manifest. This HTML page is a presentation layer and is not in the manifest either; the repository is the source of truth.</p>
+</section>
+
+<section id="limits">
+  <h2>7. Limitations, stated plainly</h2>
+  <ul class="tight">
+    <li><strong>Inclusion, not finality.</strong> Settlement proof requires an exact successful on-chain transfer; it does not wait for a confirmation or finality threshold. A production deployment would wait for a configurable confirmation/finality depth before treating accounting state as irreversible. The audit verifier reports confirmation depth; the settlement path deliberately does not gate on it.</li>
+    <li><strong>Loopback-scoped services.</strong> The trusted services (control plane and executor) bind <code>127.0.0.1</code> by default behind bearer credentials and an allowlisted browser CORS policy. There is no mTLS, JWT or workload identity for service-to-service calls, and no public-internet deployment is claimed. A wider deployment would still need TLS, credential rotation, rate limiting, monitoring and perimeter controls.</li>
+    <li><strong>Same-host compromise.</strong> Process isolation is by operating-system boundary and database role. An attacker with root on the host defeats it, as they would defeat any single-machine deployment. This is stated, not defended against.</li>
+    <li><strong>Testnet prototype; one supervised run set.</strong> Base Sepolia, hackathon scope, not a production payment system. The hardened-path evidence is a supervised run set captured once, on one machine. It is real and independently checkable on chain; it is not an uptime or scale claim.</li>
+    <li><strong>One reviewer identity; no rate limit on escalations.</strong> One configured reviewer identity represents all human decisions, and the reviewer boundary has no rate limit, lockout, CSRF/origin check, session expiry or MFA. Dashboard Basic auth is a prototype operator boundary, not institutional SSO/MFA.</li>
+    <li><strong>Tamper-evident, not immutable.</strong> Audit records are tamper-evident through on-chain anchoring of their digests; they are not immutable. Anchoring requires the anchor worker to be running — if it is not, digests are still stored durably in Postgres and records report as pending, never as anchored.</li>
+    <li><strong>Stage-1 history is kept separately and labelled.</strong> Earlier Base Sepolia transactions from Stage 1 remain in the repository as history. They predate signer isolation, chain-proven settlement and the trusted audit finalizer, and none of them is presented on this page as hardened evidence.</li>
+    <li><strong>Deterministic fixtures in judged runs.</strong> Judged runs use the deterministic fixture planner rather than the LLM path so results are reproducible; the LLM path exists and is schema-validated identically, but it is not in the decision path either way.</li>
+    <li><strong>Not claimed, and must never be:</strong> “no bugs”, “completely secure” or “production-safe for real money”; MAS approved, MAS certified or SAFR compliant in any official or certification sense; irreversible blockchain finality.</li>
+  </ul>
+</section>
+
+<section id="links">
+  <h2>8. Links</h2>
+  <ul class="tight">
+    <li>GitHub repository — <a href="https://github.com/Harshyadav442277/Cerberus">github.com/Harshyadav442277/Cerberus</a></li>
+    <li>Evidence manifest — <a href="https://github.com/Harshyadav442277/Cerberus/blob/main/docs/submission/EVIDENCE.md">docs/submission/EVIDENCE.md</a></li>
+    <li>Final freeze, gate results and release identity — <a href="https://github.com/Harshyadav442277/Cerberus/blob/main/docs/submission/FINAL_FREEZE.md">docs/submission/FINAL_FREEZE.md</a></li>
+    <li>Evidence package — <a href="https://github.com/Harshyadav442277/Cerberus/tree/main/artifacts/judge-evidence">artifacts/judge-evidence/</a></li>
+    <li>README, “Current finalist build” — <a href="https://github.com/Harshyadav442277/Cerberus/blob/main/README.md#current-finalist-build">README.md</a></li>
+    <li>CI run on the release payload — <a href="https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842">actions/runs/32301340842</a></li>
+    <li>Block explorer — <a href="https://base-sepolia.blockscout.com/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7">AuditAnchor contract</a> · <a href="https://base-sepolia.blockscout.com/address/0x35820e5cC60F961515EF987C94D4328a82Df38Fc">executor (payer)</a> · <a href="https://base-sepolia.blockscout.com/address/0xf56e3F3134879156e11EAff78978a270726B661b">merchant payTo</a> on base-sepolia.blockscout.com</li>
+  </ul>
+</section>
+
+<footer>
+  <p>Cerberus — NTU InnovateX 2026, Track 1. Static evidence page; nothing on it is live. Figures and hashes are copied from <code>docs/submission/FINAL_FREEZE.md</code>, <code>docs/submission/EVIDENCE.md</code> and <code>artifacts/judge-evidence/08_final/evidence-summary.json</code> (generated 2026-08-22T01:49:00Z at repository SHA <code>0462558b3b4610173587729a90cb64f006a3c2f3</code>). SAFR is a non-binding MAS industry white paper; this project implements its agent-assisted-payments domain and makes no claim of MAS approval or certification.</p>
+</footer>
+
+</main>
+</body>
+</html>

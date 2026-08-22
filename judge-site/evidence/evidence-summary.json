@@ -1,0 +1,544 @@
+{
+  "generated_at": "2026-08-22T01:49:00Z",
+  "generated_by": "Phase 8 \u2014 evidence packaging and verification (read-only)",
+  "repo": {
+    "remote": "https://github.com/Harshyadav442277/Cerberus.git",
+    "branch": "main",
+    "repo_sha_at_generation": "0462558b3b4610173587729a90cb64f006a3c2f3",
+    "note": "repo_sha_at_generation is the parent of the Phase-8 commit that carries this file; a commit cannot contain its own SHA."
+  },
+  "network": "Base Sepolia",
+  "chain_id": 84532,
+  "contracts": {
+    "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "audit_anchor": "0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7"
+  },
+  "identities": {
+    "executor_payer": "0x35820e5cC60F961515EF987C94D4328a82Df38Fc",
+    "merchant_pay_to": "0xf56e3F3134879156e11EAff78978a270726B661b"
+  },
+  "phases": {
+    "0_environment": {
+      "status": "COMPLETE",
+      "evidence": [
+        "00_environment/environment.log"
+      ],
+      "video": "11_videos/phase-00-01-environment-database.webm"
+    },
+    "1_database": {
+      "status": "COMPLETE",
+      "evidence": [
+        "01_database/postgres-runtime.log",
+        "01_database/migrate.log",
+        "01_database/roles.log",
+        "01_database/db-verify.log"
+      ],
+      "least_privilege_logins": [
+        "cerberus_agent_app",
+        "cerberus_agent_role",
+        "cerberus_anchor_app",
+        "cerberus_anchor_role",
+        "cerberus_control_app",
+        "cerberus_control_plane_role",
+        "cerberus_executor_app",
+        "cerberus_executor_role",
+        "cerberus_reconciler_app",
+        "cerberus_reconciler_role"
+      ],
+      "video": "11_videos/phase-00-01-environment-database.webm"
+    },
+    "2_credentials": {
+      "status": "COMPLETE",
+      "evidence": [
+        "02_credentials/credentials-summary.log"
+      ],
+      "claim": "payment, authorization and anchor signers are absent from the agent process",
+      "video": "11_videos/phase-02-credential-boundaries.webm"
+    },
+    "3_services": {
+      "status": "COMPLETE",
+      "evidence": [
+        "03_services/health-summary-final.log",
+        "03_services/merchant.log",
+        "03_services/api.log",
+        "03_services/executor.log",
+        "03_services/reconciler.log",
+        "03_services/anchor.log"
+      ],
+      "video": "11_videos/phase-03-runtime-health.webm"
+    },
+    "4_deny": {
+      "status": "COMPLETE",
+      "scenario": "cap_breach",
+      "proposed_usdc": 5,
+      "per_transaction_cap_usdc": 1,
+      "counterparty": "merchant_abc",
+      "governance": {
+        "audit_id": "audit_84670a33",
+        "disposition": "DENY",
+        "reason": "per_transaction_cap_exceeded",
+        "audit_settlement": null,
+        "reservation_id": null,
+        "reservation_status": null,
+        "settlement_tx": null,
+        "reconciliation_attempts": null,
+        "reconciliation_error": null
+      },
+      "x402_reached": false,
+      "settlement": null,
+      "anchor_tx": "0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa",
+      "interpretation": "5 USDC exceeded the 1 USDC per-transaction ceiling. The x402 client was never constructed, so payment authority never existed. There is no failed blockchain transaction.",
+      "evidence": [
+        "04_deny/deny-summary-final.log",
+        "04_deny/deny-raw.log",
+        "04_deny/audit-verify.log"
+      ],
+      "video": "11_videos/phase-04-deny.webm"
+    },
+    "5_escalate": {
+      "status": "COMPLETE",
+      "scenario": "new_counterparty",
+      "proposed_usdc": 0.75,
+      "counterparty": "merchant_new",
+      "governance": {
+        "audit_id": "audit_30aa1a70",
+        "disposition": "ESCALATE",
+        "reason": "counterparty_not_on_allowlist",
+        "audit_settlement": {
+          "rail": "x402",
+          "status": "settled",
+          "tx_hash": "0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469",
+          "settled_at": "2026-08-22T00:28:02.714Z"
+        },
+        "reservation_id": "res_bb7391c9-c96c-4dc5-8925-d5e336cd94b7",
+        "reservation_status": "SETTLED",
+        "settlement_tx": "0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469",
+        "reconciliation_attempts": 1,
+        "reconciliation_error": null
+      },
+      "human_approval": {
+        "decision": "approved",
+        "reviewer_id": "reviewer:local"
+      },
+      "execution_authorization": {
+        "authorization_id": "auth_f70a3e32-35f9-4427-b5e6-a8b1e72f5234",
+        "status": "CONSUMED"
+      },
+      "x402_reached": true,
+      "anchor_tx": "0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877",
+      "interpretation": "The AI could not self-approve a new counterparty. A human approval was required before execution authority was granted, and only then did settlement occur.",
+      "evidence": [
+        "05_escalate/escalate-final.log",
+        "05_escalate/escalate-raw.log",
+        "05_escalate/settlement-proof.txt"
+      ],
+      "screenshot": "10_screenshots/phase-05/escalate-terminal-approved.png",
+      "video": "11_videos/phase-05-escalate-human-approval.webm"
+    },
+    "6_allow": {
+      "status": "COMPLETE",
+      "scenario": "clean",
+      "proposed_usdc": 0.5,
+      "counterparty": "merchant_xyz",
+      "invoice": "invoice_884",
+      "governance": {
+        "audit_id": "audit_ff45a977",
+        "disposition": "ALLOW",
+        "reason": "within_mandate",
+        "audit_settlement": {
+          "rail": "x402",
+          "status": "settled",
+          "tx_hash": "0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa",
+          "settled_at": "2026-08-22T01:08:17.631Z"
+        },
+        "reservation_id": "res_02b8a156-54d8-4a24-9a53-574e36450dd8",
+        "reservation_status": "SETTLED",
+        "settlement_tx": "0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa",
+        "reconciliation_attempts": 1,
+        "reconciliation_error": null
+      },
+      "execution_authorization": {
+        "authorization_id": "auth_8b204222-ac27-40b9-a5dc-d5a3dc8cb875",
+        "status": "CONSUMED"
+      },
+      "x402_reached": true,
+      "anchor_tx": "0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368",
+      "interpretation": "Within mandate, so the proposal was authorized for exactly this action and settled for real on Base Sepolia.",
+      "evidence": [
+        "06_allow/allow-final.log",
+        "06_allow/allow-raw.log",
+        "06_allow/settlement-receipt.json",
+        "06_allow/audit-verify.log"
+      ],
+      "video": "11_videos/phase-06-allow-settled.webm",
+      "log_wording_note": "The CLI note in allow-final.log about an unfunded payer is stale generic informational text carried by the demo runner. The payer was funded and this run settled; the on-chain receipt and the SETTLED reservation are authoritative."
+    },
+    "7_outcome_unknown": {
+      "status": "COMPLETE",
+      "origin": "real ambiguous execution incident, not manufactured for the demonstration",
+      "original_governance": "ALLOW / within_mandate, 0.5 USDC, x402 reached",
+      "governance": {
+        "audit_id": "audit_0aaac796",
+        "disposition": "ALLOW",
+        "reason": "within_mandate",
+        "audit_settlement": {
+          "rail": "x402",
+          "status": "failed",
+          "tx_hash": null,
+          "settled_at": null
+        },
+        "reservation_id": "res_bcaf9720-4b9a-4710-946c-cb9d00d04a36",
+        "reservation_status": "FAILED",
+        "settlement_tx": null,
+        "reconciliation_attempts": 17,
+        "reconciliation_error": "EIP-3009 authorization expired unused; safe to retry"
+      },
+      "execution_authorization": {
+        "authorization_id": "auth_4920d58f-1337-4d44-ba7a-70b3f0fdff9a",
+        "status": "CONSUMED"
+      },
+      "eip3009_authorization": {
+        "payer": "0x35820e5cC60F961515EF987C94D4328a82Df38Fc",
+        "nonce": "0x8dbcbebfc0c876c91a6b64f0e716f5b52f09257901583d7692b38d06dc9739dc",
+        "valid_before": 1787359784,
+        "valid_before_utc": "2026-08-22T00:49:44Z",
+        "usdc_authorization_state": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "consumed_on_chain": false
+      },
+      "interpretation": "ALLOW, then the signed execution became ambiguous. Capacity stayed held, nothing was blindly retried, and the keyless reconciler deferred until positive chain evidence existed. The EIP-3009 authorization expired unused, which is positive non-payment evidence rather than an inference from the merchant HTTP response. Terminal state is FAILED with a null settlement transaction and safe to retry.",
+      "evidence": [
+        "07_unknown/unknown-reconciliation-final.log"
+      ],
+      "video": "11_videos/phase-07-outcome-unknown-reconciliation.webm"
+    },
+    "8_packaging": {
+      "status": "COMPLETE",
+      "evidence": [
+        "08_final/final-verification.log",
+        "08_final/SHA256SUMS.txt",
+        "08_final/evidence-summary.json"
+      ]
+    }
+  },
+  "settlements": [
+    {
+      "phase": 5,
+      "scenario": "ESCALATE",
+      "audit_id": "audit_30aa1a70",
+      "tx_hash": "0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469",
+      "receipt_status": "0x1",
+      "block_number": 45795096,
+      "token_contract": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "usdc_transfer": {
+        "from": "0x35820e5cc60f961515ef987c94d4328a82df38fc",
+        "to": "0xf56e3f3134879156e11eaff78978a270726b661b",
+        "amount_atomic": 750000,
+        "amount_usdc": 0.75
+      }
+    },
+    {
+      "phase": 6,
+      "scenario": "ALLOW",
+      "audit_id": "audit_ff45a977",
+      "tx_hash": "0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa",
+      "receipt_status": "0x1",
+      "block_number": 45796303,
+      "token_contract": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "usdc_transfer": {
+        "from": "0x35820e5cc60f961515ef987c94d4328a82df38fc",
+        "to": "0xf56e3f3134879156e11eaff78978a270726b661b",
+        "amount_atomic": 500000,
+        "amount_usdc": 0.5
+      }
+    }
+  ],
+  "anchors": [
+    {
+      "audit_id": "audit_03117a66",
+      "anchor_tx": "0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da",
+      "db_status": "anchored",
+      "receipt_status": "0x1",
+      "block_number": 45793552,
+      "to": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
+    },
+    {
+      "audit_id": "audit_84670a33",
+      "anchor_tx": "0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa",
+      "db_status": "anchored",
+      "receipt_status": "0x1",
+      "block_number": 45793550,
+      "to": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
+    },
+    {
+      "audit_id": "audit_30aa1a70",
+      "anchor_tx": "0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877",
+      "db_status": "anchored",
+      "receipt_status": "0x1",
+      "block_number": 45795114,
+      "to": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
+    },
+    {
+      "audit_id": "audit_0aaac796",
+      "anchor_tx": "0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3",
+      "db_status": "anchored",
+      "receipt_status": "0x1",
+      "block_number": 45795806,
+      "to": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
+    },
+    {
+      "audit_id": "audit_ff45a977",
+      "anchor_tx": "0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368",
+      "db_status": "anchored",
+      "receipt_status": "0x1",
+      "block_number": 45796318,
+      "to": "0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7"
+    }
+  ],
+  "anchor_verification": {
+    "command": "npm run audit:verify",
+    "result": "5/5 proven on chain",
+    "captured_in": "08_final/final-verification.log"
+  },
+  "inventory": {
+    "file_count": 39,
+    "total_bytes": 14477276,
+    "checksummed_by": "08_final/SHA256SUMS.txt (relative paths, excludes itself and volatile live-service logs)",
+    "video_count": 7,
+    "screenshot_count": 5,
+    "video_durations_seconds": {
+      "11_videos/phase-00-01-environment-database.webm": 54.13,
+      "11_videos/phase-02-credential-boundaries.webm": 12.09,
+      "11_videos/phase-03-runtime-health.webm": 19.03,
+      "11_videos/phase-04-deny.webm": 23.33,
+      "11_videos/phase-05-escalate-human-approval.webm": 31.15,
+      "11_videos/phase-06-allow-settled.webm": 26.08,
+      "11_videos/phase-07-outcome-unknown-reconciliation.webm": 16.1
+    },
+    "files": [
+      {
+        "path": "00_environment/environment.log",
+        "bytes": 623,
+        "sha256": "02cb6969406bceb70c629e703e3b512c518252522ade97f8cc17c348a5c08fdd"
+      },
+      {
+        "path": "01_database/db-verify.log",
+        "bytes": 1255,
+        "sha256": "e38e7635dcde93bf9d327e2774c7c0e809db530ab0d4df279b235ac6f67b3298"
+      },
+      {
+        "path": "01_database/migrate.log",
+        "bytes": 291,
+        "sha256": "53ebb3bb5911236509f9495610094deab0a45fec80034b92ec5c16c693cb9b7d"
+      },
+      {
+        "path": "01_database/postgres-runtime.log",
+        "bytes": 245,
+        "sha256": "1bb9da183c0f30a98ceba49041146d2734c42bb753ad89d17bf7e74a244ac22a"
+      },
+      {
+        "path": "01_database/roles.log",
+        "bytes": 489,
+        "sha256": "7172b3b0c205ba7b8c976e470d066d021cfa1069d18a560c98c24d5568ddba4e"
+      },
+      {
+        "path": "02_credentials/credentials-summary.log",
+        "bytes": 1488,
+        "sha256": "78972e7887d3d25b785ae34ec10bcbd96939cf2f40d41e2febe6fba7fa3dfce7"
+      },
+      {
+        "path": "03_services/anchor.log",
+        "bytes": 10614,
+        "sha256": "63255d6eae2454a162196170e3481c75befded6f240cd22d7004392fcb1a30a1"
+      },
+      {
+        "path": "03_services/api.log",
+        "bytes": 722,
+        "sha256": "10729e202da534bc9ec78d818584e72b4c5cc8ee801bfc8ae8c699cf2ffda54b"
+      },
+      {
+        "path": "03_services/dashboard.log",
+        "bytes": null,
+        "sha256": null,
+        "volatile": true,
+        "note": "still being appended to by the running dashboard service; excluded from SHA256SUMS.txt. The committed copy in git is the frozen snapshot."
+      },
+      {
+        "path": "03_services/executor.log",
+        "bytes": 618,
+        "sha256": "24079604b1b078be8057beb1bd427022804870d9e49748d64da69ce8f92ddebd"
+      },
+      {
+        "path": "03_services/health-summary-final.log",
+        "bytes": 1084,
+        "sha256": "b7a46f5e3fa87eb291fb3a0216ec009b2e36dd9055ee0b0f21a2783e3bbc26d3"
+      },
+      {
+        "path": "03_services/health-summary.log",
+        "bytes": 812,
+        "sha256": "d2b1b72079520903ec20b9816b2148a17276cff076fb6cd63045b6ad69e25273"
+      },
+      {
+        "path": "03_services/merchant.log",
+        "bytes": 456,
+        "sha256": "8a33c4c6e73750e44a2cfc491aab7d9810cfcef283910515f64d94ed8d321b2c"
+      },
+      {
+        "path": "03_services/reconciler-once.log",
+        "bytes": 285,
+        "sha256": "6b4c2371245ecddfe2627de0a93d819985208e7bfb748eaecc8f18c65cacf335"
+      },
+      {
+        "path": "03_services/reconciler.log",
+        "bytes": 1559,
+        "sha256": "65f8768dccd381e986c497446524a8ffd9edda341ea936a5e0a1bc49cc250f84"
+      },
+      {
+        "path": "04_deny/audit-verify.log",
+        "bytes": 733,
+        "sha256": "c808feb2a137d915a2768c2133b232dd4375d30745a6c5616b3a519383798866"
+      },
+      {
+        "path": "04_deny/deny-raw.log",
+        "bytes": 756,
+        "sha256": "c2b1d752a81d2893a9512d3d2857ff1b13063ecfc259929e1a59fa3442af7611"
+      },
+      {
+        "path": "04_deny/deny-summary-final.log",
+        "bytes": 782,
+        "sha256": "bfe886b3870b9e4cc64bab0b66f0f57774188fda148d384d78211df9044ae3ad"
+      },
+      {
+        "path": "05_escalate/escalate-final.log",
+        "bytes": 793,
+        "sha256": "635cfad4ad84c9129b3a834b0ed1d1f9874c22e9f31a8eb4997b5411940e543d"
+      },
+      {
+        "path": "05_escalate/escalate-raw.log",
+        "bytes": 407,
+        "sha256": "016acd038e4ff87ac417bf07a61278e43554a1ee3e62a25d712b83428eef47b1"
+      },
+      {
+        "path": "05_escalate/settlement-proof.txt",
+        "bytes": 668,
+        "sha256": "e402b9fc660cfe34a664f6decc7f1395a27b775cb7c28e4986b2500e900d6e0b"
+      },
+      {
+        "path": "06_allow/allow-final.log",
+        "bytes": 712,
+        "sha256": "c5069217097c094fb776ab22d5eb6ea5da2dfea6dac0cc27d7fd0f24ba53dd7f"
+      },
+      {
+        "path": "06_allow/allow-raw.log",
+        "bytes": 712,
+        "sha256": "d449b26635e2526a8bc43c409b18e71b3e6a730dd9e9dc2ae4910d8891ef5eb1"
+      },
+      {
+        "path": "06_allow/audit-verify.log",
+        "bytes": 1132,
+        "sha256": "5b524723bf4e57ad09f33616e944327f26b3199898717acfbf9f17ddbf0cb346"
+      },
+      {
+        "path": "06_allow/settlement-receipt.json",
+        "bytes": 2437,
+        "sha256": "ed4e57200d63ad7cc32c8ea35de2bb320275a95744b343b728f83ef07157a444"
+      },
+      {
+        "path": "07_unknown/unknown-reconciliation-final.log",
+        "bytes": 4067,
+        "sha256": "62868139f249bebfe4214522792a28c15e4373d55cbbd0c508f7e3bf0a423fa6"
+      },
+      {
+        "path": "08_final/final-verification.log",
+        "bytes": 9608,
+        "sha256": "78efce59560555d27e4c2fe18e368d7e8d755475ff44cbdc619418cab3825156"
+      },
+      {
+        "path": "10_screenshots/phase-00-01/01-postgres-runtime.png",
+        "bytes": 492558,
+        "sha256": "90363befdba21661da6fda18a681d3c615c4a763639e30761824c69c6f0b9cdf"
+      },
+      {
+        "path": "10_screenshots/phase-00-01/02-migrations.png",
+        "bytes": 283072,
+        "sha256": "4bce6a01e270b44166571d331554d77562d324aea6dd162cec94779b886879d9"
+      },
+      {
+        "path": "10_screenshots/phase-00-01/03-database-roles.png",
+        "bytes": 405602,
+        "sha256": "c1c31e92191f1d55d0ad1d20ed3fa18be7f1d2c7376266af3cad389ed37348d1"
+      },
+      {
+        "path": "10_screenshots/phase-00-01/04-db-verify.png",
+        "bytes": 748386,
+        "sha256": "75e9f26b1159f4c9a28bd784fd61597e47aaabd57ce178cd29af0089f810db22"
+      },
+      {
+        "path": "10_screenshots/phase-05/escalate-terminal-approved.png",
+        "bytes": 586558,
+        "sha256": "48613f99a070f4e50e449f7607938af0f04429f4f768545db689d01c57cf7dac"
+      },
+      {
+        "path": "11_videos/phase-00-01-environment-database.webm",
+        "bytes": 2516779,
+        "sha256": "16c518c4fde6af1aeca51dc0cbe7e2fc7866c1089dd37807c3680e0a1aa987d8"
+      },
+      {
+        "path": "11_videos/phase-02-credential-boundaries.webm",
+        "bytes": 1504826,
+        "sha256": "18854c5525c804f2de6ef2f0c97f4c9085ce50aca4a49accae6cb2c7a38cac12"
+      },
+      {
+        "path": "11_videos/phase-03-runtime-health.webm",
+        "bytes": 1626195,
+        "sha256": "0b3d1a381cb201b7f09288eeab7ced318e984c0d4cd3126bb4e5332807f286ce"
+      },
+      {
+        "path": "11_videos/phase-04-deny.webm",
+        "bytes": 468488,
+        "sha256": "0b32f2b074c8cd7a6daa3d8b38c87bdbf6df50a82ec1938315f38d7ce2896318"
+      },
+      {
+        "path": "11_videos/phase-05-escalate-human-approval.webm",
+        "bytes": 1644893,
+        "sha256": "aebb49bf8e68f0845dd39c23c8b8a950c8fbc7487c6db0643f18136c1e044081"
+      },
+      {
+        "path": "11_videos/phase-06-allow-settled.webm",
+        "bytes": 1442218,
+        "sha256": "fa4b6978a9310ac45016a622959c1a1cb735d76f11da9080e1c2c66d8adedd2c"
+      },
+      {
+        "path": "11_videos/phase-07-outcome-unknown-reconciliation.webm",
+        "bytes": 2714353,
+        "sha256": "6400b8d40a804724891d6ef0cf32d74bbcefce67dc5c62f41dd7df9b984827aa"
+      }
+    ]
+  },
+  "videos": [
+    "11_videos/phase-00-01-environment-database.webm",
+    "11_videos/phase-02-credential-boundaries.webm",
+    "11_videos/phase-03-runtime-health.webm",
+    "11_videos/phase-04-deny.webm",
+    "11_videos/phase-05-escalate-human-approval.webm",
+    "11_videos/phase-06-allow-settled.webm",
+    "11_videos/phase-07-outcome-unknown-reconciliation.webm"
+  ],
+  "screenshots": [
+    "10_screenshots/phase-00-01/01-postgres-runtime.png",
+    "10_screenshots/phase-00-01/02-migrations.png",
+    "10_screenshots/phase-00-01/03-database-roles.png",
+    "10_screenshots/phase-00-01/04-db-verify.png",
+    "10_screenshots/phase-05/escalate-terminal-approved.png"
+  ],
+  "critical_missing": [],
+  "warnings": [
+    "05_escalate/audit-verify.log was removed during Phase 8: it contained a mis-pasted shell prompt line and no evidence. Phase 5's anchor (audit_30aa1a70) is verified in 06_allow/audit-verify.log and again in 08_final/final-verification.log, both reporting 5/5 proven on chain.",
+    "05_escalate/escalate-raw.log is the first attempt, which timed out waiting for the human reviewer. It is retained deliberately: the human gate is a real cross-process hold, not an in-memory pause. escalate-final.log is the approved run.",
+    "06_allow/settlement-receipt.json shows the transaction sender as the x402 facilitator, not the payer. The USDC Transfer log inside the receipt is what proves value moved from the executor to the merchant.",
+    "The demo CLI prints a generic note about an unfunded payer on ALLOW and unanchored records. It is stale informational text and does not describe these runs; the payer was funded, both permitted runs settled, and all five records are anchored.",
+    "A merchant HTTP response is never treated as financial truth. Phase 7's non-payment rests on the unconsumed, expired EIP-3009 authorization read directly from USDC on chain.",
+    "03_services/dashboard.log is excluded from SHA256SUMS.txt: the dashboard service was still running and appending to it at packaging time, so no stable checksum exists for the working copy. The snapshot committed to git is the frozen evidence. Every other file in the package is covered.",
+    "Audit records are tamper-evident through on-chain anchoring, not immutable."
+  ],
+  "status": "PASS"
+}
