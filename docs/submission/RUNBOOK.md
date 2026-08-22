@@ -212,6 +212,23 @@ Expect merchant `status: ok`, API `ok: true` with `database: up`, executor role
 
 ---
 
+## 2b. One-command start (optional wrapper)
+
+Two small Node scripts wrap the six-terminal procedure above without changing any service:
+
+```bash
+node scripts/demo-up.mjs            # starts merchant, api, executor, dashboard, reconciler, anchor
+                                    # in one window with prefixed logs; polls the health endpoints,
+                                    # checks the execution token (401) and the anchor key; prints READY
+node scripts/demo-up.mjs --check    # health table only, for services already running
+node scripts/demo-show.mjs          # runs cap_breach -> new_counterparty -> clean with a headline
+                                    # per scenario and an Enter pause between them (ESCALATE waits
+                                    # for the dashboard Approve click); --warmup runs the last two
+```
+
+Keep the launcher window off the projector; put the show script on it. If either script
+misbehaves, the manual six-terminal procedure above is unchanged.
+
 ## 3. Running the demo
 
 ```bash
