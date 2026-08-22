@@ -1,5 +1,7 @@
 # judge-site — public read-only evidence page
 
+**Deployed:** https://judge-site.vercel.app (production alias of the first deployment, 22 Aug 2026).
+
 A self-contained static site (one `index.html` with inline CSS, no frameworks, no CDNs,
 no fonts, no JavaScript, no build step) that shows the 22 August 2026 hardened-path run
 of Cerberus on Base Sepolia with its receipts, recordings, screenshots, verified gates,
