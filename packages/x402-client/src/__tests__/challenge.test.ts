@@ -79,6 +79,43 @@ async function rejectsWith(run: () => unknown, code: X402ChallengeError["code"])
   );
 }
 
+/**
+ * Transport stub for a merchant that never answers: the returned promise settles only
+ * when the request's own signal aborts, which is how the caller's timeout ends a real
+ * fetch. Two details keep that deterministic:
+ *
+ * - The Request is pinned in `pendingRequests` until it aborts. `request.signal` is a
+ *   signal derived from the timeout signal the caller passed in, and the Request
+ *   constructor (undici, as bundled in Node) links the two through a WeakRef to the
+ *   Request's internal AbortController. Once this stub has returned, nothing but the
+ *   listener below references the Request, so a garbage collection during the
+ *   few-millisecond wait could reclaim that controller; the abort then never reached
+ *   the listener and the test hung until the runner's timeout. A strong reference
+ *   held by the test keeps the abort path alive no matter when the collector runs.
+ * - A signal that is already aborted when the stub looks at it rejects at once with
+ *   the reason the listener would have delivered, so an abort that precedes the
+ *   listener cannot be missed either.
+ *
+ * The assertions about what each request carried stay in the individual tests; this
+ * only replaces the hand-rolled "settle on abort" promise.
+ */
+const pendingRequests = new Set<Request>();
+
+function neverAnswers(request: Request): Promise<Response> {
+  pendingRequests.add(request);
+  return new Promise<Response>((_resolve, reject) => {
+    const abort = () => {
+      pendingRequests.delete(request);
+      reject(request.signal.reason);
+    };
+    if (request.signal.aborted) {
+      abort();
+      return;
+    }
+    request.signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
 describe("unsigned x402 v2.21.0 challenge parsing", () => {
   it("performs one unsigned GET and parses the PAYMENT-REQUIRED header", async () => {
     let requests = 0;
@@ -115,11 +152,7 @@ describe("unsigned x402 v2.21.0 challenge parsing", () => {
         async (input) => {
           const request = input instanceof Request ? input : new Request(input);
           strictEqual(request.headers.has("PAYMENT-SIGNATURE"), false);
-          return new Promise<Response>((_resolve, reject) => {
-            request.signal.addEventListener("abort", () => reject(request.signal.reason), {
-              once: true,
-            });
-          });
+          return neverAnswers(request);
         },
         5,
       ),
@@ -185,11 +218,7 @@ describe("paid retry uses only the pinned challenge", () => {
         attempts += 1;
         const request = input instanceof Request ? input : new Request(input);
         strictEqual(request.headers.has("PAYMENT-SIGNATURE"), true);
-        return new Promise<Response>((_resolve, reject) => {
-          request.signal.addEventListener("abort", () => reject(request.signal.reason), {
-            once: true,
-          });
-        });
+        return neverAnswers(request);
       },
       async () => 12_345_678n,
       5,

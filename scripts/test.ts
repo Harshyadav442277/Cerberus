@@ -26,9 +26,15 @@ const testFiles = [
   "apps/dashboard/lib/*.test.ts",
 ];
 
-const expandedTestFiles = testFiles.flatMap((pattern) =>
-  globSync(pattern, { cwd: ROOT }).sort(),
-);
+const expandedTestFiles = testFiles.flatMap((pattern) => {
+  const matches = globSync(pattern, { cwd: ROOT }).sort();
+  // A pattern that expands to nothing is refused, never skipped: a mis-typed glob
+  // must fail this command loudly instead of silently dropping a whole suite.
+  if (matches.length === 0) {
+    throw new Error(`test file pattern matched no files: "${pattern}" (resolved against ${ROOT})`);
+  }
+  return matches;
+});
 
 const tests = spawnSync(
   process.execPath,
