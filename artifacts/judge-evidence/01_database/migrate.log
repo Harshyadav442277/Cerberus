@@ -1,0 +1,10 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 db:migrate
+> node --env-file-if-exists=.env --import tsx packages/db/src/cli/migrate.ts up
+
+
+[db] postgres://***@localhost:5544/safr_runtime
+
+  no pending migrations
+

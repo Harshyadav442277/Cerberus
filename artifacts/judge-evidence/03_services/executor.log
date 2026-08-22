@@ -1,0 +1,20 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 executor
+> tsx apps/executor/src/server.ts
+
+
+  CERBERUS isolated executor listening on http://127.0.0.1:4060
+  payment key   isolated in executor process
+  execute       POST /execute
+
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 executor
+> tsx apps/executor/src/server.ts
+
+
+  CERBERUS isolated executor listening on http://127.0.0.1:4060
+  payment key   isolated in executor process
+  execute       POST /execute
+

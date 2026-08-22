@@ -1,0 +1,39 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 reconciler
+> tsx apps/executor/src/reconcile-cli.ts
+
+
+  CERBERUS reconciliation worker
+  signer        none
+  rail          Base Sepolia USDC / EIP-3009
+
+  res_bb7391c9-c96c-4dc5-8925-d5e336cd94b7  settled
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  failed
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 reconciler
+> tsx apps/executor/src/reconcile-cli.ts
+
+
+  CERBERUS reconciliation worker
+  signer        none
+  rail          Base Sepolia USDC / EIP-3009
+
+  res_02b8a156-54d8-4a24-9a53-574e36450dd8  settled

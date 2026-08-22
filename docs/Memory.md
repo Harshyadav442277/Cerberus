@@ -13,8 +13,10 @@ A cold session should be able to resume from this file plus `SAFR_RUNTIME_PROJEC
   policy and the exact release SHAs are in
   [`submission/FINAL_FREEZE.md`](submission/FINAL_FREEZE.md), which is authoritative.
   Feature freeze was first declared at `ba5c853`; the final release-candidate lineage
-  is `cd75049` → `bb3f6a2` → `ec52e32` → this polish pass. Remaining work is signer
-  provisioning, funded evidence, recording and rehearsal — not product code.
+  is `cd75049` → `bb3f6a2` → `ec52e32` → this polish pass. Signer provisioning and the
+  funded hardened-path evidence are now **done** (see the Aug 22 entry below and
+  `artifacts/judge-evidence/`). Remaining work is presentation rehearsal — not product
+  code.
 
 - **Project name:** **CERBERUS** (corrected spelling locked by the project owner on Aug 13), named for the three-headed guardian of Hades. The three heads map to ALLOW, DENY, and ESCALATE; SAFR Runtime remains the technical description.
 - **Phase 0:** **complete.** Funded-wallet and network checks pass.
@@ -163,6 +165,62 @@ State at freeze:
 | Evidence manifest | validates, 0 failures |
 | Fresh funded live evidence | **BLOCKED** — not captured, not fabricated |
 | Screen recordings | **not captured** — automated capture unavailable |
+
+---
+
+## Aug 22 — Hardened-path live evidence captured, packaged and verified
+
+The blocker that stood since Aug 19 is cleared. The operator provisioned the three
+signers, the hardened path ran live on Base Sepolia, and the run set was then packaged
+and re-verified read-only. **No product code was changed for any of it.**
+
+**The four headline scenarios, all against `eip155:84532`.**
+
+| Scenario | Audit | Outcome |
+|---|---|---|
+| DENY — 5 USDC to `merchant_abc` against a 1 USDC per-transaction ceiling | `audit_84670a33` | `per_transaction_cap_exceeded`, rule `spend_caps.per_transaction_max`. x402 never constructed, so there is no settlement and no failed transaction — payment authority never existed |
+| ESCALATE — 0.75 USDC to `merchant_new` | `audit_30aa1a70` | `counterparty_not_on_allowlist`; held for a human; approved by `reviewer:local`; authorization `auth_f70a3e32-…`; `SETTLED` on `0x55ba3c22…25469`, receipt `status 0x1`, 750000 atomic |
+| ALLOW — 0.5 USDC to `merchant_xyz`, `invoice_884` | `audit_ff45a977` | `within_mandate`; authorization `auth_8b204222-…`; `SETTLED` on `0xfe4d0228…c995fa`, receipt `status 0x1`, 500000 atomic |
+| Ambiguous signed outcome | `audit_0aaac796` | ALLOW, then execution went ambiguous after signing. Capacity held, no blind retry, keyless reconciler `deferred` ×17, EIP-3009 authorization expired unused. Terminal `FAILED`, `settlement_tx` `NULL`, `safe to retry` |
+
+The ambiguous outcome was a **real incident during the run set**, not manufactured for
+the demo. Its value is that the non-payment is proven positively rather than assumed:
+`USDC.authorizationState(payer, nonce)` for `res_bcaf9720-…` reads **false** and the
+authorization's `validBefore` (2026-08-22T00:49:44Z) has elapsed. The merchant's HTTP
+response was never treated as financial truth.
+
+`npm run audit:verify` → **5/5 proven on chain** (`audit_03117a66`, `audit_84670a33`,
+`audit_30aa1a70`, `audit_0aaac796`, `audit_ff45a977`), each against its own anchor
+transaction.
+
+**Packaging.** `artifacts/judge-evidence/` holds 38 phase-evidence files across phases
+0–7 — logs, five screenshots, seven screen recordings — plus `08_final/` carrying
+`SHA256SUMS.txt` for the whole package, `evidence-summary.json`, and
+`final-verification.log`: a read-only re-read of the authoritative database rows, the
+least-privilege logins, the credential boundary, both settlement receipts, the
+unconsumed EIP-3009 authorization and all five anchor receipts. No zero-byte files, no
+malformed JSON, nothing missing. `artifacts/final-evidence/` was deliberately not
+touched — it is frozen evidence of the earlier gate run and rewriting it after the fact
+would defeat its purpose.
+
+**Two things to know when reading the raw logs.** The demo CLI prints a generic note
+that failed settlement and unanchored records "are expected until the payer wallet is
+funded (Memory.md blocker B1)". That text is stale and does not describe these runs —
+the payer was funded, both permitted scenarios settled, all five records anchored.
+Historical logs were kept byte-for-byte rather than edited. And
+`05_escalate/escalate-raw.log` is the first attempt, which timed out waiting for a human
+reviewer; it is retained because it shows the human gate is a genuine cross-process
+hold. One file, `05_escalate/audit-verify.log`, was removed: it contained a mis-pasted
+shell prompt line and no evidence. Phase 5's anchor is verified in
+`06_allow/audit-verify.log` and again in `08_final/final-verification.log`.
+
+**Documentation updated to match, not rewritten:** `README.md`,
+`docs/submission/EVIDENCE.md`, `FINAL_FREEZE.md`, `LIVE_EVIDENCE_BLOCKED.md`
+(now marked RESOLVED, procedure retained), `RUNBOOK.md`, `JUDGE_SCRIPT.md` and this
+file. `JUDGE_SCRIPT.md` also had two stale figures corrected to the current gate — the
+red-team suite is 12/12, and the suite is 384 tests.
+
+**Remaining:** presentation rehearsal. Nothing else.
 
 ---
 
@@ -427,6 +485,12 @@ bare x402 payment settled, `AuditAnchor` deployed at
 runs settled and anchored successfully. Exact transaction hashes are in
 `docs/submission/EVIDENCE.md`. The other Aug 13 wallet remains unused; do not
 switch identities for the recorded demo.
+
+**B-LIVE — RESOLVED (Aug 22).** Fresh hardened-path live evidence, blocked since Aug 19
+on signer provisioning, is captured. Three signers provisioned into three separate
+processes; DENY, ESCALATE with real human approval, ALLOW with real USDC settlement and
+a genuine ambiguous-outcome reconciliation all recorded; 5/5 anchors proven on chain.
+Package and hashes: `artifacts/judge-evidence/`. See the Aug 22 log entry.
 
 **B2 — RESOLVED BY DESCOPE.** Judged runs use deterministic Proposed Action fixtures. The optional LLM intent path remains schema-validated but is not needed and never participates in the compliance decision.
 

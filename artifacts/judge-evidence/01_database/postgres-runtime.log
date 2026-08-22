@@ -1,0 +1,8 @@
+========================================
+CERBERUS — POSTGRES RUNTIME
+========================================
+
+Container: safr-postgres
+Image: postgres:16-alpine
+Status: Up 37 hours (healthy)
+Ports: 0.0.0.0:5544->5432/tcp, [::]:5544->5432/tcp

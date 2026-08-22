@@ -1,0 +1,17 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 audit:verify
+> node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/verify-anchors.ts
+
+
+  Verifying 2 anchored record(s) against Base Sepolia
+  contract  0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+  rpc       https://sepolia.base.org
+
+  VERIFIED audit_03117a66       0xec8841e47282ead5…  0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da  118 conf
+  VERIFIED audit_84670a33       0x193839e7835acb0a…  0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa  120 conf
+
+  2/2 proven on chain
+
+  Every anchored record is proven by its own on-chain transaction.
+

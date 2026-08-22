@@ -1,0 +1,11 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 demo
+> tsx apps/agent/src/cli/run.ts new_counterparty
+
+
+Scenario 3 — new counterparty   [new_counterparty]
+  proposes      0.75 USDC to merchant_new  (invoice_886, via fixture)
+
+  ERROR Timed out waiting for human review on action_d54b80e8. Approve or deny it from the dashboard.
+

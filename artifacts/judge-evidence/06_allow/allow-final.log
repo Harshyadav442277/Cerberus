@@ -1,0 +1,23 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 demo
+> tsx apps/agent/src/cli/run.ts clean
+
+
+Scenario 1 — clean transaction   [clean]
+  proposes      0.5 USDC to merchant_xyz  (invoice_884, via fixture)
+  disposition   ALLOW
+  reason        within_mandate
+  rule          (none — clean pass)
+  x402 reached  yes
+  audit_id      audit_ff45a977
+
+Audit anchors
+  audit_ff45a977  no anchor row
+
+  Verify with: npm run audit:verify
+
+Note: a failed settlement on the ALLOW path, and anchors that are not yet on chain,
+are both expected until the payer wallet is funded (Memory.md blocker B1). Neither
+affects the disposition path above.
+

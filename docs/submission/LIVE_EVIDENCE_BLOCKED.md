@@ -1,14 +1,22 @@
-# Live Evidence — BLOCKED
+# Live Evidence — RESOLVED (was BLOCKED)
 
-**Status:** Phase E (fresh hardened live payment evidence) could not be executed
-automatically. **Nothing about it has been fabricated.** No transaction hash, block
-number, or settlement in this repository comes from the hardened path; every live
-hash currently published is labelled Stage-1 history.
+> **Status: RESOLVED, 22 August 2026.** The three signers were provisioned by the
+> operator and the hardened path was run live against Base Sepolia. DENY, ESCALATE with
+> real human approval, ALLOW with real USDC settlement, and a genuine ambiguous-outcome
+> reconciliation are all captured in
+> [`artifacts/judge-evidence/`](../../artifacts/judge-evidence/) and summarised in
+> [EVIDENCE.md](./EVIDENCE.md) and [FINAL_FREEZE.md](./FINAL_FREEZE.md).
+>
+> The rest of this document is kept as the record of what the blocker was and the exact
+> procedure that cleared it — it is the runbook to reproduce the run on a fresh machine,
+> not a current status claim. Everything below describes the state **before** the
+> signers were provisioned.
 
-Everything else in the finalist build ran and is green. This document is the exact
-handoff needed to unblock the live run.
+**Nothing about the blocker was ever fabricated.** While it stood, no transaction hash,
+block number, or settlement in this repository came from the hardened path, and every
+live hash published at that time was labelled Stage-1 history.
 
-Verify the blocker yourself at any time:
+Check the preconditions on any machine:
 
 ```bash
 npm run preflight
@@ -16,7 +24,7 @@ npm run preflight
 
 ---
 
-## Why it is blocked
+## Why it was blocked
 
 The finalist architecture deliberately splits one Stage-1 key into **three separate
 signers, held by three different processes**. That separation is the product — the

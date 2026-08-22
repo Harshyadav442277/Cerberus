@@ -62,9 +62,9 @@ labelled as such.
 | **Typecheck / dashboard build / contract compile** | all clean |
 | **Continuous integration** | GitHub Actions reproduces the full gate on a clean Linux runner with no wallet secrets; verify the status for the commit being deployed |
 | **Database verification** (`npm run db:verify`) | all checks pass |
-| **Fresh live evidence** | **BLOCKED — not captured.** The three signers are not provisioned on this machine and no funded payment has been made on the hardened path. Nothing has been fabricated; see [LIVE_EVIDENCE_BLOCKED.md](docs/submission/LIVE_EVIDENCE_BLOCKED.md). |
+| **Fresh live evidence** | **CAPTURED on the hardened path.** Three signers provisioned and isolated; DENY, ESCALATE-with-human-approval, ALLOW and a real ambiguous-outcome reconciliation all captured against Base Sepolia. Package: [`artifacts/judge-evidence/`](artifacts/judge-evidence/), summarised in [`08_final/evidence-summary.json`](artifacts/judge-evidence/08_final/evidence-summary.json). |
 | **Phase 7 (seeded sandbox)** | **Complete.** `npm run sandbox` |
-| **Screen recordings** | A baseline adversarial recording is indexed in final evidence; no fresh funded live-payment recording is claimed |
+| **Screen recordings** | Seven screen recordings covering environment/database, credential boundaries, runtime health, DENY, ESCALATE, ALLOW settlement and the reconciliation incident, in [`artifacts/judge-evidence/11_videos/`](artifacts/judge-evidence/11_videos/) |
 
 ### Security posture
 
@@ -122,8 +122,9 @@ Stated plainly, because a security claim is only worth what its exceptions admit
 - **Same-host compromise.** Process isolation is by operating-system boundary and
   database role. An attacker with root on the host defeats it, as they would defeat
   any single-machine deployment.
-- **No fresh funded evidence on the hardened path.** Blocked on operator key
-  provisioning and funding, and stated as blocked rather than papered over.
+- **Testnet evidence, not a production track record.** The hardened-path evidence is
+  a supervised Base Sepolia run set, captured once, on one machine. It is real and
+  independently checkable on chain; it is not an uptime or scale claim.
 
 ### Historical Stage-1 evidence
 
@@ -133,9 +134,26 @@ retained as history rather than presented as current evidence.
 
 Live settlement and anchoring are explorer-verifiable: the [bare x402 payment](https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9), [AuditAnchor deployment](https://base-sepolia.blockscout.com/tx/0x2cb059b1671678ae8ade38edca8daaa29f8a9e44b758e60484993f3899cebd08), and [final supervised-run anchor](https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191) all succeeded on Base Sepolia. The full two-run transaction manifest is in [submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
-These prove the Stage-1 rail and governance flow. The hardened path must be rerun
-before its live-settlement evidence is claimed; its code, adversarial tests and
-security remediation are complete.
+These prove the Stage-1 rail and governance flow, and are retained as history only.
+
+### Current hardened-path evidence
+
+Captured on the finalist build with the payment, authorization and anchor signers held
+by three separate processes. Base Sepolia (`eip155:84532`), USDC
+`0x036CbD53842c5426634e7929541eC2318f3dCF7e`, executor `0x35820e5cC60F961515EF987C94D4328a82Df38Fc`,
+merchant `0xf56e3F3134879156e11EAff78978a270726B661b`.
+
+| Scenario | Outcome | On-chain |
+|---|---|---|
+| **DENY** — 5 USDC against a 1 USDC per-transaction cap (`audit_84670a33`) | `per_transaction_cap_exceeded`; the x402 client is **never constructed** | No settlement, because payment authority never existed. Audit anchor [`0xfaabd0…9a7aa`](https://base-sepolia.blockscout.com/tx/0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa) |
+| **ESCALATE** — 0.75 USDC to a counterparty not on the allowlist (`audit_30aa1a70`) | Held for a human; approved by `reviewer:local`; then `SETTLED` | Settlement [`0x55ba3c…25469`](https://base-sepolia.blockscout.com/tx/0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469) (`status 0x1`, 750000 atomic). Anchor [`0x3d4659…78877`](https://base-sepolia.blockscout.com/tx/0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877) |
+| **ALLOW** — 0.5 USDC within mandate (`audit_ff45a977`) | `within_mandate`; authorized for exactly that action; `SETTLED` | Settlement [`0xfe4d02…c995fa`](https://base-sepolia.blockscout.com/tx/0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa) (`status 0x1`, 500000 atomic). Anchor [`0xdb4eed…96368`](https://base-sepolia.blockscout.com/tx/0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368) |
+| **Ambiguous outcome** — a real incident, not staged (`audit_0aaac796`) | ALLOW, then the signed execution became ambiguous. Capacity stayed held, nothing was blindly retried, the keyless reconciler deferred 17 times, and the EIP-3009 authorization expired unused. Terminal state `FAILED`, `settlement_tx` null, safe to retry | No transfer. `USDC.authorizationState(payer, nonce)` reads **false** and the validity window has elapsed — positive non-payment evidence, not an inference from the merchant's HTTP response. Anchor [`0x156f3e…d62e3`](https://base-sepolia.blockscout.com/tx/0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3) |
+
+`npm run audit:verify` reports **5/5 anchored records proven on chain**. The full
+package, its SHA-256 manifest and a read-only re-verification transcript are in
+[`artifacts/judge-evidence/`](artifacts/judge-evidence/); per-scenario detail is in
+[submission/EVIDENCE.md](docs/submission/EVIDENCE.md).
 
 ## Documents
 
@@ -155,6 +173,7 @@ Read in this order. The Bible is the source of truth and overrides everything el
 | [submission/FINAL_FREEZE.md](docs/submission/FINAL_FREEZE.md) | Release status, exact SHAs, gate results, and the architecture/feature/code freeze policy |
 | [submission/RUNBOOK.md](docs/submission/RUNBOOK.md) | Cold start to judged demo, and the failure modes actually hit |
 | [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | Verified local and Base Sepolia evidence, transaction manifest, and known limitations |
+| [`artifacts/judge-evidence/`](artifacts/judge-evidence/) | The captured hardened-path evidence package: per-phase logs, screenshots, recordings, SHA-256 manifest and `evidence-summary.json` |
 
 ## Stack
 

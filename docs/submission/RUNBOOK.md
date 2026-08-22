@@ -14,8 +14,10 @@ recovery steps for the failures actually hit during setup.
 The public hashes and Windows evidence below remain valid proof of the Stage-1 rail
 and governance flow. They were produced before the finalist signer-isolation change
 and must not be presented as proof that the new authorization/executor boundary has
-settled live. Phase-1 code and adversarial tests are complete; capture a fresh funded
-run after applying this setup.
+settled live. That boundary has since settled live on its own evidence: the
+hardened-path run set of 22 August 2026 is in
+[`artifacts/judge-evidence/`](../../artifacts/judge-evidence/) with the transaction
+manifest in [EVIDENCE.md](./EVIDENCE.md). Keep the two sets labelled separately.
 
 Create the ignored environment files from their examples. `.env` is shared/public,
 `.env.agent` is the only file parsed by the agent, `.env.authorizer` holds the
@@ -248,7 +250,8 @@ evidence. Do not switch to the other Aug 13 throwaway wallet. The configured pay
 AUDIT_ANCHOR_ADDRESS=0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7
 ```
 
-Verified public-chain identifiers:
+Verified public-chain identifiers — **Stage-1 history**, produced by the payer above
+before signer isolation:
 
 | Item | Transaction / address |
 |---|---|
@@ -258,7 +261,26 @@ Verified public-chain identifiers:
 | Final ESCALATE settlement | `0xed859f2458884eb3e57bad5f2779e09f41493c86456e6118ae8d4ead3440a93c` |
 | Final ESCALATE anchor | `0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191` |
 
-See `EVIDENCE.md` for both complete supervised-run manifests.
+Verified public-chain identifiers — **hardened path**, produced with the payment,
+authorization and anchor signers in three separate processes. Payer
+`0x35820e5cC60F961515EF987C94D4328a82Df38Fc`, payee
+`0xf56e3F3134879156e11EAff78978a270726B661b`:
+
+| Item | Transaction |
+|---|---|
+| ESCALATE settlement, 0.75 USDC (`audit_30aa1a70`) | `0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469` |
+| ALLOW settlement, 0.5 USDC (`audit_ff45a977`) | `0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa` |
+| DENY anchor (`audit_84670a33`) — no settlement, x402 never constructed | `0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa` |
+| ESCALATE anchor | `0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877` |
+| ALLOW anchor | `0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368` |
+| Ambiguous-outcome anchor (`audit_0aaac796`) — terminal `FAILED`, `settlement_tx` `NULL` | `0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3` |
+
+`npm run audit:verify` reports 5/5 proven on chain across both sets of anchored
+records.
+
+See `EVIDENCE.md` for the complete supervised-run manifests, and
+`artifacts/judge-evidence/08_final/` for the SHA-256 manifest and the read-only
+re-verification transcript.
 
 Before another recorded run:
 
@@ -305,6 +327,17 @@ ESCALATE). A tiny amount of ETH covers the three anchor calls.
 ---
 
 ## 6. Regenerating evidence
+
+The captured hardened-path package is `artifacts/judge-evidence/`; verify it has not
+changed since capture without re-running anything:
+
+```bash
+cd artifacts/judge-evidence && sha256sum -c 08_final/SHA256SUMS.txt
+```
+
+`artifacts/final-evidence/` is frozen historical evidence and must not be regenerated.
+
+To recapture the dashboard screenshots:
 
 ```bash
 pwsh -File scripts/capture-evidence.ps1

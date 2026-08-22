@@ -1,0 +1,29 @@
+CERBERUS — PHASE 5 ESCALATE SETTLEMENT PROOF
+
+Audit:
+audit_30aa1a70
+
+Governance:
+Disposition: ESCALATE
+Reason: counterparty_not_on_allowlist
+Human review: APPROVED
+
+Settlement:
+Status: SETTLED
+Amount: 0.75 USDC
+Network: Base Sepolia
+Token: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
+Payer: 0x35820e5cC60F961515EF987C94D4328a82Df38Fc
+Payee: 0xf56e3F3134879156e11EAff78978a270726B661b
+
+Settlement transaction:
+0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469
+
+On-chain receipt status:
+0x1 — successful inclusion
+
+Audit anchor transaction:
+0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877
+
+Anchor verification:
+3/3 proven on chain

@@ -1,0 +1,10 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 merchant
+> tsx apps/merchant/src/server.ts
+
+[merchant] x402 resource server listening on :4021
+[merchant] network      eip155:84532
+[merchant] facilitator  https://x402.org/facilitator
+[merchant] payTo        0xf56e3F3134879156e11EAff78978a270726B661b
+[merchant] routes       /pay/merchant_xyz, /pay/merchant_abc, /pay/merchant_new

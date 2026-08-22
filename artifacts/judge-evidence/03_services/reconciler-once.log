@@ -1,0 +1,10 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 reconciler
+> tsx apps/executor/src/reconcile-cli.ts --once
+
+
+  CERBERUS reconciliation worker
+  signer        none
+  rail          Base Sepolia USDC / EIP-3009
+

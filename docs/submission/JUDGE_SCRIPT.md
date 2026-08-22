@@ -127,10 +127,21 @@ Then the line that matters most:
 > Cerberus marks it **OUTCOME_UNKNOWN**, keeps the budget held, and refuses to retry
 > until it has read the chain and knows. Exactly one payment happens, or none.
 
+This one actually happened to us, and we kept the evidence — `audit_0aaac796`. An
+ALLOW was authorized and signed, and then the outcome went ambiguous. Cerberus held the
+capacity, retried nothing, and the keyless reconciler returned `deferred` seventeen
+times because it never had positive chain evidence either way. The payment
+authorization eventually expired unused. Terminal state: `FAILED`, settlement
+transaction `NULL`, safe to retry.
+
+> A network error is not proof that money did not move. So we didn't guess — we read
+> the authorization off the chain. USDC says it was never used, and its validity window
+> has passed. That's not "we assume it failed." That's proof it never happened.
+
 ### 8. The proof
 
-> Twelve out of twelve adversarial attack classes. Nine out of nine in the security
-> red-team suite. Three hundred and sixty-three automated tests.
+> Twelve out of twelve adversarial attack classes. Twelve out of twelve in the security
+> red-team suite. Three hundred and eighty-four automated tests.
 >
 > And this one is my favourite: **we break each security control on purpose and check
 > the tests notice.** Twelve out of twelve. A security test suite that can't fail is
@@ -204,10 +215,17 @@ implementation. None of those is true, and a judge who knows the space will noti
 > our own database's word that it's there.
 
 **"Did you actually pay something?"**
-> Real USDC has settled on Base Sepolia through this system, and the transactions are
-> public. Be precise about which build produced which transaction — see
-> `docs/submission/EVIDENCE.md`, where Stage-1 history and finalist-hardened evidence
-> are labelled separately, on purpose.
+> Yes, on the hardened build with the payment key in its own process. An approved
+> ESCALATE settled 0.75 USDC — `0x55ba3c22…25469` — and an in-mandate ALLOW settled
+> 0.5 USDC — `0xfe4d0228…c995fa`. Both receipts read `status 0x1` on Base Sepolia, and
+> both show the USDC transfer from the executor to the merchant. The DENY has no
+> transaction at all, which is the point: payment authority never existed. All five
+> audit records are anchored, and `npm run audit:verify` reads them back off the chain
+> 5 out of 5.
+>
+> Be precise about which build produced which transaction — `docs/submission/EVIDENCE.md`
+> labels Stage-1 history and finalist-hardened evidence separately, on purpose, and the
+> whole hardened package is in `artifacts/judge-evidence/`.
 
 ---
 

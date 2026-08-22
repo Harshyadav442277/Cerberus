@@ -1,0 +1,24 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 demo
+> tsx apps/agent/src/cli/run.ts new_counterparty
+
+
+Scenario 3 — new counterparty   [new_counterparty]
+  proposes      0.75 USDC to merchant_new  (invoice_886, via fixture)
+  disposition   ESCALATE
+  reason        counterparty_not_on_allowlist
+  rule          counterparty_policy
+  human review  approved by reviewer:local
+  x402 reached  yes
+  audit_id      audit_30aa1a70
+
+Audit anchors
+  audit_30aa1a70  no anchor row
+
+  Verify with: npm run audit:verify
+
+Note: a failed settlement on the ALLOW path, and anchors that are not yet on chain,
+are both expected until the payer wallet is funded (Memory.md blocker B1). Neither
+affects the disposition path above.
+

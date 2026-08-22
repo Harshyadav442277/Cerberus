@@ -1,0 +1,171 @@
+==============================================
+ CERBERUS — PHASE 8 FINAL VERIFICATION
+==============================================
+Captured (UTC): 2026-08-22T01:37:45Z
+Read-only verification. No payment, no DB mutation, no service restart.
+
+=== 1. REPOSITORY STATE ===
+branch        main
+HEAD          0462558b3b4610173587729a90cb64f006a3c2f3
+origin/main   0462558b3b4610173587729a90cb64f006a3c2f3
+remote        https://github.com/Harshyadav442277/Cerberus.git
+ahead/behind  0	0
+last commit   0462558 Add the audit-log screenshot referenced in EVIDENCE.md
+
+=== 2. EVIDENCE INVENTORY (artifacts/judge-evidence) ===
+Counts cover phase evidence 00-07 and 10/11; the Phase-8 integrity files
+(evidence-summary.json, SHA256SUMS.txt) are generated after this log.
+phase evidence files  38
+videos                7
+screenshots           5
+zero-byte files       0
+malformed JSON        0
+total bytes           14647157
+
+video durations (seconds):
+  phase-00-01-environment-database.webm                    54.133000
+  phase-02-credential-boundaries.webm                      12.091000
+  phase-03-runtime-health.webm                             19.030000
+  phase-04-deny.webm                                       23.326000
+  phase-05-escalate-human-approval.webm                    31.149000
+  phase-06-allow-settled.webm                              26.076000
+  phase-07-outcome-unknown-reconciliation.webm             16.104000
+
+=== 3. AUTHORITATIVE DATABASE STATE (read-only SELECT) ===
+    audit_id    | disposition |            reason             | reservation_status |                           settlement_tx                            | recon_attempts 
+----------------+-------------+-------------------------------+--------------------+--------------------------------------------------------------------+----------------
+ audit_0aaac796 | ALLOW       | within_mandate                | FAILED             | (null)                                                             |             17
+ audit_30aa1a70 | ESCALATE    | counterparty_not_on_allowlist | SETTLED            | 0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469 |              1
+ audit_84670a33 | DENY        | per_transaction_cap_exceeded  |                    | (null)                                                             |               
+ audit_ff45a977 | ALLOW       | within_mandate                | SETTLED            | 0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa |              1
+(4 rows)
+
+Phase 7 terminal audit settlement JSON:
+ {"rail": "x402", "status": "failed", "tx_hash": null, "settled_at": null}
+
+Phase 7 reconciliation error:
+ EIP-3009 authorization expired unused; safe to retry
+
+Human approval records:
+    audit_id    | decision |  reviewer_id   
+----------------+----------+----------------
+ audit_30aa1a70 | approved | reviewer:local
+ audit_7ed88f7b | denied   | reviewer:local
+(2 rows)
+
+Execution authorizations (exact-action, single-use):
+             authorization_id              |    audit_id    |  status  
+-------------------------------------------+----------------+----------
+ auth_f70a3e32-35f9-4427-b5e6-a8b1e72f5234 | audit_30aa1a70 | CONSUMED
+ auth_4920d58f-1337-4d44-ba7a-70b3f0fdff9a | audit_0aaac796 | CONSUMED
+ auth_8b204222-ac27-40b9-a5dc-d5a3dc8cb875 | audit_ff45a977 | CONSUMED
+(3 rows)
+
+
+=== 4. LEAST-PRIVILEGE DATABASE LOGINS (names only, no credentials) ===
+           rolname           
+-----------------------------
+ cerberus_agent_app
+ cerberus_agent_role
+ cerberus_anchor_app
+ cerberus_anchor_role
+ cerberus_control_app
+ cerberus_control_plane_role
+ cerberus_executor_app
+ cerberus_executor_role
+ cerberus_reconciler_app
+ cerberus_reconciler_role
+(10 rows)
+
+
+=== 5. CREDENTIAL ISOLATION (variable names only — no values read) ===
+  .env.agent         AGENT_DATABASE_URL EXECUTION_API_TOKEN NEXT_PUBLIC_API_URL EXECUTOR_URL MERCHANT_BASE_URL EVM_RPC_URL EXECUTOR_WALLET_ADDRESS AUDIT_ANCHOR_ADDRESS
+  .env.authorizer    CONTROL_PLANE_DATABASE_URL EXECUTION_API_TOKEN EXECUTION_AUTH_PRIVATE_KEY AUDIT_ANCHOR_PRIVATE_KEY REVIEWER_API_TOKEN REVIEWER_ID
+  .env.executor      EXECUTOR_DATABASE_URL EXECUTOR_EVM_PRIVATE_KEY EVM_RPC_URL
+  .env.anchor        ANCHOR_DATABASE_URL AUDIT_ANCHOR_PRIVATE_KEY AUDIT_ANCHOR_ADDRESS EVM_RPC_URL ANCHOR_POLL_MS
+  .env.reconciler    RECONCILER_DATABASE_URL EVM_RPC_URL
+  .env.reviewer      CERBERUS_API_URL REVIEWER_API_TOKEN
+
+  Hostile-agent boundary — payment/authorization/anchor signers in the agent process:
+    EXECUTOR_EVM_PRIVATE_KEY       ABSENT (expected)
+    EXECUTION_AUTH_PRIVATE_KEY     ABSENT (expected)
+    AUDIT_ANCHOR_PRIVATE_KEY       ABSENT (expected)
+    REVIEWER_API_TOKEN             ABSENT (expected)
+
+  Reconciler signer material:
+    no private key — keyless reconciler confirmed
+
+  Credential files tracked by git (must be empty):
+    none
+
+=== 6. ON-CHAIN SETTLEMENT RECEIPTS (read-only RPC: https://base-sepolia-rpc.publicnode.com) ===
+  Phase 5 ESCALATE  0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469
+    receipt status    0x1 (0x1 = successful inclusion)
+    block             45795096
+    token contract    0x036cbd53842c5426634e7929541ec2318f3dcf7e
+    USDC Transfer     from 0x35820e5cc60f961515ef987c94d4328a82df38fc -> 0xf56e3f3134879156e11eaff78978a270726b661b  750000 atomic (0.75 USDC)
+  Phase 6 ALLOW  0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa
+    receipt status    0x1 (0x1 = successful inclusion)
+    block             45796303
+    token contract    0x036cbd53842c5426634e7929541ec2318f3dcf7e
+    USDC Transfer     from 0x35820e5cc60f961515ef987c94d4328a82df38fc -> 0xf56e3f3134879156e11eaff78978a270726b661b  500000 atomic (0.50 USDC)
+
+=== 7. PHASE 7 POSITIVE NON-PAYMENT EVIDENCE (read-only eth_call) ===
+  reservation      res_bcaf9720-4b9a-4710-946c-cb9d00d04a36
+  EIP-3009 nonce   0x8dbcbebfc0c876c91a6b64f0e716f5b52f09257901583d7692b38d06dc9739dc
+  payer            0x35820e5cC60F961515EF987C94D4328a82Df38Fc
+  validBefore      1787359784 (2026-08-22T00:49:44Z — already elapsed)
+  USDC.authorizationState(payer, nonce) = 0x0000000000000000000000000000000000000000000000000000000000000000
+  => false. The authorization was never consumed on chain and its validity
+     window has elapsed. The money did not move, and cannot move under this
+     authorization. This is positive non-payment evidence, not an inference
+     from the merchant HTTP response.
+
+=== 8. AUDIT ANCHOR RECEIPTS (read-only RPC) ===
+    audit_id    |                           anchor_tx_hash                           |  status  
+----------------+--------------------------------------------------------------------+----------
+ audit_03117a66 | 0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da | anchored
+ audit_84670a33 | 0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa | anchored
+ audit_30aa1a70 | 0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877 | anchored
+ audit_0aaac796 | 0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3 | anchored
+ audit_ff45a977 | 0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368 | anchored
+(5 rows)
+
+  status 0x1  to 0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7  block 45793552   0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da
+  status 0x1  to 0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7  block 45793550   0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa
+  status 0x1  to 0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7  block 45795114   0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877
+  status 0x1  to 0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7  block 45795806   0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3
+  status 0x1  to 0x2d2d857ce3c0d5d666b7e0db3fe8067d4b4d6ff7  block 45796318   0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368
+
+=== 9. npm run audit:verify (read-only anchor verification) ===
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 audit:verify
+> node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/verify-anchors.ts
+
+
+  Verifying 5 anchored record(s) against Base Sepolia
+  contract  0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+  rpc       https://sepolia.base.org
+
+  VERIFIED audit_03117a66       0xec8841e47282ead5…  0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da  3559 conf
+  VERIFIED audit_84670a33       0x193839e7835acb0a…  0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa  3561 conf
+  VERIFIED audit_30aa1a70       0x185bb5d0c3a4edc1…  0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877  1997 conf
+  VERIFIED audit_0aaac796       0xdd447c2534d1c782…  0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3  1306 conf
+  VERIFIED audit_ff45a977       0xfe12c36b4090fd3d…  0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368  794 conf
+
+  5/5 proven on chain
+
+  Every anchored record is proven by its own on-chain transaction.
+
+
+=== 10. NETWORK IDENTITY ===
+  chain id (eth_chainId)  84532  (Base Sepolia, expected 84532)
+  USDC                    0x036CbD53842c5426634e7929541eC2318f3dCF7e
+  executor (payer)        0x35820e5cC60F961515EF987C94D4328a82Df38Fc
+  merchant payTo          0xf56e3F3134879156e11EAff78978a270726B661b
+  AuditAnchor contract    0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+
+==============================================
+ PHASE 8 FINAL VERIFICATION COMPLETE
+==============================================

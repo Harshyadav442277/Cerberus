@@ -63,15 +63,35 @@ dashboard health proxy fix. No test was removed or weakened.
 | **Evil origin** | Receives no `Access-Control-Allow-Origin` grant. |
 | **Dashboard** | Audit feed, mandate, agent and escalation pages all render with live records; health indicators now render accurately. |
 
-**No funded settlement is claimed.** The three signer keys are not provisioned on this
-machine, so `x402 reached` is `NO` on the ALLOW path and settlement is `null`. This was
-confirmed identical at the unmodified start commit, so it is an environment state, not a
-regression.
+**At the time of this gate run, no funded settlement was claimed** — the three signer
+keys were not yet provisioned on this machine, so `x402 reached` was `NO` on the ALLOW
+path and settlement was `null`. That was confirmed identical at the unmodified start
+commit, so it was an environment state, not a regression. The signers were provisioned
+afterwards and the live run set was captured; see **Current live-evidence status**
+below. The gate figures in this section are unchanged by that capture — no product code
+was modified for it.
 
 ## Current live-evidence status
 
-**BLOCKED.** `artifacts/final-evidence/manifest.json` carries `live.status = "BLOCKED"`
-with `allow`, `escalate` and `deny` all `null`. Nothing has been fabricated.
+**CAPTURED — 22 August 2026.** The three signers were provisioned into three separate
+processes and the hardened path was run live against Base Sepolia (`eip155:84532`).
+
+| Scenario | Audit | Result |
+|---|---|---|
+| DENY — 5 USDC against a 1 USDC per-transaction cap | `audit_84670a33` | `per_transaction_cap_exceeded`; x402 never constructed; no settlement, because payment authority never existed |
+| ESCALATE — 0.75 USDC, counterparty not on the allowlist | `audit_30aa1a70` | Held for a human, approved by `reviewer:local`, then `SETTLED` — `0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469`, receipt `status = 0x1`, 750000 atomic |
+| ALLOW — 0.5 USDC within mandate | `audit_ff45a977` | `SETTLED` — `0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa`, receipt `status = 0x1`, 500000 atomic |
+| Ambiguous signed outcome (real incident, not staged) | `audit_0aaac796` | No blind retry; capacity held; keyless reconciler deferred 17 times; EIP-3009 authorization expired unused. Terminal `FAILED`, `settlement_tx` `NULL`, safe to retry |
+
+`npm run audit:verify` reports **5/5 anchored records proven on chain**. The package,
+its SHA-256 manifest and a read-only re-verification transcript are in
+[`artifacts/judge-evidence/`](../../artifacts/judge-evidence/); the per-scenario
+narrative is in [EVIDENCE.md](./EVIDENCE.md).
+
+`artifacts/final-evidence/manifest.json` still carries `live.status = "BLOCKED"` and is
+**deliberately left untouched**: it is the frozen attestation of the earlier gate run
+and rewriting it after the fact would defeat its purpose. The current live status is
+this section and the `judge-evidence` package.
 
 Historical Stage-1 Base Sepolia transactions remain in the repository and are **labelled
 historical**. They predate signer isolation, trusted-time remediation, the current

@@ -1,0 +1,20 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 audit:verify
+> node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/verify-anchors.ts
+
+
+  Verifying 5 anchored record(s) against Base Sepolia
+  contract  0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
+  rpc       https://sepolia.base.org
+
+  VERIFIED audit_03117a66       0xec8841e47282ead5…  0x98b34f10e47aac9e2e46b18ee4e049500866cd83af0743e43a8f6a3189ede2da  2930 conf
+  VERIFIED audit_84670a33       0x193839e7835acb0a…  0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa  2932 conf
+  VERIFIED audit_30aa1a70       0x185bb5d0c3a4edc1…  0x3d4659c3890b2061eaf04fc4351b83bce5d496c999259e6a8a55a6290be78877  1369 conf
+  VERIFIED audit_0aaac796       0xdd447c2534d1c782…  0x156f3ed3e17d65a59ca37593befa8eb47b02dae8b44eafbe5b008318db8d62e3  677 conf
+  VERIFIED audit_ff45a977       0xfe12c36b4090fd3d…  0xdb4eed29be7f44d0c7af7375721047219cf6c74c0f87a08b373938a6b9596368  166 conf
+
+  5/5 proven on chain
+
+  Every anchored record is proven by its own on-chain transaction.
+

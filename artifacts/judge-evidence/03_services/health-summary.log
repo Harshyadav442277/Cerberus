@@ -1,0 +1,22 @@
+==============================================
+CERBERUS — PHASE 3 RUNTIME HEALTH
+==============================================
+
+Merchant:
+{"status":"ok","network":"eip155:84532","facilitator":"https://x402.org/facilitator","payTo":"0xf56e3F3134879156e11EAff78978a270726B661b","counterparties":["merchant_xyz","merchant_abc","merchant_new"]}
+
+API:
+{"ok":true,"database":"up","network":"eip155:84532","network_label":"Base Sepolia","facilitator":"https://x402.org/facilitator","audit_anchor_configured":false,"at":"2026-08-21T21:04:50.628Z"}
+
+Executor:
+{"status":"ok","role":"isolated-payment-executor","network":"eip155:84532"}
+
+Dashboard HTTP: 401
+
+Workers:
+reconciler
+anchor
+
+==============================================
+PHASE 3 RUNTIME HEALTH CHECK COMPLETE
+==============================================

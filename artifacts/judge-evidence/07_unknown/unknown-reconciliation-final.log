@@ -1,0 +1,83 @@
+
+============================================================
+ CERBERUS — PHASE 7: OUTCOME_UNKNOWN / SAFE RECONCILIATION
+============================================================
+
+REAL INCIDENT: audit_0aaac796
+No new payment is being triggered in this evidence replay.
+
+=== 1. ORIGINAL GOVERNANCE / EXECUTION ATTEMPT ===
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 demo
+> tsx apps/agent/src/cli/run.ts clean
+
+
+Scenario 1 — clean transaction   [clean]
+  proposes      0.5 USDC to merchant_xyz  (invoice_884, via fixture)
+  disposition   ALLOW
+  reason        within_mandate
+  rule          (none — clean pass)
+  x402 reached  yes
+  audit_id      audit_0aaac796
+
+Audit anchors
+  audit_0aaac796  no anchor row
+
+  Verify with: npm run audit:verify
+
+Note: a failed settlement on the ALLOW path, and anchors that are not yet on chain,
+are both expected until the payer wallet is funded (Memory.md blocker B1). Neither
+affects the disposition path above.
+
+
+=== 2. DURABLE PAYMENT CORRELATION ===
+              reservation_id              |    audit_id    |    amount_decimal    |               payment_payer                |               payment_pay_to               |                           payment_nonce                            | payment_valid_before | submission_block 
+------------------------------------------+----------------+----------------------+--------------------------------------------+--------------------------------------------+--------------------------------------------------------------------+----------------------+------------------
+ res_bcaf9720-4b9a-4710-946c-cb9d00d04a36 | audit_0aaac796 | 0.500000000000000000 | 0x35820e5cC60F961515EF987C94D4328a82Df38Fc | 0xf56e3F3134879156e11EAff78978a270726B661b | 0x8dbcbebfc0c876c91a6b64f0e716f5b52f09257901583d7692b38d06dc9739dc |           1787359784 |         45795598
+(1 row)
+
+
+=== 3. KEYLESS RECONCILER ACTIVITY ===
+  CERBERUS reconciliation worker
+  signer        none
+  rail          Base Sepolia USDC / EIP-3009
+
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  deferred
+  res_bcaf9720-4b9a-4710-946c-cb9d00d04a36  failed
+
+=== 4. AUTHORITATIVE FINAL FINANCIAL STATE ===
+    audit_id    | status | settlement_tx | reconciliation_attempts |                 reconciliation_error                 
+----------------+--------+---------------+-------------------------+------------------------------------------------------
+ audit_0aaac796 | FAILED |               |                      17 | EIP-3009 authorization expired unused; safe to retry
+(1 row)
+
+
+=== 5. TERMINAL AUDIT TRUTH ===
+    audit_id    | disposition |     reason     |                                settlement                                 
+----------------+-------------+----------------+---------------------------------------------------------------------------
+ audit_0aaac796 | ALLOW       | within_mandate | {"rail": "x402", "status": "failed", "tx_hash": null, "settled_at": null}
+(1 row)
+
+
+RESULT:
+Ambiguous signed outcome was NOT blindly retried.
+Capacity remained held while reconciliation was unresolved.
+Keyless reconciler deferred until positive chain evidence existed.
+Expired-unused EIP-3009 authorization => FAILED / safe to retry.
+

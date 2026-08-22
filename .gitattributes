@@ -5,3 +5,11 @@ artifacts/final-evidence/**/*.md text eol=lf
 artifacts/final-evidence/**/*.txt text eol=lf
 artifacts/final-evidence/**/*.log text eol=lf
 artifacts/final-evidence/**/*.mp4 binary
+
+# The judge-evidence package is covered by 08_final/SHA256SUMS.txt, so its textual
+# files must not be line-ending filtered on any platform or the checksums break.
+artifacts/judge-evidence/**/*.json text eol=lf
+artifacts/judge-evidence/**/*.txt text eol=lf
+artifacts/judge-evidence/**/*.log text eol=lf
+artifacts/judge-evidence/**/*.png binary
+artifacts/judge-evidence/**/*.webm binary

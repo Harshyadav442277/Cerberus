@@ -1,0 +1,23 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 demo
+> tsx apps/agent/src/cli/run.ts cap_breach
+
+
+Scenario 2 — cap breach   [cap_breach]
+  proposes      5 USDC to merchant_abc  (invoice_885, via fixture)
+  disposition   DENY
+  reason        per_transaction_cap_exceeded
+  rule          spend_caps.per_transaction_max
+  x402 reached  NO — never constructed
+  audit_id      audit_84670a33
+
+Audit anchors
+  audit_84670a33  no anchor row
+
+  Verify with: npm run audit:verify
+
+Note: a failed settlement on the ALLOW path, and anchors that are not yet on chain,
+are both expected until the payer wallet is funded (Memory.md blocker B1). Neither
+affects the disposition path above.
+

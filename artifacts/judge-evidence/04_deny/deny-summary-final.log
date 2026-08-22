@@ -1,0 +1,21 @@
+==============================================
+CERBERUS — PHASE 4 DENY PROOF
+==============================================
+
+Scenario 2 — cap breach   [cap_breach]
+  proposes      5 USDC to merchant_abc  (invoice_885, via fixture)
+  disposition   DENY
+  reason        per_transaction_cap_exceeded
+  rule          spend_caps.per_transaction_max
+  x402 reached  NO — never constructed
+  audit_id      audit_84670a33
+affects the disposition path above.
+
+=== TRUSTED ON-CHAIN AUDIT PROOF ===
+  VERIFIED audit_84670a33       0x193839e7835acb0a…  0xfaabd09ea1829938d7d447b9aa1152743cd2eae62738873b22366eb631e9a7aa  120 conf
+
+  2/2 proven on chain
+
+==============================================
+DENY: PAYMENT AUTHORITY NEVER EXISTED
+==============================================

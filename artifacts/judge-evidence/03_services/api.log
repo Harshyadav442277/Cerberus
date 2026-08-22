@@ -1,0 +1,22 @@
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 api
+> tsx apps/api/src/server.ts
+
+
+  CERBERUS API — SAFR Runtime listening on http://127.0.0.1:4050
+  live feed     GET /audit/stream
+  escalations   POST /escalations/:actionId/decision
+  authorize     POST /execution-authorizations
+
+npm warn Unknown project config "store-dir". This will stop working in the next major version of npm.
+
+> safr-runtime@0.1.0 api
+> tsx apps/api/src/server.ts
+
+
+  CERBERUS API — SAFR Runtime listening on http://127.0.0.1:4050
+  live feed     GET /audit/stream
+  escalations   POST /escalations/:actionId/decision
+  authorize     POST /execution-authorizations
+
