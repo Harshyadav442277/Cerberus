@@ -11,6 +11,15 @@ export type StartDecision<Job> =
   | { kind: "REUSE"; job: Job }
   | { kind: "CONFLICT"; job: Job };
 
+export type ResetClaim<Job> =
+  | { kind: "CHECK"; jobs: readonly Job[] }
+  | { kind: "ACTIVE" }
+  | { kind: "PENDING" };
+
+export type ResetDecision =
+  | { kind: "RESET"; retired: number }
+  | { kind: "UNSAFE" };
+
 export class PresentationRunGate<
   Scenario extends string,
   Job extends GatedRun<Scenario>,
@@ -19,8 +28,10 @@ export class PresentationRunGate<
   private readonly latestByScenario = new Map<Scenario, string>();
   private activeRunId: string | null = null;
   private pendingScenario: Scenario | null = null;
+  private resetPending = false;
 
   decide(scenario: Scenario): StartDecision<Job> {
+    if (this.resetPending) return { kind: "PENDING" };
     const existingId = this.latestByScenario.get(scenario);
     const existing = existingId ? this.runs.get(existingId) : undefined;
     if (existing) return { kind: "REUSE", job: existing };
@@ -34,7 +45,7 @@ export class PresentationRunGate<
   }
 
   claim(scenario: Scenario): void {
-    if (this.pendingScenario || this.activeRunId) {
+    if (this.pendingScenario || this.activeRunId || this.resetPending) {
       throw new Error("presentation run gate accepted a second launch claim");
     }
     this.pendingScenario = scenario;
@@ -64,5 +75,39 @@ export class PresentationRunGate<
 
   get(runId: string): Job | null {
     return this.runs.get(runId) ?? null;
+  }
+
+  /**
+   * Claims a short presentation-reset window. Financial state is not inspected or
+   * mutated here; the caller must positively classify every retained job before it
+   * asks the gate to forget those presentation records.
+   */
+  beginReset(): ResetClaim<Job> {
+    if (this.resetPending || this.pendingScenario) return { kind: "PENDING" };
+    if ([...this.runs.values()].some((job) => job.status === "RUNNING")) {
+      return { kind: "ACTIVE" };
+    }
+    this.resetPending = true;
+    return { kind: "CHECK", jobs: [...this.runs.values()] };
+  }
+
+  completeReset(canRetire: (job: Job) => boolean): ResetDecision {
+    if (!this.resetPending) {
+      throw new Error("presentation run gate has no claimed reset");
+    }
+    const jobs = [...this.runs.values()];
+    if (jobs.some((job) => !canRetire(job))) {
+      this.resetPending = false;
+      return { kind: "UNSAFE" };
+    }
+    this.runs.clear();
+    this.latestByScenario.clear();
+    this.activeRunId = null;
+    this.resetPending = false;
+    return { kind: "RESET", retired: jobs.length };
+  }
+
+  abandonReset(): void {
+    this.resetPending = false;
   }
 }

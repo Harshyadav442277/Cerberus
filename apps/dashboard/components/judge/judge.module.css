@@ -125,7 +125,23 @@
 .topActions {
   display: flex;
   height: 100%;
+  align-items: center;
   margin-left: auto;
+}
+
+.topActions button:disabled {
+  color: #506471;
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.resetNotice {
+  padding: 0 7px;
+  color: var(--amber);
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .stage {
@@ -1310,7 +1326,7 @@
 
 @media (max-width: 1180px) {
   .nav button { padding: 0 5px; font-size: 9px; }
-  .topActions button:last-child { display: none; }
+  .fullscreenAction { display: none; }
   .overview { grid-template-columns: 0.82fr 1.18fr; gap: 20px 30px; }
   .unknownPanel { grid-template-columns: 0.72fr 1.28fr; gap: 28px; }
   .archNode > div { width: 150px; }

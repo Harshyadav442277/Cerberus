@@ -147,6 +147,13 @@ async function responseError(response: Response): Promise<string> {
   return value?.error ?? "live_execution_unavailable";
 }
 
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || target.matches("input, textarea, select"))
+  );
+}
+
 export function JudgeConsole() {
   const [view, setView] = useState<View>("overview");
   const [readiness, setReadiness] = useState<JudgeReadiness | null>(null);
@@ -158,6 +165,8 @@ export function JudgeConsole() {
   });
   const [unknownCheck, setUnknownCheck] = useState<UnknownChainCheck | null>(null);
   const [unknownBusy, setUnknownBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [settlementChecks, setSettlementChecks] = useState<
     Partial<Record<JudgeScenario, SettlementChainCheck>>
   >({});
@@ -166,6 +175,14 @@ export function JudgeConsole() {
     escalate: false,
     allow: false,
   });
+  const resetBlocked =
+    unknownBusy ||
+    Object.values(runs).some(
+      (state) =>
+        state.mode === "LIVE" ||
+        state.reviewBusy ||
+        state.error === "run_state_unavailable",
+    );
 
   const loadReadiness = useCallback(async () => {
     setReadinessBusy(true);
@@ -193,6 +210,31 @@ export function JudgeConsole() {
     }
   }, []);
 
+  const resetPresentation = useCallback(async () => {
+    if (resetBusy || resetBlocked) return;
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const response = await fetch("/api/judge/reset", {
+        method: "POST",
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(await responseError(response));
+      setRuns({
+        deny: { ...EMPTY_RUN },
+        escalate: { ...EMPTY_RUN },
+        allow: { ...EMPTY_RUN },
+      });
+      setSettlementChecks({});
+      setUnknownCheck(null);
+      setView("overview");
+    } catch (error) {
+      setResetError((error as Error).message);
+    } finally {
+      setResetBusy(false);
+    }
+  }, [resetBlocked, resetBusy]);
+
   useEffect(() => {
     void loadReadiness();
   }, [loadReadiness]);
@@ -208,6 +250,10 @@ export function JudgeConsole() {
       if (selected) {
         event.preventDefault();
         setView(selected);
+      } else if (event.key.toLowerCase() === "r") {
+        if (event.repeat || isTextEntryTarget(event.target)) return;
+        event.preventDefault();
+        if (!resetBusy && !resetBlocked) void resetPresentation();
       } else if (event.key.toLowerCase() === "f") {
         event.preventDefault();
         if (document.fullscreenElement) void document.exitFullscreen();
@@ -216,7 +262,7 @@ export function JudgeConsole() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [resetBlocked, resetBusy, resetPresentation]);
 
   const patchRun = useCallback((scenario: JudgeScenario, change: Partial<RunUi>) => {
     setRuns((current) => ({
@@ -443,6 +489,24 @@ export function JudgeConsole() {
           </button>
           <button
             type="button"
+            disabled={resetBusy || resetBlocked}
+            title={
+              resetBlocked
+                ? "Available only when every financial run is terminal"
+                : resetError ?? "Forget terminal Judge presentation jobs without running an action"
+            }
+            onClick={() => void resetPresentation()}
+          >
+            <kbd>R</kbd> {resetBusy ? "Resetting" : "Test Again"}
+          </button>
+          {resetError && (
+            <span className={styles.resetNotice} role="status">
+              RESET REFUSED
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.fullscreenAction}
             onClick={() => {
               if (document.fullscreenElement) void document.exitFullscreen();
               else void document.documentElement.requestFullscreen();

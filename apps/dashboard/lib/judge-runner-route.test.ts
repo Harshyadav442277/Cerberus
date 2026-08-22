@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import {
   createJudgeRunStatusHandler,
+  createResetJudgeRunsHandler,
   createStartJudgeRunHandler,
 } from "./judge-runner-route";
 
 const original = {
   runner: process.env.JUDGE_RUNNER_API_TOKEN,
+  reviewer: process.env.REVIEWER_API_TOKEN,
   user: process.env.REVIEWER_DASHBOARD_USERNAME,
   password: process.env.REVIEWER_DASHBOARD_PASSWORD,
 };
@@ -14,6 +16,7 @@ const original = {
 afterEach(() => {
   for (const [name, value] of Object.entries({
     JUDGE_RUNNER_API_TOKEN: original.runner,
+    REVIEWER_API_TOKEN: original.reviewer,
     REVIEWER_DASHBOARD_USERNAME: original.user,
     REVIEWER_DASHBOARD_PASSWORD: original.password,
   })) {
@@ -24,9 +27,20 @@ afterEach(() => {
 
 function configure() {
   process.env.JUDGE_RUNNER_API_TOKEN = "judge-runner-token-at-least-32-characters";
+  process.env.REVIEWER_API_TOKEN = "reviewer-api-token-at-least-32-characters";
   process.env.REVIEWER_DASHBOARD_USERNAME = "reviewer";
   process.env.REVIEWER_DASHBOARD_PASSWORD = "dashboard-password-at-least-16";
   return `Basic ${Buffer.from("reviewer:dashboard-password-at-least-16").toString("base64")}`;
+}
+
+function resetRequest(body?: string) {
+  const headers: Record<string, string> = { authorization: configure() };
+  if (body !== undefined) headers["content-type"] = "application/json";
+  return new Request("http://dashboard.test/api/judge/reset", {
+    method: "POST",
+    headers,
+    body,
+  });
 }
 
 function request(body?: string) {
@@ -130,5 +144,83 @@ describe("Judge Console fixed-scenario boundary", () => {
     );
     assert.equal(response.status, 409);
     assert.deepEqual(await response.json(), { error: "run_state_unavailable" });
+  });
+});
+
+describe("Judge Console presentation reset", () => {
+  it("rejects a browser reset body before any upstream call", async () => {
+    let upstreamCalls = 0;
+    const handler = createResetJudgeRunsHandler(async () => {
+      upstreamCalls += 1;
+      return Response.json({ status: "RESET", retired: 0 });
+    });
+    const response = await handler(resetRequest(JSON.stringify({ actionId: "action_bad" })));
+    assert.equal(response.status, 400);
+    assert.equal(upstreamCalls, 0);
+  });
+
+  it("refuses reset when durable audit truth shows an active run", async () => {
+    let presenterCalls = 0;
+    const handler = createResetJudgeRunsHandler(async (url) => {
+      if (String(url).includes("/audit?")) {
+        return Response.json({
+          items: [
+            {
+              record: { disposition: "ALLOW", human_review: null },
+              execution: { status: "OUTCOME_UNKNOWN" },
+            },
+          ],
+        });
+      }
+      presenterCalls += 1;
+      return Response.json({ status: "RESET", retired: 1 });
+    });
+    const response = await handler(resetRequest());
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: "RUN_ALREADY_ACTIVE" });
+    assert.equal(presenterCalls, 0);
+  });
+
+  it("uses separate server credentials for the audit proof and presenter reset", async () => {
+    const calls: { url: string; authorization: string; method: string }[] = [];
+    const handler = createResetJudgeRunsHandler(async (url, init) => {
+      calls.push({
+        url: String(url),
+        authorization: new Headers(init?.headers).get("authorization") ?? "",
+        method: init?.method ?? "GET",
+      });
+      return String(url).includes("/audit?")
+        ? Response.json({ items: [] })
+        : Response.json({ status: "RESET", retired: 2 });
+    });
+    const response = await handler(resetRequest());
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: "RESET", retired: 2 });
+    assert.deepEqual(calls, [
+      {
+        url: "http://localhost:4050/audit?limit=500",
+        authorization: "Bearer reviewer-api-token-at-least-32-characters",
+        method: "GET",
+      },
+      {
+        url: "http://localhost:4070/runs/reset",
+        authorization: "Bearer judge-runner-token-at-least-32-characters",
+        method: "POST",
+      },
+    ]);
+  });
+
+  it("fails closed when the durable audit read is unavailable", async () => {
+    let presenterCalls = 0;
+    const handler = createResetJudgeRunsHandler(async (url) => {
+      if (String(url).includes("/audit?")) {
+        return Response.json({ error: "unavailable" }, { status: 503 });
+      }
+      presenterCalls += 1;
+      return Response.json({ status: "RESET", retired: 1 });
+    });
+    const response = await handler(resetRequest());
+    assert.equal(response.status, 503);
+    assert.equal(presenterCalls, 0);
   });
 });

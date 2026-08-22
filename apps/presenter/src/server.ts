@@ -121,6 +121,41 @@ async function execute(job: RunJob): Promise<void> {
   }
 }
 
+async function canRetirePresentationJob(job: RunJob): Promise<boolean> {
+  if (job.status === "RUNNING") return false;
+  const outcome = job.outcome;
+  if (
+    job.status === "COMPLETE" &&
+    outcome &&
+    ["denied", "escalation_denied", "no_mandate", "authorization_failed"].includes(
+      outcome.status,
+    )
+  ) {
+    return true;
+  }
+  if (
+    job.status === "COMPLETE" &&
+    outcome?.status === "settled" &&
+    outcome.settlement?.status === "settled" &&
+    Boolean(outcome.settlement.tx_hash)
+  ) {
+    return true;
+  }
+
+  // An ambiguous or failed adapter job is resettable only after durable audit truth
+  // positively records settlement or non-payment. The agent/presenter role already
+  // has read-only audit access; this adds no reviewer or financial authority.
+  const { getAuditLogRecordByActionId } = await import("@safr/db");
+  const audit = await getAuditLogRecordByActionId(job.action.action_id);
+  return Boolean(
+    audit &&
+      (audit.disposition === "DENY" ||
+        audit.human_review?.decision === "denied" ||
+        audit.settlement?.status === "settled" ||
+        audit.settlement?.status === "failed"),
+  );
+}
+
 const app = express();
 app.disable("x-powered-by");
 app.use((request, response, next) => {
@@ -175,6 +210,43 @@ app.get("/health", async (_request, response) => {
     checks,
     at: new Date().toISOString(),
   });
+});
+
+app.post("/runs/reset", async (request, response) => {
+  if (
+    request.body !== undefined ||
+    (request.headers["content-length"] && Number(request.headers["content-length"]) > 0)
+  ) {
+    response.status(400).json({ error: "reset_body_not_allowed" });
+    return;
+  }
+
+  const claim = runGate.beginReset();
+  if (claim.kind !== "CHECK") {
+    response.status(409).json({ error: "RUN_ALREADY_ACTIVE" });
+    return;
+  }
+
+  try {
+    const resettable = new Set(
+      (
+        await Promise.all(
+          claim.jobs.map(async (job) =>
+            (await canRetirePresentationJob(job)) ? job.run_id : null,
+          ),
+        )
+      ).filter((runId): runId is string => runId !== null),
+    );
+    const result = runGate.completeReset((job) => resettable.has(job.run_id));
+    if (result.kind === "UNSAFE") {
+      response.status(409).json({ error: "RUN_RESET_UNAVAILABLE" });
+      return;
+    }
+    response.json({ status: "RESET", retired: result.retired });
+  } catch {
+    runGate.abandonReset();
+    response.status(503).json({ error: "RUN_RESET_UNAVAILABLE" });
+  }
 });
 
 app.post("/runs/:scenario", async (request, response) => {
