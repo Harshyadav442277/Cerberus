@@ -65,14 +65,14 @@ Then the part that separates this from a policy engine:
 
 ### 1. The normal case
 
-> The agent proposes five dollars to an approved supplier. Within policy. **ALLOW** —
-> and that's a real USDC payment on Base Sepolia.
+> The agent proposes half a USDC — fifty cents — to an approved supplier. Within
+> policy. **ALLOW** — and that's a real USDC payment on Base Sepolia.
 
 > That's the easy case.
 
 ### 2. The agent exceeds its authority
 
-> Same agent, now asking for five hundred. **DENY.**
+> Same agent, now asking for five USDC against a one-USDC limit per payment. **DENY.**
 
 Then the line that matters most:
 
@@ -104,7 +104,7 @@ Then the line that matters most:
 
 ### 5. The hostile merchant
 
-> The human approved five dollars. The merchant sends a bill for fifty.
+> The human approved half a USDC. The merchant sends a bill for five.
 >
 > Rejected — before anything is signed. We re-check the merchant's actual bill against
 > the approval at the last possible moment.
@@ -210,9 +210,14 @@ implementation. None of those is true, and a judge who knows the space will noti
 
 **"Why blockchain for the audit log?"**
 > Only for a fingerprint. The records stay in PostgreSQL — no amounts, no
-> counterparties, nothing personal goes on-chain. Just a hash, so nobody can quietly
-> rewrite history afterwards. And we verify it by reading the chain, not by trusting
-> our own database's word that it's there.
+> counterparties, nothing personal goes on-chain. Just a hash, so any change to a
+> record afterwards is detectable: the stored record no longer reproduces the digest
+> that is on the chain. And we verify it by reading the chain, not by trusting our own
+> database's word that it's there.
+>
+> Be precise: that makes the log tamper-**evident**, not immutable. A database
+> administrator could still alter a row — we would see it, not prevent it — and a
+> record that was never anchored has no external proof.
 
 **"Did you actually pay something?"**
 > Yes, on the hardened build with the payment key in its own process. An approved

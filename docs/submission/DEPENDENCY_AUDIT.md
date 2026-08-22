@@ -71,25 +71,29 @@ are pinned by Next.js and solc, so the alternative was a major-version bump of t
 framework, which is exactly the "blindly force-upgrade and break x402 or Next.js"
 outcome that had to be avoided this close to a demo.
 
-### Verification after the upgrade
+### Verification after the upgrade (historical snapshot, 19 August 2026)
 
-Figures below are as at the dependency upgrade and are historical. Later builds raised
-the suite to 363 tests across 72 suites, then 381 across 78 suites at the final release
-remediation, and 384 across 78 at the freeze pass; the audit result is unchanged. The current gate is in the README's
-"Current finalist build" section.
+The figures in this table are the **historical snapshot taken at the dependency
+upgrade on 19 August 2026**, not the current gate. The suite subsequently grew to 363
+tests / 72 suites, then 381 / 78 at the final release remediation, and stands at
+**384/384 tests across 78 suites** at the freeze pass, with the red team at **12/12
+classes, 70 assertions**; the audit result is unchanged (clean at the freeze pass and
+in CI run [32301340842](https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842)).
+The current gate is in [FINAL_FREEZE.md](FINAL_FREEZE.md) and the README's "Current
+finalist build" section, which are authoritative.
 
 Raising a transitive dependency is only safe if the build still works, so each of
 these was re-run against the overridden tree:
 
-| Check | Command | Result |
-| --- | --- | --- |
-| Audit | `corepack pnpm audit` | **No known vulnerabilities found** |
-| Types | `npm run typecheck` | clean |
-| Tests | `npm test` | 330/330, 61 suites |
-| Adversarial | `npm run adversarial` | 12/12 classes, 80 assertions |
-| Red team | `npm run redteam` | 9/9 classes, 60 assertions |
-| Dashboard | `npm run build --prefix apps/dashboard` | builds, all 8 routes emitted |
-| Contracts | `npm run contracts:compile` | AuditAnchor compiled, solc 0.8.36 |
+| Check | Command | Result at the 19 August 2026 snapshot | Current (freeze pass) |
+| --- | --- | --- | --- |
+| Audit | `corepack pnpm audit` | **No known vulnerabilities found** | **No known vulnerabilities found** |
+| Types | `npm run typecheck` | clean | clean |
+| Tests | `npm test` | 330/330, 61 suites | **384/384, 78 suites** |
+| Adversarial | `npm run adversarial` | 12/12 classes, 80 assertions | 12/12 classes, 80 assertions |
+| Red team | `npm run redteam` | 9/9 classes, 60 assertions | **12/12 classes, 70 assertions** |
+| Dashboard | `npm run build --prefix apps/dashboard` | builds, all 8 routes emitted | builds; authenticated runtime route emitted |
+| Contracts | `npm run contracts:compile` | AuditAnchor compiled, solc 0.8.36 | AuditAnchor compiled, solc 0.8.36, 263-byte deployable bytecode |
 
 ---
 

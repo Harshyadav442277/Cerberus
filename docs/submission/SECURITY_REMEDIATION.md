@@ -3,9 +3,11 @@
 **Baseline inspected:** `6159474` (`origin/main`, "Record Phase 6 adversarial proof")
 **Baseline verification:** 260 tests / 48 suites; adversarial 12/12 classes, 78/78 assertions
 
-**After remediation** (figures as at the close of this pass, and historical: later
-builds raised them to 363 / 72, then 381 / 78, then 384 / 78 — see the README's current-build
-section, which is authoritative for current figures):
+**After remediation** (figures as at the close of this pass on 19 August 2026, and
+historical: later builds raised the suite to 363 / 72, then 381 / 78, then **384 tests /
+78 suites**, and the red team to **12/12 classes, 70 assertions** — see
+[FINAL_FREEZE.md](./FINAL_FREEZE.md) and the README's current-build section, which are
+authoritative for current figures):
 330 tests / 61 suites; adversarial 12/12 classes, 80 assertions;
 red team 9/9 classes, 60 assertions; dependency audit clean.
 
@@ -36,7 +38,7 @@ throughout — see **Attack I** below.
 | **Reconciler database role** | The reconciler login inherited `cerberus_executor_role` wholesale, including execution-authorization consumption. | New `cerberus_reconciler_role` with only what reconciliation needs: correlation reads, lease claim/fence, defer, chain-proven settle, expired-unused failure, terminal audit write, outbox enqueue. | Attack I — 6 assertions | **Fixed — not deferred** | It retains `UPDATE (settlement) ON audit_log`, which is required: the reconciler is a trusted terminal finalizer. It cannot consume authorizations, bind reservations, mutate mandates, create approvals, or author anchors. |
 | **Confirmation / finality semantics** | Chain proof verified exact successful inclusion only. | Confirmation depth is now computed and reported by the audit verifier, with a configurable `AUDIT_MIN_CONFIRMATIONS` threshold that flags shallow anchors. | Attack C — 2 confirmation assertions | **Partially implemented — deliberately** | **The settlement path still treats exact successful inclusion as SETTLED.** Requiring N confirmations there would make every ALLOW demo report `OUTCOME_UNKNOWN` for N blocks, which is the demo destabilization the remediation brief said to avoid. See the explicit statement below. |
 | **Dependency audit** | Stale claim of "6 vulnerabilities: 4 high, 2 moderate". Actual current audit: 8 (5 high, 2 moderate, 1 low). | All 8 fixed via pnpm `overrides` raising `postcss`, `nanoid`, `tmp`, `sharp`. No direct dependency or framework major version changed. | Build + full suite re-verified after the upgrade | **Fixed — 0 vulnerabilities** | See [DEPENDENCY_AUDIT.md](./DEPENDENCY_AUDIT.md). All 8 were build-time, dev-only, or optional-and-unused; none was on the payment path. |
-| **CI** | No GitHub status checks on head. | GitHub Actions workflow running PostgreSQL, migrations, role provisioning, seed, schema verification, typecheck, tests, adversarial, red team, contract compile and dashboard build — with no wallet secrets and no live payment. | Run [32263194913](https://github.com/Harshyadav442277/Cerberus/actions/runs/32263194913) | **Implemented and green** | CI does not run a funded payment, by design. The live-evidence run stays manual. It independently reproduces 363/363 tests, 12/12 adversarial classes, 9/9 red-team classes and a clean dependency audit on a fresh Linux runner. |
+| **CI** | No GitHub status checks on head. | GitHub Actions workflow running PostgreSQL, migrations, role provisioning, seed, schema verification, typecheck, tests, adversarial, red team, contract compile and dashboard build — with no wallet secrets and no live payment. | First green run [32263194913](https://github.com/Harshyadav442277/Cerberus/actions/runs/32263194913) (363/363 tests, 12/12 adversarial, 9/9 red-team at that build); release-payload run [32301340842](https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842) on head `6d40e85` | **Implemented and green** | CI does not run a funded payment, by design. The live-evidence run stays manual. On the release payload it independently reproduces 384/384 tests across 78 suites, 12/12 adversarial classes, 12/12 red-team classes and a clean dependency audit on a fresh Linux runner. |
 | **Documentation consistency** | Stage-1 numbers mixed with Stage-2 claims. | README carries one **Current finalist build** section with the real SHA and counts; historical evidence is labelled as such rather than rewritten. | — | **Fixed** | — |
 
 ---
@@ -109,16 +111,24 @@ Run from a clean checkout with PostgreSQL up and migrations applied:
 npm run typecheck && npm test && npm run adversarial && npm run redteam && npm run build --prefix apps/dashboard && npm run contracts:compile && npm run db:verify && corepack pnpm audit
 ```
 
-| Gate | Result |
-| --- | --- |
-| `npm run typecheck` | clean |
-| `npm test` | **330 passed / 330**, 61 suites, 0 failed |
-| `npm run adversarial` | **12/12 classes**, 80 assertions |
-| `npm run redteam` | **9/9 classes**, 60 assertions |
-| `npm run build --prefix apps/dashboard` | builds |
-| `npm run contracts:compile` | AuditAnchor, solc 0.8.36 |
-| `npm run db:verify` | all checks pass |
-| `corepack pnpm audit` | no known vulnerabilities |
+The results below are the **historical snapshot at the close of this pass (19 August
+2026)**. The current gate — **384/384 tests, 78 suites; adversarial 12/12 classes, 80
+assertions; red team 12/12 classes, 70 assertions; mutation 12/12 guards; seeded
+sandbox 0 violations on seeds 42 and 1337; `db:verify` 13 checks; CI run
+[32301340842](https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842)
+green on `6d40e85`** — is recorded in [FINAL_FREEZE.md](./FINAL_FREEZE.md), which is
+authoritative.
+
+| Gate | Result at the close of this pass (19 Aug 2026) | Current (freeze pass) |
+| --- | --- | --- |
+| `npm run typecheck` | clean | clean |
+| `npm test` | **330 passed / 330**, 61 suites, 0 failed | **384 passed / 384**, 78 suites, 0 failed |
+| `npm run adversarial` | **12/12 classes**, 80 assertions | **12/12 classes**, 80 assertions |
+| `npm run redteam` | **9/9 classes**, 60 assertions | **12/12 classes**, 70 assertions |
+| `npm run build --prefix apps/dashboard` | builds | builds |
+| `npm run contracts:compile` | AuditAnchor, solc 0.8.36 | AuditAnchor, solc 0.8.36 |
+| `npm run db:verify` | all checks pass | all 13 checks pass |
+| `corepack pnpm audit` | no known vulnerabilities | no known vulnerabilities |
 
 ### Stop conditions — all clear
 

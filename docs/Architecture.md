@@ -327,9 +327,9 @@ Postgres tables mirror Bible §7.1–7.5 **exactly** — same field names, same 
 
 `mandate_version` is copied onto every audit record at decision time, so a later mandate edit cannot retroactively change the record of a past decision (Bible §7.2 design note — this exists specifically to close the judge question "what if the rule changes after a transaction is logged?").
 
-### 6.1 Immutability anchor
+### 6.1 Tamper-evidence anchor
 
-`keccak256(canonical_json(record))` → `AuditAnchor.anchor(bytes32)` on Base Sepolia. The returned tx hash is stored alongside the record, in an `audit_anchor` table rather than as columns on `audit_log`, so §7.5 stays exactly as the Bible defines it (Rules R4). This supports the "immutable" claim without a custom chain (Bible §8). Only the digest goes on chain — no amounts, no counterparties, no audit content.
+`keccak256(canonical_json(record))` → `AuditAnchor.anchor(bytes32)` on Base Sepolia. The returned tx hash is stored alongside the record, in an `audit_anchor` table rather than as columns on `audit_log`, so §7.5 stays exactly as the Bible defines it (Rules R4). This delivers the audit-log property Bible §8 describes as "immutable" without a custom chain — stated precisely, the log is **tamper-evident, not immutable**: an altered record no longer reproduces its anchored digest, and `npm run audit:verify` proves that by reading the receipt and the `Anchored` event back from Base Sepolia rather than trusting the database. It does not make rows unalterable — a database administrator can still change them, and a record that was never anchored has no external proof. Only the digest goes on chain — no amounts, no counterparties, no audit content.
 
 Anchoring is **asynchronous and non-blocking**: a slow or failed anchor must never stall or fail a disposition, since the disposition path is the demo-critical one. The digest is computed and stored *before* the network call, so even a total RPC outage leaves a verifiable hash in Postgres.
 

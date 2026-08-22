@@ -201,7 +201,7 @@ viem — chain reads, contract deployment, transaction signing
 Next.js + Tailwind CSS — compliance dashboard
 Express — dashboard REST API with an SSE live feed, and the x402 merchant server
 zod — schema validation for every governance object
-node:test — test runner (91 tests, 21 suites)
+node:test — test runner (384 tests, 78 suites)
 ```
 
 ## 12. Sponsor tools, APIs, and infrastructure disclosure
@@ -260,9 +260,16 @@ submission text.
 GitHub repository:  https://github.com/Harshyadav442277/Cerberus
 Architecture:       https://github.com/Harshyadav442277/Cerberus/blob/main/docs/assets/safr-architecture-slide.png
 Evidence manifest:  https://github.com/Harshyadav442277/Cerberus/blob/main/docs/submission/EVIDENCE.md
-Live x402 payment:   https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9
+Stage-1 live x402 payment (pre-signer-isolation history):
+                     https://base-sepolia.blockscout.com/tx/0xed51af702ebc263f8296c1fc6cb677928880f4a4dc6eee7a05f69e14e99efab9
 AuditAnchor:         https://base-sepolia.blockscout.com/address/0x2D2d857ce3c0d5d666B7e0dB3fE8067d4B4D6Ff7
-Final audit anchor:  https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191
+Stage-1 final audit anchor (history):
+                     https://base-sepolia.blockscout.com/tx/0x507858741ff5c381167b2b3b85d2e0bb71ec5052e8327dbd78ca40986db1d191
+Hardened ESCALATE settlement, 0.75 USDC (22 Aug 2026):
+                     https://base-sepolia.blockscout.com/tx/0x55ba3c22d58a83a1b6093f2e289c544239d4839cd97b008b791d5a6052225469
+Hardened ALLOW settlement, 0.5 USDC (22 Aug 2026):
+                     https://base-sepolia.blockscout.com/tx/0xfe4d02288ea8882d8b75e520cf627e97d57b04e4f3a3cc81e40b780a36c995fa
+Hardened evidence package: https://github.com/Harshyadav442277/Cerberus/tree/main/artifacts/judge-evidence
 ```
 
 Confirm the repository is **public** before submitting — a 404 on the repo link is a
@@ -304,5 +311,6 @@ easy, avoidable errors:
 - **Do not claim production-readiness.** Known limitations, stated plainly if asked:
   host-level isolation still depends on distinct deployment principals; a used
   EIP-3009 nonce without exact transfer evidence stays UNKNOWN for manual review; the
-  fresh hardened-path testnet evidence run remains pending; overnight time-window wrap
-  is unsupported.
+  hardened-path evidence is one supervised Base Sepolia run set captured on 22 August
+  2026 (see `FINAL_FREEZE.md`, `EVIDENCE.md` and `artifacts/judge-evidence/`), not a
+  production track record; overnight time-window wrap is unsupported.

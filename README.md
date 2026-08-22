@@ -551,10 +551,12 @@ npm run audit:verify        # re-hash every stored record, compare to its anchor
 npm run audit:tamper-demo   # edit a real record, watch the digest break, roll back
 ```
 
-`audit:tamper-demo` is the honest version of the immutability claim. It takes a stored
-`DENY`, rewrites it to `ALLOW` the way someone covering their tracks would, and shows
-the digest no longer reproduces — then rolls the transaction back so the log is
-unchanged.
+`audit:tamper-demo` is the honest version of the tamper-evidence claim — the log is
+tamper-evident, not immutable. It takes a stored `DENY`, rewrites it to `ALLOW` the way
+someone covering their tracks would, and shows the digest no longer reproduces — then
+rolls the transaction back so the log is unchanged. A database administrator can still
+alter rows; what the anchor guarantees is that the alteration is detectable by reading
+the chain, and a record that was never anchored has no external proof.
 
 Anchoring is asynchronous and cannot affect a decision: the digest is stored before
 any network call, and a slow, broken, or unconfigured RPC leaves the record valid and

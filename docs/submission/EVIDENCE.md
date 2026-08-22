@@ -25,9 +25,12 @@ are in [FINAL_FREEZE.md](FINAL_FREEZE.md), which is authoritative.
 > historical evidence and is not modified by later runs.
 
 What has actually been produced, what it proves, and the known prototype limitations.
-Local evidence was captured on 13 August 2026; Stage-1 live Base Sepolia evidence was
-completed and independently re-verified on 14 August 2026. The finalist-hardened live
-run set was captured on 22 August 2026 and re-verified read-only the same day.
+The Stage-1 dashboard screenshots were captured on 13 August 2026 and the Stage-1
+explorer captures on 14 August 2026; Stage-1 live Base Sepolia evidence was completed and
+independently re-verified on 14 August 2026. The finalist-hardened live run set was captured on 22 August 2026 and re-verified
+read-only the same day, and the execution gates in
+[Verified by execution](#verified-by-execution-not-screenshot) are the finalist freeze
+pass recorded in [FINAL_FREEZE.md](FINAL_FREEZE.md).
 
 Regenerate development dashboard shots any time with:
 
@@ -45,7 +48,11 @@ pwsh -File scripts/capture-evidence.ps1 -Final
 
 ---
 
-## Captured — `docs/assets/evidence/`
+## Captured — `docs/assets/evidence/` (Stage-1 dashboard and explorer captures, 13–14 August 2026)
+
+These screenshots were taken on the Stage-1 build. They show the dashboard and the
+Stage-1 chain evidence; the finalist-hardened package carries its own screenshots and
+recordings in [`artifacts/judge-evidence/`](../../artifacts/judge-evidence/).
 
 | File | Shows | Proves |
 |---|---|---|
@@ -75,17 +82,27 @@ reliably.
 
 ## Verified by execution, not screenshot
 
-These were run and passed; the terminal output is the evidence.
+These were run and passed; the terminal output is the evidence. The figures below are
+the **current finalist build** and match [FINAL_FREEZE.md](FINAL_FREEZE.md) and the
+README's "Current finalist build" table, which are authoritative. The frozen terminal
+logs are in [`artifacts/final-evidence/terminal/`](../../artifacts/final-evidence/terminal/).
+*(Historical: the 13 August 2026 Stage-1 local snapshot was 91/91 tests across 21
+suites. That figure is superseded and is kept here only as history.)*
 
 | Check | Command | Result |
 |---|---|---|
-| Test suite | `npm test` | **91/91**, 21 suites |
+| Test suite | `npm test` | **384/384** tests, 78 suites, 0 failed, 0 skipped |
+| Adversarial suite | `npm run adversarial` | **12/12** attack classes, 80 assertions |
+| Security red team | `npm run redteam` | **12/12** attack classes, 70 assertions |
+| Mutation matrix | `npm run mutation` | **12/12** security guards proven detectable |
+| Seeded sandbox | `npm run sandbox -- --seed 42` and `--seed 1337` (50 agents, 1,000 actions, concurrency 25) | **0** budget violations, **0** duplicate effects, **0** replay violations on both seeds |
 | Type safety | `npm run typecheck` | clean |
-| Dashboard production build | `npm run build --prefix apps/dashboard` | clean, 6 routes |
+| Dashboard production build | `npm run build --prefix apps/dashboard` | clean; server-only authenticated reviewer/runtime proxies emitted |
 | Schema mirrors the spec | `npm run db:verify` | **13/13** |
+| Continuous integration | GitHub Actions run [32301340842](https://github.com/Harshyadav442277/Cerberus/actions/runs/32301340842) | green on release payload `6d40e85`, all 21 steps, on a clean Linux runner with no wallet secrets |
 | Three-scenario demo | `npm run demo:script` | ALLOW → DENY → ESCALATE(approved) |
 | Demo reliability | `npm run demo:script -- --thrice` | three consecutive clean runs |
-| Live human gate | `npm run demo -- new_counterparty --live-escalation` | dashboard Approve unblocked a **separate agent process**; `human_review` persisted as `approved by compliance_officer_01`; x402 reached |
+| Live human gate | `npm run demo -- new_counterparty`, then **Approve** on the dashboard `/escalations` page | dashboard Approve unblocked a **separate agent process**; `human_review` persisted (22 Aug run `audit_30aa1a70`: `approved` by `reviewer:local`); x402 reached and settled |
 | Interception constraint | part of `npm test` | on DENY, x402 client construction count is **0** |
 
 The live-escalation run is the strongest single piece of evidence and it is
@@ -227,11 +244,23 @@ load without that interstitial.
 
 Worth having ready for Q&A rather than being caught by it.
 
-- **Concurrency.** Two simultaneous proposals could both pass the rolling-cap check
-  before either settles. The sequential demo path is unaffected. Correct fix is an
-  atomic reservation; scoped as a Stage 2 item rather than rushed before the deadline.
-- **Rolling window.** `rolling_window.window` is fixed at 24h matching the seeded
-  mandate rather than parsed generally.
+- **Concurrency — implemented and tested, no longer a limitation.** Budget capacity is
+  reserved atomically before any Execution Authorization is signed: `reserveBudget()`
+  in `packages/db/src/reservations.ts` takes transaction-scoped PostgreSQL advisory
+  locks in a fixed order (the per-agent velocity key, then the per-mandate budget key)
+  and enforces `settled + active reserved + requested <= rolling_window.max_total` per
+  (mandate, currency) inside that transaction. Two simultaneous proposals cannot both
+  pass the rolling-cap check. This is proven by concurrency tests against a real
+  PostgreSQL (`packages/db/src/__tests__/reservations.test.ts`: two concurrent 80s
+  against a budget of 100, a 20-way burst, two agents racing one shared mandate), by
+  the mutation matrix (removing either lock makes those tests fail), and by the seeded
+  sandbox (seeds 42 and 1337, 50 agents / 1,000 actions / concurrency 25, 0 budget
+  violations).
+- **Rolling window.** The trusted reservation path parses `rolling_window.window`
+  (`24h`, `7d`; an unrecognised shape is refused, not guessed). The agent-visible
+  preliminary counter that feeds the pure engine still reads a fixed 24-hour settled
+  total (`rolling_total_24h`), which matches the seeded mandate; transaction-time
+  enforcement is the authoritative gate.
 - **Time windows.** An overnight window that wraps past midnight is unsupported.
 - **Auth.** *(Historical Stage-1 limitation — since fixed.)* At Stage 1 the local
   escalation endpoint had no authentication. Both the decision endpoint and the
@@ -243,3 +272,20 @@ Worth having ready for Q&A rather than being caught by it.
 - **Intent generation.** Judged runs use the deterministic fixture planner, not the
   LLM path, so results are reproducible. The LLM path exists and is schema-validated
   identically, but it is not in the decision path either way.
+- **Inclusion, not finality.** Settlement proof requires an exact successful on-chain
+  transfer; it does not wait for a confirmation or finality threshold. The audit
+  verifier reports confirmation depth; the settlement path deliberately does not gate
+  on it.
+- **Loopback-scoped services.** The control plane and executor bind `127.0.0.1` and
+  use bearer credentials; there is no service-to-service workload identity, TLS, or
+  rate limiting, and no public-internet deployment is claimed.
+- **One reviewer identity.** A single configured reviewer identity represents all human
+  decisions, and the reviewer boundary has no rate limit, lockout, session expiry, or
+  MFA.
+- **Same-host compromise.** Process and database-role separation is defeated by root on
+  the same machine, as on any single-host deployment.
+- **Testnet prototype.** Base Sepolia, hackathon scope; not a production payment system.
+- **Tamper-evident, not immutable.** The audit log is tamper-evident through on-chain
+  anchoring: an altered record no longer reproduces its anchored digest, and
+  `npm run audit:verify` proves that by reading the chain. A database administrator can
+  still alter rows, and a record that was never anchored has no external proof.
