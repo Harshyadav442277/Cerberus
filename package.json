@@ -25,6 +25,7 @@
     "anchor": "node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/anchor-worker.ts",
     "anchor:once": "node --env-file-if-exists=.env --import tsx packages/audit-log/src/cli/anchor-worker.ts --once",
     "reviewer:auto": "tsx apps/reviewer/src/index.ts",
+    "presenter": "node --env-file-if-exists=.env.presenter --import tsx apps/presenter/src/server.ts",
     "dashboard": "npm run dev --prefix apps/dashboard",
     "contracts:compile": "tsx contracts/src/compile.ts",
     "contracts:deploy": "tsx contracts/src/deploy.ts",

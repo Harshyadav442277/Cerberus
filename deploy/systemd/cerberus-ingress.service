@@ -1,0 +1,13 @@
+[Unit]
+Description=Cerberus fixed-path local ingress
+After=network-online.target cerberus-api.service cerberus-presenter.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/AeroChrome/Desktop/Projects/Cerberus
+ExecStart=/home/AeroChrome/.nvm/versions/node/v24.13.1/bin/node deploy/ingress-proxy.mjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

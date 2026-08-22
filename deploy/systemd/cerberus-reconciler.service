@@ -1,0 +1,14 @@
+[Unit]
+Description=Cerberus keyless reconciliation worker
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/AeroChrome/Desktop/Projects/Cerberus
+Environment=EVM_RPC_URL=https://base-sepolia-rpc.publicnode.com
+ExecStart=/home/AeroChrome/.nvm/versions/node/v24.13.1/bin/node --import tsx apps/executor/src/reconcile-cli.ts
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

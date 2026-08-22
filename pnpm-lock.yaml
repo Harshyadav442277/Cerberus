@@ -139,6 +139,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.8(react@19.2.8)
+      viem:
+        specifier: ^2.55.11
+        version: 2.55.11(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -216,6 +219,37 @@ importers:
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.6
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.8
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  apps/presenter:
+    dependencies:
+      '@safr/agent':
+        specifier: workspace:*
+        version: link:../agent
+      '@safr/controls-repository':
+        specifier: workspace:*
+        version: link:../../packages/controls-repository
+      '@safr/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@safr/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       express:
         specifier: ^5.2.1
         version: 5.2.1

@@ -1,0 +1,14 @@
+[Unit]
+Description=Cerberus single-instance Judge presenter
+After=network-online.target cerberus-api.service cerberus-executor.service cerberus-merchant.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/AeroChrome/Desktop/Projects/Cerberus
+Environment=EVM_RPC_URL=https://base-sepolia-rpc.publicnode.com
+ExecStart=/home/AeroChrome/.nvm/versions/node/v24.13.1/bin/node --env-file-if-exists=.env.presenter --import tsx apps/presenter/src/server.ts
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

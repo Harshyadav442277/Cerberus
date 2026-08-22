@@ -22,3 +22,4 @@ export type {
 } from "./ports.js";
 export { AuthorizationRefusalError } from "./ports.js";
 export { createAuthorizationPort, createSettlementPort } from "./settlement/index.js";
+export { loadAgentProcessEnv } from "./env.js";

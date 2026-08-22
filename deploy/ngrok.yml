@@ -1,0 +1,5 @@
+version: "3"
+tunnels:
+  cerberus-ingress:
+    proto: http
+    addr: 127.0.0.1:4080
