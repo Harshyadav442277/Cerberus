@@ -24,6 +24,7 @@ const testFiles = [
   "contracts/src/__tests__/*.test.ts",
   "apps/api/src/__tests__/*.test.ts",
   "apps/dashboard/lib/*.test.ts",
+  "apps/presenter/src/*.test.ts",
 ];
 
 const expandedTestFiles = testFiles.flatMap((pattern) => {
