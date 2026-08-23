@@ -40,7 +40,7 @@ for (const f of [...localFiles].sort()) console.log("  ok  " + f);
 for (const m of html.matchAll(attrRe)) {
   const v = m[1];
   if (!/^https?:\/\//i.test(v)) continue;
-  if (!/^https:\/\/(github\.com\/Harshyadav442277\/Cerberus|base-sepolia\.blockscout\.com)(\/|$)/.test(v)) fail(`unexpected external URL ${v}`);
+  if (!/^https:\/\/(github\.com\/Harshyadav442277\/Cerberus|base-sepolia\.blockscout\.com|cerberus-judge-console\.vercel\.app|judge-site\.vercel\.app)(\/|$)/.test(v)) fail(`unexpected external URL ${v}`);
 }
 
 // 3 — hash truth check against repository documents
