@@ -36,7 +36,7 @@ for (const m of html.matchAll(attrRe)) {
 console.log(`links: ${local} relative references (${localFiles.size} distinct files), ${anchors} in-page anchors, ${external} external URLs`);
 for (const f of [...localFiles].sort()) console.log("  ok  " + f);
 
-// external URLs must only point at GitHub or the Base Sepolia Blockscout explorer
+// external URLs must only point at GitHub, the Base Sepolia Blockscout explorer, or the project's own Vercel pages
 for (const m of html.matchAll(attrRe)) {
   const v = m[1];
   if (!/^https?:\/\//i.test(v)) continue;
