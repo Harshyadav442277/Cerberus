@@ -105,24 +105,47 @@ describe("Judge Console fixed-scenario boundary", () => {
   });
 
   it("adds only the server-side runner credential and forwards no body", async () => {
-    let upstreamAuthorization = "";
-    let upstreamBody: BodyInit | null | undefined;
-    const handler = createStartJudgeRunHandler(async (_url, init) => {
-      upstreamAuthorization = new Headers(init?.headers).get("authorization") ?? "";
-      upstreamBody = init?.body;
+    const calls: {
+      url: string;
+      authorization: string;
+      method: string;
+      body: BodyInit | null | undefined;
+    }[] = [];
+    const handler = createStartJudgeRunHandler(async (url, init) => {
+      calls.push({
+        url: String(url),
+        authorization: new Headers(init?.headers).get("authorization") ?? "",
+        method: init?.method ?? "GET",
+        body: init?.body,
+      });
+      if (String(url).includes("/audit?")) return Response.json({ items: [] });
       return Response.json(validRun, { status: 202 });
     });
     const response = await handler(request(), {
       params: Promise.resolve({ scenario: "allow-valid-payment" }),
     });
     assert.equal(response.status, 202);
-    assert.equal(upstreamAuthorization, "Bearer judge-runner-token-at-least-32-characters");
-    assert.equal(upstreamBody, undefined);
+    assert.deepEqual(calls, [
+      {
+        url: "http://localhost:4050/audit?limit=500",
+        authorization: "Bearer reviewer-api-token-at-least-32-characters",
+        method: "GET",
+        body: undefined,
+      },
+      {
+        url: "http://localhost:4070/runs/allow-valid-payment",
+        authorization: "Bearer judge-runner-token-at-least-32-characters",
+        method: "POST",
+        body: undefined,
+      },
+    ]);
   });
 
   it("preserves the runner's one-active-run conflict", async () => {
-    const handler = createStartJudgeRunHandler(async () =>
-      Response.json({ error: "RUN_ALREADY_ACTIVE" }, { status: 409 }),
+    const handler = createStartJudgeRunHandler(async (url) =>
+      String(url).includes("/audit?")
+        ? Response.json({ items: [] })
+        : Response.json({ error: "RUN_ALREADY_ACTIVE" }, { status: 409 }),
     );
     const response = await handler(request(), {
       params: Promise.resolve({ scenario: "allow-valid-payment" }),
@@ -144,6 +167,123 @@ describe("Judge Console fixed-scenario boundary", () => {
     );
     assert.equal(response.status, 409);
     assert.deepEqual(await response.json(), { error: "run_state_unavailable" });
+  });
+});
+
+describe("Judge Console durable pre-start guard", () => {
+  for (const status of ["OUTCOME_UNKNOWN", "RECONCILING"] as const) {
+    it(`blocks a fresh presenter when durable execution is ${status}`, async () => {
+      let presenterCalls = 0;
+      const handler = createStartJudgeRunHandler(async (url) => {
+        if (String(url).includes("/audit?")) {
+          return Response.json({
+            items: [
+              {
+                action: { agent_id: "agent_treasury_01" },
+                record: { disposition: "ALLOW", human_review: null },
+                execution: { status },
+              },
+            ],
+          });
+        }
+        presenterCalls += 1;
+        return Response.json(validRun, { status: 202 });
+      });
+
+      const response = await handler(request(), {
+        params: Promise.resolve({ scenario: "allow-valid-payment" }),
+      });
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), { error: "RUN_ALREADY_ACTIVE" });
+      assert.equal(presenterCalls, 0, "no presenter POST or new action may occur");
+    });
+  }
+
+  it("blocks a fresh presenter while an ESCALATE review is pending", async () => {
+    let presenterCalls = 0;
+    const handler = createStartJudgeRunHandler(async (url) => {
+      if (String(url).includes("/audit?")) {
+        return Response.json({
+          items: [
+            {
+              action: { agent_id: "agent_treasury_01" },
+              record: { disposition: "ESCALATE", human_review: null },
+              execution: null,
+            },
+          ],
+        });
+      }
+      presenterCalls += 1;
+      return Response.json(validRun, { status: 202 });
+    });
+
+    const response = await handler(request(), {
+      params: Promise.resolve({ scenario: "allow-valid-payment" }),
+    });
+    assert.equal(response.status, 409);
+    assert.equal(presenterCalls, 0, "no presenter POST or new action may occur");
+  });
+
+  for (const status of ["FAILED", "SETTLED"] as const) {
+    it(`allows the presenter start path after durable ${status}`, async () => {
+      let presenterCalls = 0;
+      const handler = createStartJudgeRunHandler(async (url) => {
+        if (String(url).includes("/audit?")) {
+          return Response.json({
+            items: [
+              {
+                action: { agent_id: "agent_treasury_01" },
+                record: { disposition: "ALLOW", human_review: null },
+                execution: { status },
+              },
+            ],
+          });
+        }
+        presenterCalls += 1;
+        return Response.json(validRun, { status: 202 });
+      });
+
+      const response = await handler(request(), {
+        params: Promise.resolve({ scenario: "allow-valid-payment" }),
+      });
+      assert.equal(response.status, 202);
+      assert.equal(presenterCalls, 1);
+    });
+  }
+
+  it("fails closed on an unavailable durable audit read", async () => {
+    let presenterCalls = 0;
+    const handler = createStartJudgeRunHandler(async (url) => {
+      if (String(url).includes("/audit?")) {
+        return Response.json({ error: "unavailable" }, { status: 503 });
+      }
+      presenterCalls += 1;
+      return Response.json(validRun, { status: 202 });
+    });
+
+    const response = await handler(request(), {
+      params: Promise.resolve({ scenario: "allow-valid-payment" }),
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { error: "live_execution_unavailable" });
+    assert.equal(presenterCalls, 0);
+  });
+
+  it("fails closed on a malformed durable audit response", async () => {
+    let presenterCalls = 0;
+    const handler = createStartJudgeRunHandler(async (url) => {
+      if (String(url).includes("/audit?")) {
+        return Response.json({ items: [{ malformed: true }] });
+      }
+      presenterCalls += 1;
+      return Response.json(validRun, { status: 202 });
+    });
+
+    const response = await handler(request(), {
+      params: Promise.resolve({ scenario: "allow-valid-payment" }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal(presenterCalls, 0);
   });
 });
 
