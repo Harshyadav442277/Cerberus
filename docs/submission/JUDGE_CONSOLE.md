@@ -331,6 +331,9 @@ does not claim current verification.
 - Live ALLOW/approved ESCALATE still depend on hosted-service reachability, funded
   Base Sepolia test wallets, RPC/facilitator health, and finality latency. The captured
   fallback is the explicit insurance path.
-- No Judge reset endpoint exists. Each fixed scenario executes at most once per
-  presenter process; rehearse with an operator-prepared environment, then restart on
-  the known finals state before opening the public URL.
+- There is no Judge reset of any database table. The only reset is the presentation
+  registry (`POST /api/judge/reset` → presenter `/reset`), which refuses while a run is
+  active or while a scenario still has live financial state, and otherwise forgets the
+  volatile run records so a fixed scenario can be shown again. Rehearse with an
+  operator-prepared environment, then restart on the known finals state before opening
+  the public URL.

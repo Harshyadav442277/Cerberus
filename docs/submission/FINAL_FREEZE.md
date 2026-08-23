@@ -197,10 +197,39 @@ Every code change after freeze requires **all** of:
 
 ## Remaining work
 
-Not product code. Signer provisioning, the funded Base Sepolia run, audit anchoring,
-screenshots and the screen recordings are **done** — see **Current live-evidence
-status** above and `artifacts/judge-evidence/`. In scope after freeze:
+Signer provisioning, the funded Base Sepolia run, audit anchoring, screenshots, the
+screen recordings, the public evidence page and the hosted Judge Console are **done** —
+see **Current live-evidence status** above, `artifacts/judge-evidence/`, and the
+post-freeze addendum below. In scope now:
 
 - presentation;
-- rehearsal;
+- rehearsal on the hosted console and on the local fallback;
 - judge Q&A.
+
+## Post-freeze addendum — 23 August 2026 (`caf7057`)
+
+The freeze above governs the **financial runtime**: policy, reservations, authorization,
+settlement, reconciliation, audit and the signer split. None of that changed after the
+release payload. What was added after the freeze is a **presentation layer and operator
+tooling**, recorded here so this document stays true:
+
+| Added | Where | What it is / is not |
+|---|---|---|
+| Public evidence page | `judge-site/` → <https://judge-site.vercel.app> | Static, read-only page presenting the 22 Aug hardened run (receipts, anchors, recordings, manifest, limitations). No runtime, no secrets. |
+| Judge Console | `apps/dashboard/app/judge/`, `components/judge/`, `lib/judge-*.ts` → <https://cerberus-judge-console.vercel.app/judge> | Basic-auth-gated presenter surface that runs the three **fixed** scenarios (`cap_breach`, `new_counterparty`, `clean`) and a read-only chain check for the `audit_0aaac796` incident. Financial fields are fixed server-side; the browser cannot set amounts, counterparties, mandates or payees. Falls back to the captured 22 Aug evidence, never labelled live. See `JUDGE_CONSOLE.md`. |
+| Presenter service | `apps/presenter/` | One persistent process that invokes the existing `@safr/agent` `runAction` with the existing adapters; agent DB role + execution bearer only; one active run at a time; rejects browser Origins; no signer, no reviewer credential. Its `/reset` counterpart clears only the volatile presentation registry after a financial-state check — it touches no table. |
+| Deployment scaffolding | `deploy/` (systemd units, Kubernetes manifests, ingress proxy, ngrok tunnel) | How the unchanged services are kept running and reached by the Vercel dashboard. Not a new trust boundary: the API keeps its reviewer bearer, the presenter its runner bearer. |
+| Mandate v2 publisher | `packages/db/src/cli/publish-finals-mandate-v2.ts` | Schema-owner CLI that publishes `mandate_001` **v2**: rolling 24-hour budget 3 → **24 USDC** so repeated finals runs cannot trip the window; per-transaction cap stays **1 USDC**; velocity, allowlist and escalation policy unchanged. Versioned, never an in-place edit. |
+| Demo launcher / driver | `scripts/demo-up.mjs`, `scripts/demo-show.mjs` | Local one-command start and scenario driver over the existing `npm run` scripts (RUNBOOK §2b). |
+| Test-runner reliability | `packages/x402-client/src/__tests__/challenge.test.ts`, `scripts/test.ts` | Timeout tests pin their pending Requests against GC; the runner fails on a glob that matches no files. No assertion removed. |
+
+**Gate re-run at `caf7057` (23 Aug, local Postgres, all fixes applied):** `npm test`
+**411/411 tests across 83 suites**, 0 failed (the frozen 384 plus the presentation-layer
+tests); `npm run typecheck` clean; `npm run evidence:verify` PASS; `npm run db:verify` 13
+checks. The **Current finalist build** figures in the README are the freeze-pass numbers
+and are kept as written; `artifacts/final-evidence/` remains frozen and untouched.
+
+**Still not claimed, unchanged:** production readiness; irreversible finality; MAS
+approval or certification; an immutable audit log (it is tamper-evident); service-to-
+service authentication beyond bearer tokens and loopback/tunnel scoping; hardened-path
+evidence beyond the one supervised 22 Aug run set.

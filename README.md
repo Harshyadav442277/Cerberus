@@ -53,7 +53,7 @@ labelled as such.
 | | |
 |---|---|
 | **Source identity** | Recorded by SHA in the generated final-evidence manifest; no hand-maintained “current commit” value |
-| **Automated tests** | **384 passed / 384**, 78 suites, 0 failed |
+| **Automated tests** | **384 passed / 384**, 78 suites, 0 failed at the freeze pass; 411/411 across 83 suites after the 23 Aug presentation layer (FINAL_FREEZE.md addendum) |
 | **Adversarial suite** (`npm run adversarial`) | **12/12 attack classes**, 80 assertions |
 | **Security red team** (`npm run redteam`) | **12/12 attack classes**, 70 assertions |
 | **Mutation matrix** (`npm run mutation`) | **12/12 security guards proven detectable** |
