@@ -3,6 +3,7 @@ import {
   authenticateReviewerDashboard,
   reviewerLoginRequired,
 } from "./reviewer-dashboard-auth";
+import { hasActiveJudgeFinancialState } from "./judge-recovery";
 import type { JudgeRun, JudgeScenarioId } from "./judge-types";
 
 const PRESENTER_URL =
@@ -34,31 +35,22 @@ function reviewerCredential(): string | null {
   return token && token.length >= 32 ? token : null;
 }
 
-function hasActiveFinancialState(value: unknown): boolean | null {
-  if (!value || typeof value !== "object") return null;
-  const items = (value as { items?: unknown }).items;
-  if (!Array.isArray(items)) return null;
-  const activeExecution = new Set([
-    "RESERVED",
-    "AUTHORIZED",
-    "SUBMITTING",
-    "OUTCOME_UNKNOWN",
-    "RECONCILING",
-  ]);
-  return items.some((value) => {
-    if (!value || typeof value !== "object") return false;
-    const item = value as {
-      action?: { agent_id?: unknown };
-      record?: { disposition?: unknown; human_review?: unknown };
-      execution?: { status?: unknown } | null;
-    };
-    // This endpoint retires only the fixed Judge presenter namespace. Unrelated
-    // historical/sandbox agents cannot be affected by that in-memory reset.
-    if (item.action?.agent_id !== "agent_treasury_01") return false;
-    const pendingReview =
-      item.record?.disposition === "ESCALATE" && item.record.human_review === null;
-    return pendingReview || activeExecution.has(String(item.execution?.status ?? ""));
-  });
+async function readActiveFinancialState(
+  fetcher: typeof fetch,
+  reviewerToken: string,
+): Promise<boolean | null> {
+  try {
+    const auditResponse = await fetcher(`${CONTROL_PLANE_API}/audit?limit=500`, {
+      headers: { authorization: `Bearer ${reviewerToken}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!auditResponse.ok) return null;
+    const auditBody = await auditResponse.json().catch(() => null);
+    return hasActiveJudgeFinancialState(auditBody);
+  } catch {
+    return null;
+  }
 }
 
 function safeReset(value: unknown): { status: "RESET"; retired: number } | null {
@@ -107,8 +99,17 @@ export function createStartJudgeRunHandler(fetcher: typeof fetch = fetch) {
     }
 
     const token = runnerCredential();
-    if (!token) {
+    const reviewerToken = reviewerCredential();
+    if (!token || !reviewerToken) {
       return NextResponse.json({ error: "live_execution_unavailable" }, { status: 503 });
+    }
+
+    const active = await readActiveFinancialState(fetcher, reviewerToken);
+    if (active === null) {
+      return NextResponse.json({ error: "live_execution_unavailable" }, { status: 503 });
+    }
+    if (active) {
+      return NextResponse.json({ error: "RUN_ALREADY_ACTIVE" }, { status: 409 });
     }
 
     try {
@@ -190,14 +191,8 @@ export function createResetJudgeRunsHandler(fetcher: typeof fetch = fetch) {
       // Fail closed if durable read truth shows review, payment, or reconciliation
       // still in progress. This also protects a presenter that has restarted and
       // lost its volatile job map.
-      const auditResponse = await fetcher(`${CONTROL_PLANE_API}/audit?limit=500`, {
-        headers: { authorization: `Bearer ${reviewerToken}` },
-        cache: "no-store",
-        signal: AbortSignal.timeout(10_000),
-      });
-      const auditBody = await auditResponse.json().catch(() => null);
-      const active = hasActiveFinancialState(auditBody);
-      if (!auditResponse.ok || active === null) {
+      const active = await readActiveFinancialState(fetcher, reviewerToken);
+      if (active === null) {
         return NextResponse.json({ error: "reset_unavailable" }, { status: 503 });
       }
       if (active) {

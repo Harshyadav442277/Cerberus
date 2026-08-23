@@ -15,6 +15,14 @@ import type {
   SettlementChainCheck,
   UnknownChainCheck,
 } from "@/lib/judge-types";
+import {
+  durableJudgeTerminal,
+  hasActiveJudgeFinancialState,
+  isJudgeResetBlocked,
+  pollTrustedAudit,
+  RECONCILIATION_PROVED_NON_PAYMENT,
+  type DurableJudgeTerminal,
+} from "@/lib/judge-recovery";
 import styles from "./judge.module.css";
 
 type View =
@@ -118,7 +126,7 @@ const TIMELINES: Record<JudgeScenario, { key: string; label: string; sub?: strin
 };
 
 function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
 function short(value: string | null | undefined, head = 10, tail = 8) {
@@ -175,14 +183,8 @@ export function JudgeConsole() {
     escalate: false,
     allow: false,
   });
-  const resetBlocked =
-    unknownBusy ||
-    Object.values(runs).some(
-      (state) =>
-        state.mode === "LIVE" ||
-        state.reviewBusy ||
-        state.error === "run_state_unavailable",
-    );
+  const mounted = useRef(true);
+  const resetBlocked = isJudgeResetBlocked(Object.values(runs), unknownBusy);
 
   const loadReadiness = useCallback(async () => {
     setReadinessBusy(true);
@@ -240,6 +242,13 @@ export function JudgeConsole() {
   }, [loadReadiness]);
 
   useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (view === "unknown" && !unknownCheck && !unknownBusy) void loadUnknown();
   }, [loadUnknown, unknownBusy, unknownCheck, view]);
 
@@ -277,8 +286,100 @@ export function JudgeConsole() {
       let seen: string[] = ["PROPOSED"];
       let lastAudit: FeedItem | null = null;
       let failedStatusReads = 0;
-      const deadline = Date.now() + 3 * 60 * 1000;
-      while (Date.now() < deadline) {
+
+      const readKnownAudit = async (): Promise<FeedItem | null> => {
+        const response = await fetch("/api/runtime/audit?limit=500", {
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("audit_unavailable");
+        const feed = (await response.json()) as { items?: FeedItem[] };
+        return (
+          feed.items?.find(
+            (item) => item.action.action_id === current.action.action_id,
+          ) ?? null
+        );
+      };
+
+      const verifySettlement = async (audit: FeedItem) => {
+        try {
+          const verified = await fetch(
+            `/api/judge/chain/settlement/${encodeURIComponent(audit.record.audit_id)}`,
+            { cache: "no-store" },
+          );
+          if (verified.ok && mounted.current) {
+            const value = (await verified.json()) as SettlementChainCheck;
+            setSettlementChecks((checks) => ({ ...checks, [scenario]: value }));
+          }
+        } catch {
+          // Settlement remains durable even if the independent read-only check is unavailable.
+        }
+      };
+
+      const finishFromAudit = async (terminal: DurableJudgeTerminal) => {
+        lastAudit = terminal.audit;
+        seen = observations(current, lastAudit, seen);
+        if (!mounted.current) return;
+
+        if (terminal.kind === "FAILED") {
+          current = {
+            ...current,
+            status: "FAILED",
+            error: "settlement_failed",
+          };
+          patchRun(scenario, {
+            run: current,
+            audit: lastAudit,
+            observations: seen,
+            mode: "ERROR",
+            error: "settlement_failed",
+          });
+          return;
+        }
+
+        current = { ...current, status: "COMPLETE", error: null };
+        patchRun(scenario, {
+          run: current,
+          audit: lastAudit,
+          observations: seen,
+          mode: "COMPLETE",
+          error: null,
+        });
+        await verifySettlement(terminal.audit);
+      };
+
+      const recoverFromAudit = async (presenterUnavailable: boolean) => {
+        if (mounted.current) {
+          patchRun(scenario, {
+            run: current,
+            audit: lastAudit,
+            observations: seen,
+            mode: presenterUnavailable ? "UNAVAILABLE" : "LIVE",
+            error: presenterUnavailable ? "run_state_unavailable" : null,
+          });
+        }
+
+        const terminal = await pollTrustedAudit({
+          readAudit: readKnownAudit,
+          onAudit: (audit) => {
+            lastAudit = audit;
+            seen = observations(current, lastAudit, seen);
+            if (mounted.current) {
+              patchRun(scenario, {
+                run: current,
+                audit: lastAudit,
+                observations: seen,
+                mode: presenterUnavailable ? "UNAVAILABLE" : "LIVE",
+                error: presenterUnavailable ? "run_state_unavailable" : null,
+              });
+            }
+          },
+          wait: () => sleep(1_000),
+          isActive: () => mounted.current,
+        });
+        if (terminal) await finishFromAudit(terminal);
+      };
+
+      while (mounted.current) {
         const runnerStillActive = current.status === "RUNNING";
         const [runResult, feedResult] = await Promise.allSettled([
           runnerStillActive
@@ -286,8 +387,9 @@ export function JudgeConsole() {
                 cache: "no-store",
               })
             : Promise.resolve(null),
-          fetch("/api/runtime/audit?limit=100", { cache: "no-store" }),
+          fetch("/api/runtime/audit?limit=500", { cache: "no-store" }),
         ]);
+        if (!mounted.current) return;
 
         if (feedResult.status === "fulfilled" && feedResult.value.ok) {
           const feed = (await feedResult.value.json()) as { items?: FeedItem[] };
@@ -305,11 +407,7 @@ export function JudgeConsole() {
           } else {
             const code = await responseError(runResult.value);
             if (code === "run_state_unavailable") {
-              patchRun(scenario, {
-                audit: lastAudit,
-                mode: "UNAVAILABLE",
-                error: code,
-              });
+              await recoverFromAudit(true);
               return;
             }
             failedStatusReads += 1;
@@ -319,14 +417,16 @@ export function JudgeConsole() {
         }
 
         seen = observations(current, lastAudit, seen);
+        const durableTerminal = durableJudgeTerminal(lastAudit);
+        if (durableTerminal) {
+          await finishFromAudit(durableTerminal);
+          return;
+        }
+        const durableFinancialStateActive =
+          hasActiveJudgeFinancialState({ items: lastAudit ? [lastAudit] : [] }) === true;
         if (!statusRead) {
           if (failedStatusReads >= 5) {
-            patchRun(scenario, {
-              audit: lastAudit,
-              observations: seen,
-              mode: "UNAVAILABLE",
-              error: "run_state_unavailable",
-            });
+            await recoverFromAudit(true);
             return;
           }
           patchRun(scenario, { audit: lastAudit, observations: seen, mode: "LIVE" });
@@ -334,33 +434,19 @@ export function JudgeConsole() {
           continue;
         }
 
-        const executionStatus = lastAudit?.execution?.status;
-        const reconciledSettlement =
-          executionStatus === "SETTLED" && Boolean(lastAudit?.execution?.settlement_tx);
-        const reconciliationFailed =
-          executionStatus === "FAILED" || executionStatus === "EXPIRED";
         const waitingForReconciliation =
           current.status === "COMPLETE" &&
-          current.outcome?.status === "settlement_unknown" &&
-          !reconciledSettlement &&
-          !reconciliationFailed;
+          current.outcome?.status === "settlement_unknown";
         const unresolved =
           current.status === "COMPLETE" &&
-          ((current.outcome?.status === "settlement_unknown" && reconciliationFailed) ||
-            current.outcome?.status === "settlement_failed" ||
+          (current.outcome?.status === "settlement_failed" ||
             current.outcome?.status === "authorization_failed" ||
             current.outcome?.status === "no_mandate");
         patchRun(scenario, {
           run: current,
           audit: lastAudit,
           observations: seen,
-          error:
-            current.error ??
-            (reconciliationFailed
-              ? "settlement_failed"
-              : unresolved
-                ? current.outcome?.status ?? null
-                : null),
+          error: current.error ?? (unresolved ? current.outcome?.status ?? null : null),
           mode:
             current.status === "FAILED" || unresolved
               ? "ERROR"
@@ -372,30 +458,19 @@ export function JudgeConsole() {
         });
 
         if (current.status !== "RUNNING") {
-          if (waitingForReconciliation) {
-            await sleep(1_000);
-            continue;
+          if (waitingForReconciliation || durableFinancialStateActive) {
+            await recoverFromAudit(false);
+            return;
           }
           const settlementTx =
-            current.outcome?.settlement?.tx_hash ?? lastAudit?.execution?.settlement_tx;
+            lastAudit?.execution?.settlement_tx ?? current.outcome?.settlement?.tx_hash;
           if (current.status === "COMPLETE" && settlementTx) {
-            const auditId = current.outcome?.audit?.audit_id ?? lastAudit?.record.audit_id;
-            if (auditId) {
-              const verified = await fetch(
-                `/api/judge/chain/settlement/${encodeURIComponent(auditId)}`,
-                { cache: "no-store" },
-              );
-              if (verified.ok) {
-                const value = (await verified.json()) as SettlementChainCheck;
-                setSettlementChecks((checks) => ({ ...checks, [scenario]: value }));
-              }
-            }
+            if (lastAudit) await verifySettlement(lastAudit);
           }
           return;
         }
         await sleep(750);
       }
-      patchRun(scenario, { mode: "UNAVAILABLE", error: "run_state_unavailable" });
     },
     [patchRun],
   );
@@ -714,7 +789,7 @@ function ScenarioPanel({
   const failed = state.mode === "ERROR";
   const unavailable = state.mode === "UNAVAILABLE";
   const completed = state.mode === "COMPLETE";
-  const tx = outcome?.settlement?.tx_hash ?? audit?.execution?.settlement_tx ?? null;
+  const tx = audit?.execution?.settlement_tx ?? outcome?.settlement?.tx_hash ?? null;
 
   if (captured) return <CapturedScenario scenario={scenario} />;
 
@@ -753,7 +828,7 @@ function ScenarioPanel({
                 : state.error === "settlement_unknown"
                   ? "LIVE SETTLEMENT UNRESOLVED"
                   : state.error === "settlement_failed"
-                    ? "RECONCILIATION PROVED NON-PAYMENT"
+                    ? RECONCILIATION_PROVED_NON_PAYMENT
                 : "LIVE EXECUTION UNAVAILABLE"}
           </h2>
           <p>
