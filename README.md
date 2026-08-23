@@ -175,6 +175,7 @@ Read in this order. The Bible is the source of truth and overrides everything el
 | [submission/EVIDENCE.md](docs/submission/EVIDENCE.md) | Verified local and Base Sepolia evidence, transaction manifest, and known limitations |
 | [`artifacts/judge-evidence/`](artifacts/judge-evidence/) | The captured hardened-path evidence package: per-phase logs, screenshots, recordings, SHA-256 manifest and `evidence-summary.json` |
 | [Public evidence page](https://judge-site.vercel.app) | Read-only static page (source in [`judge-site/`](judge-site/)) presenting the 22 Aug hardened run: receipts, anchors, recordings, gate figures, limitations |
+| [submission/JUDGE_CONSOLE.md](docs/submission/JUDGE_CONSOLE.md) | The hosted, Basic-auth-gated finals presentation surface (`/judge` on the Vercel dashboard + single-instance presenter service): fixed scenarios, read-only chain checks, captured fallback, operator checklist |
 
 ## Stack
 

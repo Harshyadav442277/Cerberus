@@ -229,6 +229,20 @@ node scripts/demo-show.mjs          # runs cap_breach -> new_counterparty -> cle
 Keep the launcher window off the projector; put the show script on it. If either script
 misbehaves, the manual six-terminal procedure above is unchanged.
 
+## 2c. Hosted Judge Console (finals presentation surface)
+
+`docs/submission/JUDGE_CONSOLE.md` describes the Basic-auth-gated `/judge` page on the
+Vercel-hosted dashboard and the single-instance presenter service that runs the three fixed
+scenarios; the local procedure above remains the fallback.
+
+**Mandate v2 is one-way.** `npm run mandate:publish:finals-v2` publishes `mandate_001` v2
+(rolling 24-hour budget 24 USDC; per-transaction cap still 1 USDC) and marks v1
+superseded. Migration 006 never lets a mandate move back to `active`, so after publishing
+v2 the commands that re-upsert v1 — `npm run demo:reset`, `npm run db:seed`, and therefore
+`npm run db:verify` and `npm test`'s reseed step — fail by design. Order for a finals
+machine: `demo:reset` → `db:verify` → `mandate:publish:finals-v2` → **never reset again**.
+Check which version is live on the dashboard Mandate page (3 USDC = v1, 24 USDC = v2).
+
 ## 3. Running the demo
 
 ```bash
@@ -341,6 +355,7 @@ ESCALATE). A tiny amount of ETH covers the three anchor calls.
 | Dashboard shows "Reconnecting" | API not running, or restarted | `npm run api`, then reload |
 | Escalation Approve returns 409 | already decided (double-click or a second reviewer) | Expected — the claim is atomic by design |
 | Demo scenario 1 unexpectedly DENIES | seeded `time_window` narrowed | Seed allows all seven days; re-run `npm run db:seed`. `db:verify` warns if the seed excludes today. |
+| `demo:reset` / `db:seed` / `db:verify` / `npm test` fail with `lifecycle status cannot move from superseded to active` | mandate v2 has been published on this database | Expected — see §2c. Do not reset a v2 machine; rehearsal rows simply accumulate under the 24 USDC budget. |
 
 ---
 
